@@ -97,6 +97,12 @@ const ZEITPUNKT: Intl.DateTimeFormatOptions = {
 /** Mit Sekunden — für den Tooltip, wo der genaue Wert gefragt ist. */
 const ZEITPUNKT_GENAU: Intl.DateTimeFormatOptions = { ...ZEITPUNKT, second: "2-digit" };
 
+const UHRZEIT_GENAU: Intl.DateTimeFormatOptions = {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+};
+
 const DATUM: Intl.DateTimeFormatOptions = {
   year: "numeric",
   month: "2-digit",
@@ -131,6 +137,23 @@ export function formatiereZeitpunktGenau(
   }
   const zeitpunkt = alsZeitpunkt(wert);
   return zeitpunkt === null ? wert : formatierer(sprache, zone, ZEITPUNKT_GENAU).format(zeitpunkt);
+}
+
+/**
+ * Nur die Uhrzeit, mit Sekunden: **die hintere Hälfte von
+ * {@link formatiereZeitpunktGenau}**, in derselben Sprache und Zone. Für die Zeile
+ * eines Tages, dessen Datum schon dasteht (`docs/nachrichtendetail.md` §10.19).
+ */
+export function formatiereUhrzeitGenau(
+  wert: string | null | undefined,
+  sprache: Sprache,
+  zone: string | undefined,
+): string {
+  if (!wert) {
+    return "";
+  }
+  const zeitpunkt = alsZeitpunkt(wert);
+  return zeitpunkt === null ? wert : formatierer(sprache, zone, UHRZEIT_GENAU).format(zeitpunkt);
 }
 
 export function formatiereDatum(

@@ -1183,7 +1183,7 @@ Sache.
 ### 10.4 Die Zeitleiste
 
 Senkrecht, ein Schritt je Zeile, weil das Panel schmal ist. Je Schritt: der Name, ein schmaler
-Balken, die Dauer als Text.
+Balken, die Dauer als Text und, sobald die Leiste breit genug ist, das Ende des Schritts (§10.19).
 
 **Die Rechnung steht in `detail.ts`, nicht in der Komponente** — sie ist eine Entscheidung, und
 Entscheidungen werden hier geprüft, Markup nicht (`tests/nachrichtendetail.test.ts`).
@@ -2817,6 +2817,217 @@ sich nichts, `next dev` bleibt unberührt. Gelaufen über die drei betroffenen D
 Mechanismus — Beleg aus dem Verlauf, `router.back()`, Fokus über `fokusNachDatei` und
 `useFokusZurueck` — ist für die Nachrichtenliste gesehen (§10.17, Sichtprüfung); für Belegsuche und
 Prozessansicht steht der Posten in der README-Tabelle „Offene Sichtprüfungen".
+
+### 10.19 Das Ende je Schritt in der breiten Zeitleiste *(09.11.2026, E‑1184, M1013, Zweig `feat/schritt-endzeit`)*
+
+**Der Anlass:** Vorgabe des Auftraggebers vom 09.11.2026 an einer Nachricht der Produktion (zwei
+Schritte, Panel maximiert). Gewünscht ist die Uhrzeit, zu der jeder Schritt fertig war. Reiner
+Frontend-Umbau in `features/nachrichten`: **kein Feld, kein Statement, kein Endpunkt**; `schritte[].ende`
+kommt seit Schritt 5 (§1, §4). Weil keine Abfrage entsteht, ist keine Messung nach L7 fällig.
+
+#### E‑1184: die Vorgaben des Auftraggebers
+
+| | |
+|---|---|
+| **Inhalt** | Je Schrittzeile **nur das Ende**, nicht der Start. Fehlt `ende` (laufender Schritt, Protokolllücke), steht **nichts**: keine erfundene Zeit, kein Platzhalter, keine Null |
+| **Format** | Uhrzeit mit Sekunden (`15:04:09`). **Das Datum steht nur davor, wenn der Kalendertag vom Tag des fachlichen Starts abweicht** (`10.11.2026, 08:14:02`); der Vergleich läuft in der Anzeigezone. Ist `start` `null`, gilt jeder Tag als abweichend. Vollwert und relativer Abstand stehen immer im `title` |
+| **Auslöser** | die **Breite der Zeitleiste**, nicht der Einhängepunkt: Container-Abfrage mit eigenem Namen, Schwelle gemessen. Darunter bleibt die Zeile Zeichen für Zeichen, wie sie ist |
+
+#### Was daraus gebaut ist
+
+**Die Entscheidung steht als reine Funktion in `detail.ts`:** `schrittEndeAnzeige(schritt, start,
+sprache, zone)` liefert `null` oder `{ text, vollwert }`. Formatiert wird in `lib/format.ts`; neu ist
+dort allein `formatiereUhrzeitGenau`, die hintere Hälfte von `formatiereZeitpunktGenau` über denselben
+`formatierer` und dieselbe Zone. Der Tagesvergleich sind zwei Aufrufe von `formatiereDatum`.
+
+| Stelle | Was gilt |
+|---|---|
+| **Die Spalte** | steht **unmittelbar hinter der Dauer**, weil Lesefolge und zugänglicher Name dieselbe Reihenfolge haben. Den Abstand setzt allein das `gap-2` der Zeile, dasselbe wie zwischen Balken und Dauer; die Zelle trägt keinen eigenen Rand. **Sie ist so breit wie die breiteste Form, die diese Nachricht in dieser Sprache zeigt** (seit der Nachbesserung vom 10.11.2026, unten): ohne Datumszeile die kurze, sonst die volle. Rechtsbündig, damit die Sekunden untereinander stehen, wenn eine Zeile das Datum trägt. Ton und Größe wie die Dauer, feste Ziffernbreite über `<time>` (Regel in `globals.css`), keine Farbe, keine Animation, kein Übergang |
+| **Container** | `@container/zeitleiste` sitzt am gemeinsamen Rahmen von Eingang, Leiste und Rest in `nachricht-detail.tsx`, weil alle drei auf einer Flucht stehen. Derselbe Rahmen trägt `group/zeitleiste` und die Breite der Nachricht als `data-ende-spalte` (`endeSpalte` in `detail.ts`) |
+| **Klasse** | `ENDE_SPALTE` in `aufklapp-zeile.tsx`, **eine Klasse für Zelle und Platzhalter**: `hidden w-[9.9375rem] … group-data-[ende-spalte=kurz-de]/zeitleiste:w-[3.4375rem] … @min-[38.875rem]/zeitleiste:block`, vier Breiten. Herleitung in [`spaltenwahl.md`](spaltenwahl.md) §5.6 |
+| **Beide Ebenen** (§10.16) | Die Schaltfläche trägt die Zelle, die Ebene der Ziele denselben Platzhalter in `rechtsSpiegel`; sonst verschöben sich Ziele und Schaltfläche gegeneinander |
+| **Eingang und Rest** | kein Zeitstempel (Schritt `0` steht nicht in `schritte[]`, sein Zeitpunkt ist der Beginn im Kopf), aber die Spalte bleibt frei. Ihre Ziele enden dadurch weiterhin auf der rechten Kante der Dauer |
+| **Erwartete Zeile** | kein Zeitstempel. Die Form mit Namen und *noch nicht begonnen* hält die Spalte frei. Die beiden Satzformen (`WARTET_IN`, unbekannter Schritt) haben rechts nichts, das auf einer Flucht stehen könnte, und bleiben unverändert |
+| **Ohne Ende** | Die Zelle bleibt leer und hält ihren Platz |
+
+**Kein sichtbares Präfix, aber das Wort für alle, die die Spalte nicht sehen.** Hinter der Dauer liest
+sich eine Uhrzeit als der Moment, an dem die Dauer vorbei war; „Beginn" steht im Kopf, und eine
+Verwechslung läge höchstens um die Dauer daneben, die direkt daneben steht. Das Wort in jeder Zeile
+wäre Wiederholung. **Ein Vorleseprogramm kennt aber keine Spalte**: Dort steht *„, Ende"* (`Finished`)
+als `sr-only` vor der Zeit, und im `title` steht *„Ende: 30.12.2025, 00:01:07 (vor 10 Monaten)"*. Die
+beiden Texte sind `schrittEnde` und `schrittEndeHinweis` in den Sprachdateien.
+
+**Der zugängliche Name** entsteht weiter aus dem Inhalt, ohne `aria-label`, und beginnt mit dem
+Schrittnamen (WCAG 2.5.3). Chrome meldet: `Format Conversion , technische Eigenschaften 1 min 25 s ,
+Ende 04:07:51`. Unter der Schwelle ist die Zelle `display: none` und damit auch aus dem Namen.
+
+**Der relative Abstand entsteht in der Komponente** (`formatiereRelativ`, wie im Kopf) und nicht in
+`schrittEndeAnzeige`: Die Funktion rechnet nichts gegen die Uhr des Browsers.
+
+#### Abweichungen vom Auftrag, benannt
+
+| | |
+|---|---|
+| **Die Nummer** | Der Auftrag nennt *„nächste freie nach E‑243"*. Nach `DEVELOPMENT_GUIDELINES.md` §12 schließen projektweite Nummern seit E‑1127 an die höchste vergebene an, der Bereich unter 1000 wird nicht weiter befüllt. Vergeben ist **E‑1184**, Messung **M1013** |
+| **„Kein Ende" sei nur im Unit-Test belegbar** | Das trifft nur auf `LAEUFT_AUF` zu. In einer Auswahl von 145 Details (`NEXANS`) trugen 40 einen Schritt ohne Ende, darunter der letzte Schritt einer Fehlernachricht. Gesehen, Punkt 4 unten |
+| **Erwartete Zeile** | Die Spalte ist nur dort freigehalten, wo rechts etwas steht (Tabelle oben) |
+
+**Nummern, jeder Treffer gelesen:** `\bE[^0-9A-Za-z\s]{1,3}(118[4-9]|119[0-9]|1[2-9][0-9]{2}|[2-9][0-9]{3})\b`
+über alle 70 lokalen und alle entfernten Zweige sowie in den Arbeitsbäumen aus `git worktree list`,
+samt unversionierter Dateien: **kein Treffer**. Eichung: E‑1183 auf `main`. Die bekannten Falschtreffer
+E‑249 und E‑780 liegen unterhalb des Bereichs. M1013 und Punkt 1050 sind über die lokalen Zweige
+gesucht, ohne Treffer; Eichung M1012 auf `main`. Der Punkt 1050 wird nicht gebraucht und bleibt frei.
+
+#### Tests
+
+**Zuerst geschrieben und gegen den unveränderten Code gelaufen: alle 14 neuen Fälle rot.** Nach dem Bau
+trägt der Lauf 1.535 Fälle in 54 Dateien, die gerenderten zählt `vitest.config.mts` (302 in 28).
+
+| Datei | Was |
+|---|---|
+| `tests/nachrichtendetail.test.ts`, neun Fälle | ohne Ende `null`; gleicher Tag kurz, Vollwert mit Datum; anderer Tag voll; ohne Start voll; Tageswechsel in der Anzeigezone **in beiden Richtungen** (UTC noch am Vortag, UTC schon am Folgetag); Sekunden auch bei `:00` und um Mitternacht; Englisch, wobei die kurze Form die hintere Hälfte der vollen ist; unabhängig von der Uhr des Browsers |
+| `tests/zeitleiste-ziele.test.tsx`, fünf Fälle (gerenderter Baum, die Schwelle ist eine Klasse) | Spalte und Platzhalter in beiden Ebenen samt Container, `title` und Reihenfolge des Namens; ein Klick auf die Zeit schaltet genau einmal; Vergleich gegen `start` und nicht `zeitpunkt`; ohne Beginn voll, ohne Ende leer bei freier Spalte; Eingang, Rest und erwartete Zeile ohne Zeitstempel mit Spalte. Der Klick auf ein Ziel steht unverändert in *„schaltet die Zeile mit einem Klick genau einmal"* |
+
+**Verletzungsproben im Speicher** (Vite-Plugin wie in §10.18, die Platte bleibt unberührt, 57 Fälle):
+
+| Probe | Eingriff | rot |
+|---|---|---:|
+| P0 | keiner (Eichung) | 0 |
+| P1 | Tagesvergleich in UTC statt Anzeigezone | 2 |
+| P2 | Vergleich gegen `zeitpunkt` statt `start` | 2 |
+| P3 | Spalte nur in der Schaltfläche, nicht in der Ebene der Ziele | 1 |
+| P4 | eine andere Schwelle als die gemessene | 3 |
+| P5 | Eingang und Rest halten die Spalte nicht frei | 1 |
+| P6 | kein Container an der Zeitleiste | 1 |
+| P7 | immer die volle Form | 6 |
+| P8 | Platzhalter statt nichts bei fehlendem Ende | 2 |
+
+#### Sichtprüfung im Browser (09.11.2026)
+
+`next dev` des Zweigs auf `:3002` gegen ein zweites Backend auf `:8081`, Profil `dev`, die Testkopie,
+Rolle `ADMIN`, Mandant `NEXANS`, Sprache Deutsch, Dichte `m`. Sichtbares Chrome, **angemeldet durch den
+Auftraggeber**, gesteuert über das Chrome-DevTools-Protokoll; **geklickt, nicht zugewiesen**
+(`Input.dispatchMouseEvent`). Die Fensterbreite ist über `Emulation.setDeviceMetricsOverride` gestellt.
+Die Nachrichten sind nach Gestalt gewählt; ihre `MessageID` steht bewusst nicht hier.
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | **Panel neben der Liste**, 1.920 px (Kasten 454 px) und 1.280 px (390 px), je vier Gestalten | Pixelvergleich gegen `main` auf `:3003`: in allen **acht** Vergleichen **0** abweichende Pixel (42.984 bis 73.920 je Bild). Spalte `display: none`. Eichung des Vergleichs: ein einziges umgefärbtes Dauer-Feld ergibt 290 abweichende Pixel |
+| 2 | **Eigene Route, 1.920 px** (Kasten 1.126 px), je Zeile aller vier Gestalten | Rechte Kante von Balken **1.112**, Dauer **1.200**, Ende **1.367** in jeder Zeile; die Ziele der Zeile *Eingang* enden bei **1.200**. Waagerechter Überlauf von Dokument und `main` **0**. Der Kasten selbst steht um 4 px über: das ist das `-mr-1` der Zeile (§10.16), auf `main` genauso |
+| 3 | **Schritt über Mitternacht**, Beginn 29.12.2025, 23:56:07 | `23:57:43`, `23:59:43`, **`30.12.2025, 00:01:07`**, die letzte als volle Form |
+| 4 | **Kein Ende**, letzter Schritt einer Fehlernachricht | Zelle `display: block`, leer, rechte Kante 1.367, die Flucht bleibt |
+| 5 | **`WARTET_IN`** | Beide Schritte tragen ihr Ende, die Zeile darunter keinen Zeitstempel |
+| 6 | **Fenster um die Schwelle**, eigene Route | 895 px (Kasten 621): `none`, Name 329 px. **896 px (Kasten 622): `block`, Name 163 px**, im Panel heute 162. Überlauf 0 |
+| 7 | **Volles Panel unter `xl`** (1.200 px, Kasten 926) und **Fenster 390 px** (Kasten 340) | Spalte da beziehungsweise `none`, Überlauf 0 |
+| 8 | **Schwelle, beide Sprachen, alle Dichten**, über die Breite des Kastens gestellt | Bei `T − 1` `none`, bei `T` `block`. Der Name bleibt bei `T` breiter als heute im Panel, die breiteste Form wird nicht gekürzt (über `Range` gezählt). Zahlen in [`spaltenwahl.md`](spaltenwahl.md) §5.6 |
+| 9 | **Klicks** | Klick auf die Zeit öffnet und schließt die Zeile. `elementFromPoint`: an der Mitte eines Ziels der Verweis, an der Mitte der Zeit die Zeit. Aufgeklappt stehen Ende, Dauer und Ziele aller Zeilen auf dem Pixel wie vorher |
+| 10 | **Konsole** | keine Fehler und keine Warnungen im Lauf über Route, Panel und schmales Fenster |
+
+**Nicht gesehen:** `LAEUFT_AUF` und `WARTET_VOR` (kommen in der Testkopie nicht vor, §10.12, im Register
+als Teil 3 geführt); dort tragen die gerenderten Tests. Das helle Thema (die Spalte hat die Rolle der
+Dauer, keine eigene Farbe); Englisch nur gemessen, nicht angesehen.
+
+> **Belegvermerk** *(Regel L10)*. *Gemessen:* die Tabelle oben, im Entwicklungsbau, eine Sitzung.
+> *Behauptet wird:* dass die Spalte ab der Schwelle in beiden Sprachen und allen Dichten passt und das
+> Panel neben der Liste unverändert bleibt. *Nicht gemessen:* der Produktionsbau, andere Browser als
+> Chrome.
+
+#### Nachbesserung vom 10.11.2026: die Breite je Nachricht
+
+**Der Anlass:** Vorgabe des Auftraggebers vom 09.11.2026. Auf der eigenen Route bei 1.920 px blieben
+zwischen Dauer und Endzeit rund 100 px Leerraum, die Zeit löste sich von ihrer Zeile. Verlangt war eine
+Spalte fester Breite unmittelbar rechts neben der Dauer, mit dem Abstand zwischen Balken und Dauer; den
+freien Platz sollte der Schrittname bekommen.
+
+**Der Befund vor dem Bau:** Die Spalte stand schon dort. Im DOM folgte sie der Dauer, beide standen in
+derselben Zeile mit `gap-2`, ein `ml-auto` gab es nicht, und der Name trug `flex-1`. Die Sichtprüfung
+vom 09.11. hatte das gemessen: Dauer rechts bei 1.200, Zelle von 1.208 bis 1.367. **Der Leerraum lag in
+der Spalte.** Sie war 159 px breit, für die volle Form mit Datum. Die kurze Form (54,53 px bei `m`)
+stand rechtsbündig darin, und zwischen Dauer und Uhrzeit blieben 8 + 159 − 54,53 ≈ 112 px frei. Die
+Punkte 1 bis 4 des Auftrags beschrieben den gebauten Stand. Punkt 1 („bemessen an der breitesten Form,
+rechtsbündig“) erzeugt genau diesen Spalt. Er verträgt sich nicht mit „kein Spalt vor der Endzeit“.
+
+**Rückfrage und Entscheidung des Auftraggebers (10.11.2026).** Drei Wege standen zur Wahl: die Breite je
+Nachricht, linksbündig bei bleibender Breite, oder alles so lassen. **Gewählt ist die Breite je
+Nachricht:** Die Spalte ist so breit wie die breiteste Form, die die Nachricht zeigt. Im Regelfall trägt
+keine Zeile ein Datum. Dann ist die Spalte so breit wie die kurze Form, die Uhrzeit steht ohne Spalt
+neben der Dauer, und der Name bekommt den Platz. Trägt eine Zeile das Datum, gilt die volle Form für die
+ganze Leiste. Die kurzen Zeilen stehen dann rechtsbündig darunter, ihre Sekunden unter denen der vollen
+Form, und dort bleibt der Spalt. Die Schwelle bleibt an der vollen Form; es gibt einen Auslöser.
+
+| Stelle | Was gilt |
+|---|---|
+| **`endeSpalte`** in `detail.ts` | liefert `kurz-de`, `kurz-en`, `voll-de` oder `voll-en`. Die Form ist voll, sobald ein Schritt **mit** Ende nicht am Tag des Beginns liegt. Die Datumsregel ist dieselbe Funktion wie in `schrittEndeAnzeige` (`amTagDesBeginns`), sonst könnte die Spalte eine volle Form kürzen. Ein Schritt ohne Ende zählt nicht |
+| **Rahmen** | `data-ende-spalte` und `group/zeitleiste` am Container in `nachricht-detail.tsx`. Eingang, Schritte, erwartete Zeile und Rest lesen dieselbe Wahl |
+| **`ENDE_SPALTE`** | Vier gemessene Breiten (M1014, [`spaltenwahl.md`](spaltenwahl.md) §5.6). `w-[9.9375rem]` gilt ohne Bedingung, weil die volle englische Form die breiteste ist und eine Zelle ohne Wahl so nie kürzt. Dazu `group-data-[ende-spalte=voll-de]/zeitleiste:w-[8.0625rem]`, `…kurz-de…:w-[3.4375rem]` und `…kurz-en…:w-[4.875rem]` |
+| **Unverändert** | Lage im DOM, `gap-2`, Schwelle 38,875 rem, Inhalt, Format, Datumsregel und Auslöser der Endzeit, Kettenblock, Balken, Zeilenhöhe, Tooltip, Ziele, Wartezeile |
+
+**Abweichungen, benannt:**
+
+| | |
+|---|---|
+| **Punkte 1 bis 4 des Auftrags** | Sie waren erfüllt, als der Auftrag kam (Befund oben). Gebaut ist nach Rückfrage die Breite je Nachricht |
+| **Breite je Sprache** | Zur Wahl stand „die kurze Form, sonst die heutigen 9,9375 rem“. Die kurze Form ist aber je Sprache verschieden breit: 54,53 px Deutsch, 77,61 px Englisch mit `AM` bei `m`. Eine gemeinsame Breite ließe im Deutschen 23 px Spalt. Deshalb gibt es vier Breiten. Die 9,9375 rem gelten für Englisch; die volle deutsche Form braucht 8,0625 rem. **Der Auftraggeber hat die 8,0625 rem am 10.11.2026 nach der Sichtprüfung bestätigt** |
+| **„Beide Sprachen“** | Der Auftrag bemisst die Spalte an beiden Sprachen. Gemessen sind beide; die Spalte trägt die breiteste Form der **angezeigten** Sprache |
+| **Die Tests zuerst rot** | Alle acht neuen Fälle liefen gegen den Stand vorher rot. Der erste gerenderte Fall brach dabei erst an den Breitenklassen. Seine Aussagen über Lage, Abstand und fehlenden Rand trafen schon vorher zu |
+| **Die Probe `ml-auto`** | Der Fall fängt sie über die Klasse. Im Browser änderte sie nichts: Neben einem Namen mit `flex-1` bleibt für einen automatischen Rand kein freier Platz |
+| **Die Nummer** | Keine neue E‑Nummer, weil §10.19 die Lage nicht als Entscheidung führt. Die Messung ist **M1014**, frei nach Suche über alle Zweige und Arbeitsbäume, geeicht an M1012 auf `main` |
+
+**Tests.** Acht neue Fälle, alle zuerst rot gegen den Stand vorher. Danach trägt der Lauf 1.543 Fälle in
+54 Dateien, gerendert 305 in 28 (`vitest.config.mts`).
+
+| Datei | Was |
+|---|---|
+| `tests/nachrichtendetail.test.ts`, fünf Fälle | kurz in beiden Sprachen, wenn jedes Ende am Tag des Beginns liegt; voll nach dem Tag in der Anzeigezone, in UTC dieselben Zeitpunkte kurz; ohne Beginn voll; Schritte ohne Ende zählen nicht, ohne jedes Ende kurz; voll **genau dann**, wenn eine Zeile die volle Form zeigt (gegen `schrittEndeAnzeige`, zwölf Lagen) |
+| `tests/zeitleiste-ziele.test.tsx`, drei Fälle | die Zelle folgt in beiden Ebenen unmittelbar der Dauer, den Abstand setzt das `gap-2` der Ebene, kein eigener Rand an Balken, Dauer und Zelle, alle vier Breiten an der Zelle; im Regelfall `kurz-de` am Rahmen und eine Klasse an allen zehn Stellen (Eingang, drei Schritte, erwartete Zeile, Rest, je Zeile mit Zielen auch die Ebene darüber); mit einem Ende nach Mitternacht `voll-de` für die ganze Leiste |
+
+**Verletzungsproben im Speicher** (Vite-Plugin wie in §10.18, die Platte bleibt unberührt, 65 Fälle):
+
+| Probe | Eingriff | rot |
+|---|---|---:|
+| P0 | keiner (Eichung) | 0 |
+| P1 | `ml-auto` an der Zelle | 1 |
+| P2 | Breite nur in einer Ebene: der Platzhalter in der Ebene der Ziele ohne die Breiten je Nachricht | 3 |
+| P3 | immer voll (der Stand vorher) | 1 |
+| P4 | immer kurz | 1 |
+| P5 | ein Abstandhalter zwischen Dauer und Zelle (die Spalte an der Außenkante) | 1 |
+| P6 | Tagesvergleich der Wahl in UTC statt in der Anzeigezone | 2 |
+| P7 | nur der letzte Schritt entscheidet | 1 |
+
+**Sichtprüfung im Browser (10.11.2026).** Der Diff in einem eigenen Arbeitsbaum auf `dcd364b`,
+`next dev` auf `:3002`. Daneben läuft auf `:3003` der **Stand vorher**: E‑1184 wie am 09.11. gesehen,
+also `dcd364b` mit der Spalte, aber ohne die Nachbesserung. Beide gehen
+gegen das Backend auf `:8080`, Profil `dev`, die Testkopie, Rolle `ADMIN`, Mandant `NEXANS`, Sprache
+Deutsch, Dichte `m`. Sichtbares Chrome, **angemeldet durch den Auftraggeber**, gesteuert über das
+Chrome-DevTools-Protokoll. Geklickt ist mit `Input.dispatchMouseEvent`, nicht zugewiesen. Die
+Fensterbreite stellt `Emulation.setDeviceMetricsOverride`. Das Fenster war minimiert; ein erster Lauf
+hing am ersten Bild, deshalb wurde es vor dem Lauf auf „normal“ gestellt. Die Nachrichten sind nach
+Gestalt gewählt, ihre `MessageID` steht bewusst nicht hier. Unter 160 Details der ersten Suche endete
+kein Schritt an einem anderen Tag. Die volle Form fand sich erst in Fenstern von 23:30 bis 24:00 Uhr
+Berliner Zeit (335 weitere Details, ein Treffer).
+
+| # | Geprüft | Ergebnis |
+|---|---|---|
+| 1 | **Eigene Route, 1.920 px** (Kasten 1.126 px), **Regelfall** `kurz-de`, zwei Schritte und Eingang mit Zielen | Balken → Dauer **8 px**, Dauer → Zelle **8 px** (`gap-2`). Die Uhrzeit beginnt 8,47 px hinter der letzten Ziffer der Dauer, **vorher 112,47**; die 0,47 px sind der Rest der Zelle über der Form (55 − 54,53). Kanten: Balken 1.216, Dauer 1.304, Zelle 1.312 bis 1.367 (vorher 1.112 / 1.200 / 1.208 bis 1.367). Name **771 px, vorher 667**, also 104 px = 159 − 55 mehr. Die Ziele des Eingangs enden bei 1.304, auf der Kante der Dauer wie vorher bei 1.200 |
+| 2 | **Ende nach Mitternacht**, Beginn 12.12.2025, 23:56 Uhr, der zweite Schritt endet am Folgetag | `voll-de`, Zelle **129 px** (1.238 bis 1.367), Dauer 1.230, Balken 1.142, Name 697 px (vorher 667). Die volle Form beginnt 8,98 px hinter der Dauer, vorher 38,98. **Die kurze Zeile derselben Nachricht steht rechtsbündig, 82,47 px hinter ihrer Dauer** (vorher 112,47): der Spalt der gemischten Leiste, so gewählt |
+| 3 | **Jede Zelle der Spalte einzeln**, fünf Nachrichten, 31 Zellen: Schritt mit Ende, Schritt ohne Ende, Eingang, Ebene der Ziele | Je Nachricht **eine** Breite (55 beziehungsweise 129 px) und **eine** rechte Kante, 1.367. Vor jeder Zelle liegen 8 px. In der Ebene der Ziele steht vor der Zelle der Platzhalter der Dauer (`w-20 shrink-0`, beim Eingang die Ziele selbst), und vor diesem wieder 8 px. Die Zelle der Ebene endet auf der Kante der Kopfzeile. Waagerechter Überlauf von Dokument und `main` in allen fünf **0** |
+| 4 | **Kein Ende**, letzter Schritt einer Fehlernachricht | `kurz-de`: Ein Schritt ohne Ende zählt für die Breite nicht. Die Zelle ist `display: block` und leer, rechte Kante 1.367 |
+| 5 | **Fenster um die Schwelle**, eigene Route | **895 px** (Kasten 621): `none`, Name 329 px wie am 09.11. **896 px** (Kasten 622): `block`, Name **267 px** bei `kurz-de` und **193 px** bei `voll-de`, am 09.11. waren es 163. Der Name ist gekürzt, sein `title` beginnt mit dem vollen Namen. Die Uhrzeit ist in keiner Zeile gekürzt (über `Range` gezählt). Überlauf 0 |
+| 6 | **Klick auf die Zeit** (`kurz-de`) | Der erste Klick öffnet (`aria-expanded` `false` → `true`), der zweite schließt. Aufgeklappt stehen Dauer und Zeit aller Zeilen auf dem Pixel wie zugeklappt |
+| 7 | **Panel neben der Liste**, 1.920 px (Kasten 454 px) und 1.280 px (390 px), je drei Gestalten (Regelfall, Ende nach Mitternacht, kein Ende) | Pixelvergleich gegen den Stand vorher auf `:3003`: in allen **sechs** Vergleichen **0** abweichende Pixel (50.344 bis 75.200 je Bild). Die Spalte ist `display: none`. Gegen `main` war dieser Stand am 09.11. ebenfalls pixelgleich (Zeile 1 der Prüfung von dort); heute ist `main` nicht eigens verglichen. Eichung des Vergleichs: Ein umgefärbtes Dauer-Feld ergibt 306 abweichende Pixel |
+| 8 | **Konsole** | keine Fehler und keine Warnungen im ganzen Lauf |
+
+**Nicht gesehen:**
+- **Die erwartete Zeile:** Unter den 161 Details der ersten Suche war keine wartende Nachricht (`offenerZustand` überall `KEINER`). Sie tragen die gerenderten Tests: zehn Stellen mit einer Klasse, Probe P2.
+- **Englisch und die Dichten `xs`, `s` und `l`:** nur gemessen (M1014, [`spaltenwahl.md`](spaltenwahl.md) §5.6), im Fenster nicht angesehen.
+- **Das helle Thema:** keine Farbe ist geändert.
+
+> **Belegvermerk** *(Regel L10)*. *Gemessen:* die Tabelle oben, im Entwicklungsbau, eine Sitzung,
+> Deutsch, Dichte `m`. *Behauptet wird:* Die Endzeit steht in jeder Nachricht mit dem Abstand des
+> Balkens neben der Dauer, außer in den kurzen Zeilen einer Leiste mit voller Form (Zeile 2). Sie passt
+> ab der Schwelle in beiden Sprachen und allen Dichten. Das Panel neben der Liste bleibt unverändert.
+> Für die Sprachen und Dichten stützt sich das auf M1014, nicht auf diese Sitzung. *Nicht gemessen:*
+> der Produktionsbau, andere Browser als Chrome, die erwartete Zeile im Browser.
 
 ---
 

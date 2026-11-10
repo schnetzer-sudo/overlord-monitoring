@@ -5,11 +5,12 @@ import { Clock, PlayCircle } from "lucide-react";
 import { useAnzeigezone } from "@/components/zeitzone";
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
-import { formatiereDauer, formatiereZeitpunktGenau } from "@/lib/format";
+import { formatiereDauer, formatiereRelativ, formatiereZeitpunktGenau } from "@/lib/format";
 
 import type { Eigenschaft, Nachrichtendetail, Schritt } from "../api";
 import {
   schrittAufklappbar,
+  schrittEndeAnzeige,
   schrittHinweis,
   wartezeile,
   zeitleiste,
@@ -18,14 +19,15 @@ import {
 } from "../detail";
 import type { Artefaktziel } from "../rohdaten";
 import { Ziele } from "./artefakt-ziele";
-import { AufklappZeile } from "./aufklapp-zeile";
+import { AufklappZeile, ENDE_SPALTE } from "./aufklapp-zeile";
 import { EigenschaftenListe } from "./eigenschaft-zeile";
 
 /**
  * Die Zeitleiste — der Kern der Detailansicht.
  *
  * **Senkrecht, ein Schritt je Zeile**, weil das Panel schmal ist. Je Schritt der
- * Name, ein schmaler Balken und die Dauer als Text.
+ * Name, ein schmaler Balken, die Dauer als Text und, wenn die Leiste breit genug
+ * ist, das Ende des Schritts.
  *
  * Warum der Balken auf **diese** Nachricht normiert ist und ab wann eine Lücke
  * eine eigene Zeile bekommt, steht in `../detail.ts` — dort, wo es gerechnet und
@@ -98,6 +100,7 @@ export function Zeitleiste({
             key={zeile.id}
             zeile={zeile}
             messageId={detail.messageId}
+            start={detail.start}
             ziele={ziele}
             eigenschaften={eigenschaften}
           />
@@ -162,11 +165,13 @@ function LeereLeiste({ detail }: { detail: Nachrichtendetail }) {
 function Zeile({
   zeile,
   messageId,
+  start,
   ziele,
   eigenschaften,
 }: {
   zeile: Zeitleistenzeile;
   messageId: string;
+  start: string | null;
   ziele?: Map<number, Artefaktziel[]>;
   eigenschaften?: Eigenschaftenverteilung;
 }) {
@@ -178,6 +183,7 @@ function Zeile({
       schritt={zeile.schritt}
       anteil={zeile.anteil}
       messageId={messageId}
+      start={start}
       // Kein Eimer heißt keine Ziele — und das ist der Regelfall: Solange die
       // Artefaktliste lädt, ist die Abbildung leer, und ein Schritt ohne
       // Artefakte kommt darin gar nicht vor.
@@ -219,21 +225,32 @@ function Zeile({
  *
  * Der Weg vom 18.08.2026 — der Name als Schaltfläche, die in die Gruppe des
  * Eigenschaftenblocks sprang — ist damit entfallen (E‑225).
+ *
+ * ## Seit dem 09.11.2026 steht hinter der Dauer, wann der Schritt fertig war
+ *
+ * Ab der Breite aus `ENDE_SPALTE`, nach der Dauer, weil Lesefolge und
+ * zugänglicher Name dieselbe Reihenfolge haben (E‑1184, §10.19). Ohne Ende bleibt
+ * die Zelle leer und hält trotzdem ihren Platz.
  */
 function SchrittZeile({
   schritt,
   anteil,
   messageId,
+  start,
   ziele,
   eigenschaften,
 }: {
   schritt: Schritt;
   anteil: number | null;
   messageId: string;
+  start: string | null;
   ziele: Artefaktziel[];
   eigenschaften: readonly Eigenschaft[];
 }) {
   const texte = useTexte();
+  const sprache = useSprache();
+  const zone = useAnzeigezone();
+  const ende = schrittEndeAnzeige(schritt, start, sprache, zone);
   const dauer =
     schritt.dauerSekunden === null
       ? texte.nachrichten.detail.ohneDauer
@@ -254,6 +271,27 @@ function SchrittZeile({
 
       <span className="text-muted-foreground text-beiwerk w-20 shrink-0 text-right" data-ziffern>
         {schritt.laeuftAuf && schritt.dauerSekunden === null ? "" : dauer}
+      </span>
+
+      <span className={ENDE_SPALTE}>
+        {ende === null ? null : (
+          <>
+            {/* Das Wort nur für Vorleseprogramme: Wer die Spalte sieht, liest die
+                Uhrzeit hinter der Dauer. Der Name der Schaltfläche beginnt
+                weiterhin mit dem Schritt (WCAG 2.5.3), kein `aria-label`. */}
+            <span className="sr-only">, {texte.nachrichten.detail.schrittEnde} </span>
+            <time
+              dateTime={schritt.ende ?? undefined}
+              title={einsetzen(texte.nachrichten.detail.schrittEndeHinweis, {
+                zeitpunkt: ende.vollwert,
+                abstand: formatiereRelativ(schritt.ende, sprache),
+              })}
+              className="block truncate"
+            >
+              {ende.text}
+            </time>
+          </>
+        )}
       </span>
     </>
   );
@@ -297,6 +335,7 @@ function SchrittZeile({
             <span className="w-20 shrink-0 sm:w-28" />
           )}
           <span className="w-20 shrink-0" />
+          <span aria-hidden="true" className={ENDE_SPALTE} />
         </>
       }
     >
@@ -451,6 +490,8 @@ function ErwarteteZeile({
         {name}
       </span>
       <span className="text-beiwerk shrink-0">{texte.nachrichten.detail.nochNichtBegonnen}</span>
+      {/* Kein Zeitstempel, aber dieselbe Flucht wie die Schritte darüber (E‑1184). */}
+      <span aria-hidden="true" className={ENDE_SPALTE} />
     </li>
   );
 }

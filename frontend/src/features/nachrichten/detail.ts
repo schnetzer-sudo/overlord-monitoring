@@ -1,4 +1,5 @@
-import type { Texte } from "@/i18n";
+import type { Sprache, Texte } from "@/i18n";
+import { formatiereDatum, formatiereUhrzeitGenau, formatiereZeitpunktGenau } from "@/lib/format";
 
 import type { Eigenschaft, Nachrichtendetail, Namensherkunft, Schritt } from "./api";
 
@@ -189,6 +190,94 @@ export function schrittHinweis(
   const vorhandene = teile.filter((teil): teil is string => typeof teil === "string");
 
   return vorhandene.length === 0 ? undefined : vorhandene.join("\n");
+}
+
+/** Das Ende eines Schritts, so wie die Zeile es zeigt. */
+export type SchrittEndeAnzeige = {
+  /** Was in der Spalte steht: die Uhrzeit oder, an einem anderen Tag, die volle Form. */
+  text: string;
+  /** Immer mit Datum, für den `title`. */
+  vollwert: string;
+};
+
+/**
+ * **Wann ein Schritt fertig war** *(09.11.2026, E‑1184,
+ * `docs/nachrichtendetail.md` §10.19)*.
+ *
+ * `null` heißt: kein Ende protokolliert, also steht nichts da. Ein laufender
+ * Schritt und eine Protokolllücke sehen hier gleich aus; eine erfundene Zeit
+ * wäre für beide falsch.
+ *
+ * **Das Datum steht nur davor, wenn der Tag vom fachlichen Start abweicht.**
+ * Verglichen wird in der Anzeigezone: Ein Ende um 00:30 Ortszeit ist ein neuer
+ * Tag, auch wenn UTC noch den alten zeigt. Der Vergleichswert ist `start` aus dem
+ * Kopf und nicht `zeitpunkt` (die letzte Änderung): Das Datum, gegen das der
+ * Nutzer die Zeile liest, ist das der Zeile „Beginn". Ohne Start gibt es keinen
+ * Tag zum Vergleichen, und dann steht die volle Form.
+ *
+ * Gegen die Uhr des Browsers wird hier nichts gerechnet; der relative Abstand im
+ * Tooltip entsteht in der Komponente, wie im Kopf.
+ */
+export function schrittEndeAnzeige(
+  schritt: Pick<Schritt, "ende">,
+  start: string | null,
+  sprache: Sprache,
+  zone: string | undefined,
+): SchrittEndeAnzeige | null {
+  if (!schritt.ende) {
+    return null;
+  }
+  const vollwert = formatiereZeitpunktGenau(schritt.ende, sprache, zone);
+  return {
+    text: amTagDesBeginns(schritt.ende, start, sprache, zone)
+      ? formatiereUhrzeitGenau(schritt.ende, sprache, zone)
+      : vollwert,
+    vollwert,
+  };
+}
+
+/**
+ * Die Datumsregel der Spalte, **an einer Stelle für Zeile und Spaltenbreite**:
+ * Liegt das Ende am Kalendertag des Beginns, in der Anzeigezone? Ohne Beginn nie.
+ */
+function amTagDesBeginns(
+  ende: string,
+  start: string | null,
+  sprache: Sprache,
+  zone: string | undefined,
+): boolean {
+  return (
+    start !== null && formatiereDatum(ende, sprache, zone) === formatiereDatum(start, sprache, zone)
+  );
+}
+
+/** Welche Breite die Spalte „Ende" in einer Nachricht trägt: Form und Sprache. */
+export type EndeSpalte = `${"kurz" | "voll"}-${Sprache}`;
+
+/**
+ * **Wie breit die Spalte „Ende" in dieser Nachricht ist** *(10.11.2026,
+ * Nachbesserung zu E‑1184, `docs/nachrichtendetail.md` §10.19)*.
+ *
+ * So breit wie die breiteste Form, die die Nachricht in dieser Sprache zeigt.
+ * Trägt keine Zeile das Datum, ist es die kurze Form, und die Uhrzeit steht ohne
+ * Spalt neben der Dauer. Trägt eine Zeile das Datum, ist es die volle Form für
+ * die ganze Leiste: Die kurzen Zeilen stehen dann rechtsbündig darunter, damit
+ * die Sekunden untereinander stehen. Ein Schritt ohne Ende zeigt nichts und zählt
+ * nicht mit.
+ *
+ * Die Breiten selbst stehen als Klassen an `ENDE_SPALTE`
+ * (`components/aufklapp-zeile.tsx`), gemessen in M1014.
+ */
+export function endeSpalte(
+  schritte: readonly Pick<Schritt, "ende">[],
+  start: string | null,
+  sprache: Sprache,
+  zone: string | undefined,
+): EndeSpalte {
+  const voll = schritte.some(
+    (schritt) => !!schritt.ende && !amTagDesBeginns(schritt.ende, start, sprache, zone),
+  );
+  return `${voll ? "voll" : "kurz"}-${sprache}`;
 }
 
 /**
