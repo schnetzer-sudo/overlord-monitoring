@@ -69,7 +69,7 @@ Tags und die Definition of Done für ein Release stehen in
 ### Geändert
 
 - **Freies Zeitfenster: Ein Datum ohne Uhrzeit sucht den ganzen Tag** (Entscheidung des
-  Auftraggebers vom 17.11.2026, E‑1198 bis E‑1206; E‑1202 und E‑1204 als Vorschlag,
+  Auftraggebers vom 17.11.2026, E‑1198 bis E‑1206,
   [`docs/nachrichtenliste.md`](docs/nachrichtenliste.md) §8.2, [`docs/bam-suche.md`](docs/bam-suche.md)
   §11.6, [`docs/process-view.md`](docs/process-view.md) §41). Grund: „Frei“ war schwer zu bedienen; ein
   `datetime-local` liefert erst mit Datum **und** Uhrzeit einen Wert, wer nur ein Datum eintrug, bekam
