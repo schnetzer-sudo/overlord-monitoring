@@ -359,6 +359,116 @@ breit**, was die Zusage des Endpunkts verlangt ([`bam-suche.md`](bam-suche.md) �
 > **„Spalte für Spalte gleich breit" gilt damit nicht mehr.** Die Trefferliste behält 155 px Status
 > und 304 px Ablauf, weil sie nach dem Auftrag nicht umgebaut wird. Offen als Punkt **183** (§11).
 
+> ### ⚠️ Korrektur vom 17.11.2026 — ab der Schwelle ist das Projekt fest, Status und Ablauf teilen den Rest (E‑1193, M1018)
+>
+> **Der Kasten darüber bleibt wortgleich stehen.** Überholt ist seine Zeile *„Projekt | … | **frei** ab
+> 1.167 px"* und mit ihr die Aussage, ab der Schwelle trügen Status und Ablauf feste 286 und 408 px.
+> Gemeldet hat es der Auftraggeber am 17.11.2026 aus der Produktion, Liste über die volle Breite,
+> Hülle rund 1.670 px: Projektnamen sind kurz, rechts blieb eine große Lücke, und die Statusspalte
+> kürzte den Schritt („Schritt: Conversion VDA4913 to…").
+>
+> **E‑1193 — die Entscheidung des Auftraggebers vom 17.11.2026:** *E‑149 gilt auch für die
+> Nachrichtenliste. Das Projekt ist nicht mehr die freie Spalte.* Ab der Schwelle tragen Zeitpunkt
+> und Projekt bei jeder Hüllenbreite ihre Mindestbreite. Der Überschuss teilt sich auf Status und
+> Ablauf im Verhältnis ihrer Breiten an der Schwelle, **286 : 408**.
+>
+> | Spalte | seit E‑162 (bis heute) | seit E‑1193 |
+> |---|---|---|
+> | Zeitpunkt | 187 px (11,6875 rem) | unverändert |
+> | Status | 156 px; ab der Schwelle 286 px | 156 px unter der Schwelle; ab ihr **286 px + 286/694 des Überschusses** |
+> | Ablauf | frei unter der Schwelle; ab ihr 408 px | **frei bei jeder Breite**; ab der Schwelle ist der Rest genau 408 px + 408/694 des Überschusses |
+> | Projekt | **frei** ab 1.167 px | **286 px** (17,875 rem) ab 1.167 px |
+> | Schwelle · Grundmenge | 1.167 px · 751 px | unverändert |
+>
+> **Warum nicht `table-layout: fixed`, wie in §5.5:** Es teilt einen Überschuss auf **alle**
+> bemaßten Spalten, im Verhältnis ihrer Breiten. Dann wüchsen Zeitpunkt und Projekt mit, und genau
+> das schließt die Entscheidung aus. Die Statusspalte rechnet ihren Anteil deshalb selbst:
+>
+> ```
+> @min-[72.9375rem]/nachrichtenliste:w-[calc((100cqw-29.5625rem)*286/694)]
+> ```
+>
+> `100cqw` ist die Breite der nächsten Container-Hülle, und das ist die eigene der Tabelle
+> (`components/ui/table.tsx` ist kein Container). 29,5625 rem sind die 473 px von Zeitpunkt und
+> Projekt. Der Ablauf bleibt die freie Spalte und bekommt den Rest, und der ist genau sein Anteil,
+> 408 von 694 Teilen. Weil eine Spalte frei bleibt, gleicht sie aus, was die Statusbreite in
+> Bruchteilen eines Pixels gerundet hat; der Kasten läuft nicht über. **Die Bauform aus E‑147 hält:**
+> dieselbe benannte Hülle, dieselbe Container-Abfrage an derselben einen Schwelle, `display: none`
+> an `th` und `td`, wörtliche Klassen, keine Breite in JavaScript gemessen. Alles steht in `rem` und
+> skaliert mit der Dichte; bei `xs` (14 px) liegt die Schwelle bei 1.021,125 px. Neu in
+> `lib/spaltenwahl.ts` ist `Umbau.anteilig` und die reine Rechnung `spaltenbreiten`, gegen die
+> `tests/spaltenwahl.test.tsx` die gerenderten Klassen jeder Tabelle hält (§9, Nachtrag).
+>
+> **Im Produktionsbau steht die Regel umgeformt da:** `width: calc(41.2104cqw - 12.1828rem)`, im
+> gebauten Stylesheet nachgesehen. Der Minifizierer rundet auf vier Nachkommastellen; gerechnet sind
+> das zwischen 0,0005 und 0,0008 px mehr Status bei Hüllen von 1.021 bis 1.920 px, unter einem
+> Vierundsechzigstel Pixel, mit dem der Browser rechnet, und vom Ablauf als freier Spalte
+> aufgenommen. Gemessen ist M1018 am Entwicklungsbau, der die Regel unverändert ausliefert. **Und eine
+> Falle beim Bau:** Ein Kommentar in `tests/`, der die Klassenform wörtlich zeigte, erzeugte im
+> ausgelieferten Stylesheet eine Regel mit ungültigem Wert. Tailwind liest auch dort. Die Form steht
+> deshalb in keinem Kommentar mehr ausgeschrieben, nur an der Kopfzelle und im Ausdruck des Tests.
+>
+> **Die Breiten je Hülle, Dichte `m`** (Zeitpunkt · Status · Ablauf · Projekt, px):
+>
+> | Hülle | wo | vorher | nachher, gerechnet | nachher, gemessen |
+> |---:|---|---|---|---|
+> | 751 | Grundmenge | 187 · 156 · 408 · – | 187 · 156 · 408 · – | 187 · 156 · 408 · – |
+> | 1.144 | Prozessansicht neben dem Panel, 1920 px | 187 · 156 · 801 · – | 187 · 156 · 801 · – | 187 · 156 · 801 · – |
+> | 1.159 | `/nachrichten` neben dem Panel, 1920 px | 187 · 156 · 816 · – | 187 · 156 · 816 · – | 187 · 156 · 816 · – |
+> | 1.166 | ein Pixel unter der Schwelle | 187 · 156 · 823 · – | 187 · 156 · 823 · – | 187 · 156 · 823 · – |
+> | **1.167** | Schwelle | 187 · 286 · 408 · 286 | 187 · 286 · 408 · 286 | 187 · 286 · 408 · 286 |
+> | 1.208 | Prozessansicht neben dem Baum, 1920 px | 187 · 286 · 408 · **327** | 187 · 302,896 · 432,104 · 286 | 187 · 302,891 · 432,109 · 286 |
+> | 1.655 | `/nachrichten` ohne Panel, 1920 px | 187 · 286 · 408 · **774** | 187 · 487,107 · 694,893 · 286 | 187 · 487,094 · 694,906 · 286 |
+> | 1.670 | die Meldung | 187 · 286 · 408 · **789** | 187 · 493,288 · 703,712 · 286 | 187 · 493,281 · 703,719 · 286 |
+> | 1.920 | obere Probe | 187 · 286 · 408 · **1.039** | 187 · 596,314 · 850,686 · 286 | 187 · 596,313 · 850,688 · 286 |
+>
+> Bei `xs` (14 px Wurzel) gemessen: `/nachrichten` ohne Panel 1.686 px Hülle **163,625 · 524,234 ·
+> 747,891 · 250,25** (vorher 163,625 · 250,25 · 357 · 915,125), neben dem Panel 1.252 px 163,625 ·
+> 345,391 · 492,734 · 250,25, die Prozessansicht neben dem Baum 1.293 px 163,625 · 362,281 · 516,844 ·
+> 250,25, neben dem Panel 1.237 px 163,625 · 339,203 · 483,922 · 250,25. In allen Fällen mit Projekt
+> steht Status zu Ablauf zwischen 0,70094 und 0,70098, gerechnet 286/408 = 0,70098; jede gemessene
+> Breite liegt höchstens 0,013 px neben der gerechneten.
+>
+> **Gemessen sind außerdem:** Querlauf in keinem Fall (`scrollWidth − clientWidth` = 0). Keine gekürzte
+> Zelle ab der Schwelle, auch der Schritt bei „Wartend" nicht (0 von 100 Spannen der Statuszelle bei
+> 1.655 und 1.686 px). Unter der Schwelle kürzt der Schritt wie bisher, 50 von 50 bei 751 und 1.166
+> px. Keine Kopfbeschriftung ragt über ihre Zelle. Das Projekt verschwindet unter der Schwelle über
+> `display: none` an `th` und `td`. Bei `xs` kippt die Tabelle zwischen 1.021 und 1.022 px.
+>
+> **Was es kostet, und es steht hier:**
+>
+> - **Spalten mit endlicher Aussage werden breiter, als sie brauchen.** Bei 1.655 px trägt die
+>   Statusspalte 487 px, und eine Plakette ohne Schritt braucht 156. Der Leerraum steht jetzt in Status
+>   und Ablauf statt hinter dem Projekt — derselbe Tausch wie in §5.5.
+> - **Ein Projektname über 286 px kürzt jetzt bei jeder Breite**, mit vollem `title`. Bisher bekam
+>   das Projekt ab der Schwelle den Rest und stand am breiten Fenster ungekürzt. 286 px ist der
+>   längste Projektname beider Mandanten aus M177; in der Messung oben ist keiner gekürzt (0 von 50 je
+>   Fall), die Produktion kann längere kennen.
+> - **Liste und Trefferliste gehen noch weiter auseinander.** Die Trefferliste ist nicht umgebaut;
+>   Punkt **183** bleibt offen.
+>
+> > **Belegvermerk** *(Regel L10)*. ***Gemessen*** (M1018, 17.11.2026): Chrome 157 mit Debug-Port,
+> > angemeldet durch den Auftraggeber (`ADMIN`), Entwicklungsbau dieses Zweigs (`next dev` auf
+> > `:3002`), Backend im Profil `dev` auf `:8081`, die Testkopie, Mandant `NEXANS`, Dichte `m` und
+> > `xs` über das Cookie `overlord_dichte`. Fenster 1.920 × 1.080 px über
+> > `Emulation.setDeviceMetricsOverride`: `/nachrichten?zeitraum=7d` ohne Panel, mit „Wartend" und mit
+> > geöffnetem Panel, die Prozessansicht (`zeitraum=12M`, der Prozess mit den meisten Nachrichten)
+> > neben dem Baum und neben dem Panel, je 50 Zeilen. Dazu die Hüllen 750, 751, 1.020, 1.021, 1.022,
+> > 1.166, 1.167, 1.208, 1.670 und 1.920 px über die **Inline-Breite der Hülle** gestellt, Filter
+> > „Wartend", danach zurückgesetzt. Gelesen: `getBoundingClientRect` je Kopfzelle, `display` an `th`
+> > und `td`, Querlauf am Tabellenkasten, gekürzte Spannen über die Textbreite (`Range`), Überhang der
+> > Kopfbeschriftung. ***Gerechnet, nicht gemessen:*** die Spalte „nachher, gerechnet" und die Spalte
+> > „vorher" — aus den Klassen auf `main` (`a9d354e`); gemessen ist „vorher" nur in M180 (16.09.2026)
+> > bei 751, 1.144, 1.166, 1.167, 1.208 und 1.655 px, und dort steht dieselbe Zahl. Dass der Schritt
+> > unter der Schwelle der einzige gekürzte Inhalt ist, ist je Spalte gezählt (bei 751 und 1.166 px
+> > 50 Spannen, alle in der Statusspalte, alle „Schritt: …"). ***Nicht gemessen:*** die Dichten `s`
+> > und `l`, die englische Sprache, ein zweiter Mandant, Firefox, ein „vorher" im Browser bei 1.670 und
+> > 1.920 px. ***Nicht gesehen:*** der Schritt aus der Meldung. Die Testkopie kennt nur „Send Message
+> > to Pool"; ob „Schritt: Conversion VDA4913 to …" bei 1.670 px jetzt ungekürzt steht, hängt an seiner
+> > Länge, und die ist hier unbekannt. **Abweichung:** Die Hüllen 1.670 und 1.920 px sind gestellt, nicht
+> > aus einem Fenster entstanden; ohne Panel misst die Hülle bei 1.920 px Fenster 1.655 (`m`) bzw.
+> > 1.686 px (`xs`).
+
 ---
 
 ### 5.5 Der Überschuss — wohin er geht, wenn die freie Spalte ihn nicht braucht *(16.09.2026, E‑149)*
@@ -807,6 +917,56 @@ fehlgeschlagen**; gerenderte Fälle **201 in vierundzwanzig Dateien** — aus de
 (`vitest run --reporter=json`), dieselbe Zahl wie vor dem Umbau: Der Fall zum Kettenhinweis ist
 ersetzt, nicht gestrichen.
 
+#### Nachgetragen am 17.11.2026 — Klasse gegen Rechnung, und neun Mutanten für E‑1193
+
+**`tests/spaltenwahl.test.tsx`, acht Fälle statt sechs.** Neu ist die **Zusage 6**, und sie gilt für
+jede der fünf Tabellen: Ab der Grundmenge trägt jede sichtbare Spalte, was die reine Rechnung
+`spaltenbreiten` aus `lib/spaltenwahl.ts` ergibt, und zusammen füllen die Spalten die Hülle. Der
+Leser der Klassen kennt dafür eine dritte Form, die anteilige Breite
+`@min-[…]/<name>:w-[calc((100cqw-…rem)*…/…)]`. Eine Breitenklasse, die er nicht lesen kann, lässt
+den Test fallen, statt still ohne sie zu rechnen. Der Block zum Umbau prüft für jede Spalte in
+`Umbau.anteilig` außer der freien die Klasse wörtlich: Abzug = Schwelle − Summe der Anteiligen
+(473 px), Anteil = eigene Breite / Summe (286/694). Dazu zwei Fälle zur Nachrichtenliste:
+
+1. **Am breiten Fenster** — bei 1.167, 1.208, 1.670 und 1.920 px aus den gerenderten Klassen
+   gerechnet: alle vier Spalten, Zeitpunkt 187 und Projekt 286, Status und Ablauf auf den
+   ausgeschriebenen Zahlen (etwa 1.670 → 493,288 · 703,712), kein Querlauf, Summe = Hülle.
+2. **Die Gegenprobe unter der Schwelle** — bei 294, 518, 568, 751, 1.015, 1.144 und 1.166 px
+   dieselben Breiten wie auf `main`.
+
+**`tests/spaltenbreiten.test.ts`, neu, zwölf reine Fälle:** die Rechnung bei 751, 759, 1.015, 1.144
+und 1.166 px (wie auf `main`) und bei 1.167, 1.208, 1.670 und 1.920 px (anteilig), ein Lauf von 1.167
+bis 2.400 px in Schritten zu 37 px (Verhältnis 286 : 408, kein Pixel an Zeitpunkt oder Projekt), keine
+Spalte mit 0 px ab der Grundmenge, und die Benutzertabelle bei 1.408 px (163 und 137 px, E‑149).
+
+**Rot gegen `main`, bevor der Code stand:** 18 von 20 Fällen. Am Verhalten fällt der Fall „am breiten
+Fenster" (1.208 px: Status 286 statt 302,896), die übrigen 17 an der noch fehlenden Funktion. **Grün
+blieben die Gegenprobe unter der Schwelle** und der Fall zur Benutzertabelle am breiten Fenster —
+beide sagen über `main` dasselbe wie danach.
+
+| Mutant | Datei | Ergebnis |
+|---|---|---|
+| Anteil des Status **287**/694 statt 286/694 | `nachrichten-tabelle.tsx` | **rot**, 2 Fälle |
+| Abzug **+1 px** (`29.625rem`) | `nachrichten-tabelle.tsx` | **rot**, 2 Fälle |
+| Projekt **ohne Breitenklasse** | `nachrichten-tabelle.tsx` | **rot**, 2 Fälle |
+| Projekt-Breite **+1 px** (`17.9375rem`) | `nachrichten-tabelle.tsx` | **rot**, 2 Fälle |
+| Ablauf wieder mit `@min-[72.9375rem]/nachrichtenliste:w-[25.5rem]` | `nachrichten-tabelle.tsx` | **rot**, 1 Fall |
+| Status wieder fest `@min-[72.9375rem]/nachrichtenliste:w-[17.875rem]` (Stand `main`) | `nachrichten-tabelle.tsx` | **rot**, 2 Fälle |
+| `anteilig` aus der Spaltenwahl entfernt | `nachrichten/spalten.ts` | **rot**, 5 Fälle |
+| `frei: "projekt"` wieder im Umbau (Stand `main`) | `nachrichten/spalten.ts` | **rot**, 2 Fälle |
+| Überschuss **zu gleichen Teilen** statt anteilig | `lib/spaltenwahl.ts` | **rot**, 5 Fälle |
+| **Original**, davor und danach | — | **grün**, 20 von 20 |
+
+**Neun von neun gefallen, null lebendig, null übersprungen.** Gesetzt sind die Mutanten im Speicher
+über ein Vite-Plugin (`enforce: "pre"`) in einer eigenen Testkonfiguration, nicht durch Dateitausch,
+denn `next dev` lief im selben Baum. Die drei Dateien sind danach über SHA-256 byte-gleich. **Der
+Läufer ist geeicht:** Eine Probe mit einer Fundstelle, die es nicht gibt, meldet „Fundstelle 0x" und
+lässt die ganze Datei fallen. Keine der neun hat das gemeldet.
+
+**Der ganze Lauf am 17.11.2026:** `pnpm check` grün, `vitest run` über 55 Dateien, **1.566 Fälle, 0
+fehlgeschlagen**; gerenderte Fälle **310 in achtundzwanzig Dateien**, aus dem Lauf gezählt
+(`vitest run --reporter=json`) und im Kopf von `vitest.config.mts` fortgeschrieben.
+
 **`tests/rollen-auswahl.test.tsx`** — vier Fälle, drei Mutanten, beschrieben in
 [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §18.
 
@@ -857,6 +1017,8 @@ Meldung desselben Tages (E‑149): 1.073 Fälle**, gerenderte **135 in neunzehn*
 | **E‑149** *(16.09.2026, zweite Meldung)* | `E[^0-9]{1,3}(146\|148\|149\|150)` auf denselben fünf Ständen, dazu der **Arbeitsbaum** | **E‑146** gibt auf drei Ständen 7 Treffer in `docs/` (die Eichung), **E‑148, E‑149 und E‑150 null**; im Arbeitsbaum findet dieselbe Suche E‑147 in neun Dateien und E‑149 in keiner. Auch `Punkt 182` ist frei — gebraucht wird er nicht |
 | **E‑231**, **E‑232** *(22.09.2026, beide auf einmal vergeben)* | `git grep -E 'E[^0-9]{1,3}(2[3-9][0-9]\|[3-9][0-9][0-9])'` über den **ganzen** Baum (nicht nur `docs/`, E‑Nummern stehen auch in Code-Kommentaren) auf `main`, allen **41** lokalen Branches und dem Arbeitsbaum; `[^0-9]{1,3}` deckt U+2011, U+2010, `-` und U+2013 byteweise ab | **E‑230** (die Eichung) auf `main`, `fix/nutzertexte-ohne-altsystem` und im Arbeitsbaum; **E‑231 bis E‑249 auf keinem Stand.** Die höheren Treffer sind gelesen und keine Vergaben: 250 und 290 sind EDIFACT-Beispielstrings (`ERFUNDEN+250101`) und ein Lockfile-Hash, 400 bis 955 HTTP-Codes und Tabellenwerte, **E‑780** der bekannte Falschtreffer. E‑231 gehört dieser Korrektur, E‑232 dem Suchfeld in der Kopfzeile ([`bam-suche.md`](bam-suche.md) §11.1, Vermerk) |
 
+| **E‑1193**, **M1018** *(17.11.2026)* | `git grep -o -E "E(‑\|-\|‐\|–)1[0-9]{3}\b"` über Markdown-, TypeScript-, Java-, PowerShell- und Skriptdateien auf **allen** lokalen und entfernten Zweigen, dazu `grep -r` nach `E.{1,3}(119[2-9]\|1[2-9][0-9]{2})` in den Arbeitsbäumen aller zehn Worktrees; für die Messungen `\bM1[0-9]{3}\b` auf allen lokalen Zweigen und `M10(1[7-9]\|[2-9][0-9])` in den Arbeitsbäumen | höchste **E‑1192** (126 Treffer über die Zweige, 21 im Arbeitsbaum — die Eichung), **E‑1193 auf keinem Stand**; keine E‑Nummer über 1999. Unter 1000 sind die höchsten Treffer **E‑249** und **E‑780**, beide gelesen: E‑249 ist die Bereichsangabe „E‑231 bis E‑249" in §11 dieser Datei und ihre Zitate, E‑780 der bekannte Falschtreffer. Höchste Messung **M1017**, M1018 frei. Ein offener Punkt wird nicht vergeben (nächster frei: 1053) |
+
 > ⚠️ **Die erste Suche war kaputt, und nur die Eichung hat es gezeigt.** `E.146` fand auf **allen**
 > Ständen null — der Punkt steht für ein **Byte**, und der Strich in `E‑146` ist U+2011 mit drei
 > Bytes in UTF-8. Ein „nirgends vergeben" aus diesem Lauf hätte für jede Nummer gegolten, auch für
@@ -869,7 +1031,8 @@ Meldung desselben Tages (E‑149): 1.073 Fälle**, gerenderte **135 in neunzehn*
 
 ```
 frontend/src/
-├─ lib/spaltenwahl.ts                              NEU — die Rechnung: Grundmenge, Schwelle, sichtbare Spalten
+├─ lib/spaltenwahl.ts                              NEU — die Rechnung: Grundmenge, Schwelle, sichtbare Spalten;
+│                                                  (17.11., E‑1193) `Umbau.anteilig` und `spaltenbreiten`
 ├─ components/auswahl-feld.tsx                     NEU (16.09.) — die Auswahlliste der Anwendung, gemeinsamer Baustein
 ├─ features/nachrichten/
 │  ├─ treffer-spalten.ts                           NEU — Mindestbreiten, Stufen, Sichtbarkeit der Trefferliste
@@ -884,7 +1047,8 @@ frontend/src/
 │  └─ components/katalog-tabelle.tsx, katalog-zeile.tsx
 ├─ features/nachrichten/components/nachricht-detail.tsx   Punkt 176 — Projekt und Prozess mit `title`
 └─ components/kopfzeile.tsx                        Punkt 177 — der Produktname mit `title`
-frontend/tests/spaltenwahl.test.tsx                NEU — fünf Fälle (seit 16.09. mit der Nachrichtenliste)
+frontend/tests/spaltenwahl.test.tsx                NEU — fünf Fälle (seit 16.09. mit der Nachrichtenliste; seit 17.11. acht)
+frontend/tests/spaltenbreiten.test.ts              NEU (17.11., E‑1193) — die reine Rechnung `spaltenbreiten`
 scripts/sichtprobe-schmal/
 ├─ spaltenbedarf.js                                NEU — der Messkern für Mindestbreiten
 ├─ etiketten.mjs                                   NEU — die Beschriftungsmengen aus den Sprachdateien

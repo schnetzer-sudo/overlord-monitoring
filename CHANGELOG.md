@@ -68,6 +68,17 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Geändert
 
+- **Nachrichtenliste am breiten Fenster: Zeitpunkt und Projekt fest, Status und Ablauf teilen den
+  Rest** (Entscheidung des Auftraggebers vom 17.11.2026, E‑1193,
+  [`docs/spaltenwahl.md`](docs/spaltenwahl.md) §5.4, [`docs/nachrichtenliste.md`](docs/nachrichtenliste.md)
+  §8.1). Grund: Seit E‑162 nahm ab 1.167 px Hülle das Projekt den ganzen Überschuss. Projektnamen
+  sind kurz, rechts blieb eine große Lücke, und die Statusspalte kürzte den Schritt (Meldung aus der
+  Produktion, Hülle rund 1.670 px). Jetzt tragen Zeitpunkt (187 px) und Projekt (286 px) ab der
+  Schwelle ihre Mindestbreite; Status und Ablauf teilen den Überschuss 286 : 408. Bei 1.670 px Hülle
+  sind das 187 · 493 · 704 · 286 statt 187 · 286 · 408 · 789. An der Schwelle und darunter bleiben
+  alle Breiten, wie sie waren; Schwelle, Grundmenge und Mindestbreiten sind unverändert. Die Liste in
+  der Prozessansicht folgt ohne Sonderweg. Im Browser gemessen (M1018). Die Trefferliste der Suche
+  ist nicht umgebaut (Punkt 183 bleibt offen). Keine Änderung am Backend.
 - **Schlüsselteile frei wählbar, Schlüssel von hinten ausgerichtet** (Entscheidungen des
   Auftraggebers vom 26.10.2026, E‑1164 bis E‑1177, [`docs/tasks.md`](docs/tasks.md) §2). Grund: Eine
   Definition mit optionaler Abladestelle war ungültig, weil nur der erste Teil des Schlüssels

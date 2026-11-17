@@ -112,6 +112,16 @@ import { StatusPlakette } from "./status-plakette";
  * bekommt den Rest, die Statusspalte ist die Plakette (9,75 rem, damit
  * „Zusammengeführt" auch bei Dichte `xs` nicht kürzt).
  *
+ * ## Ab der Schwelle teilen Status und Ablauf den Rest (E‑1193, 17.11.2026)
+ *
+ * **Das Projekt ist nicht mehr die freie Spalte.** Projektnamen sind kurz, und am
+ * breiten Fenster stand hinter ihnen eine große Lücke, während die Statusspalte
+ * den Schritt kürzte (Meldung aus der Produktion, Hülle rund 1.670 px). Ab der
+ * Schwelle tragen jetzt Zeitpunkt (11,6875 rem) und Projekt (17,875 rem) ihre
+ * Mindestbreite, und Status und Ablauf teilen den Überschuss 286 : 408 — die
+ * Statusspalte über eine Breite aus der Hülle (`cqw`), der Ablauf als freie
+ * Spalte. An der Schwelle und darunter bleibt alles, wie oben beschrieben.
+ *
  * Der aktive Mandant bleibt bei jeder Breite in der Kopfzeile sichtbar; das
  * entscheidet der Anwendungsrahmen, nicht diese Tabelle.
  */
@@ -162,23 +172,24 @@ export function NachrichtenTabelle({
             {/* Jede feste Spalte trägt ihre gemessene Mindestbreite (M177, M180):
                 Zeitpunkt 187 px, Status 156 px — die Plakette, der Zusatz
                 „Schritt: …" daneben kürzt. Ab der Schwelle des Projekts
-                (1.167 px, E‑162) trägt der Status 286 px — Plakette und Schritt —
-                und der Ablauf 408 px, sein längster Name. */}
+                (1.167 px, E‑162) trägt der Status an der Schwelle 286 px —
+                Plakette und Schritt — und darüber seinen Anteil am Überschuss:
+                286 von 694 Teilen dessen, was die Hülle über Zeitpunkt und
+                Projekt (29,5625 rem = 473 px) hinaus hat (E‑1193). */}
             <TableHead className="h-8 w-[11.6875rem]">
               <SortierUmschalter sortierung={sortierung} aufSortierung={aufSortierung} />
             </TableHead>
-            <TableHead className="h-8 w-[9.75rem] @min-[72.9375rem]/nachrichtenliste:w-[17.875rem]">
+            <TableHead className="h-8 w-[9.75rem] @min-[72.9375rem]/nachrichtenliste:w-[calc((100cqw-29.5625rem)*286/694)]">
               {texte.nachrichten.spalten.status}
             </TableHead>
-            {/* Unter der Schwelle ohne Breitenangabe: Der Ablaufname bekommt, was
-                über Zeitpunkt und Status hinausgeht. Ab ihr eine feste Breite —
-                die Überbreite gehört dann dem Projekt. */}
-            <TableHead className="h-8 @min-[72.9375rem]/nachrichtenliste:w-[25.5rem]">
-              {texte.nachrichten.spalten.ablauf}
-            </TableHead>
-            {/* Ohne Breitenangabe: Ab seiner Schwelle ist das Projekt die freie
-                Spalte am Zeilenende und bekommt dort genau seine 286 px. */}
-            <TableHead className={cn("h-8", NACHRICHTEN_SICHTBAR.projekt)}>
+            {/* Ohne Breitenangabe, bei jeder Breite: Der Ablaufname bekommt, was
+                die übrigen Spalten lassen. Ab der Schwelle ist das genau sein
+                Anteil am Überschuss, 408 von 694 Teilen — an der Schwelle selbst
+                408 px, sein längster Name (E‑1193). */}
+            <TableHead className="h-8">{texte.nachrichten.spalten.ablauf}</TableHead>
+            {/* Ab seiner Schwelle trägt das Projekt seine Mindestbreite, bei
+                jeder Hüllenbreite — es ist nicht mehr die freie Spalte (E‑1193). */}
+            <TableHead className={cn("h-8 w-[17.875rem]", NACHRICHTEN_SICHTBAR.projekt)}>
               {texte.nachrichten.spalten.projekt}
             </TableHead>
           </TableRow>
