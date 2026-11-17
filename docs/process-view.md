@@ -3001,6 +3001,16 @@ für dieses Panel gemessen ([`bam-werte.md`](bam-werte.md) §11a). Das Panel tr�
 für Klasse dieselbe Hülle wie in der Nachrichtenliste** — `xl:w-[26rem] 2xl:w-[30rem]` —, und das
 ist die eigentliche Wirkung von E‑57: Der vierte Einhängepunkt sieht aus wie der erste.
 
+> ### ⚠️ Korrektur vom 17.11.2026 — die Breite ist ziehbar, die Hülle bleibt dieselbe (E‑1208 bis E‑1210)
+>
+> **Der Satz darüber gilt weiter: Klasse für Klasse dieselbe Hülle**, nur heißt sie jetzt
+> `PANEL_NEBEN_LISTE_AB_XL` (`lib/panelbreite.ts`) — 26 und 30 rem als Minimum, darüber die gezogene
+> Breite, der Griff davor in der Fuge ([`nachrichtendetail.md`](nachrichtendetail.md) §10.21).
+> **Ein Unterschied steht nur hier:** Die Übertragungsliste scrollt im Rahmen für sich (§47), ihre
+> Bildlaufleiste liegt in der Liste und nimmt der Tabelle Breite. Das Maximum hält dafür 15 px frei
+> (`panelNebenListe(…, { listeScrolltSelbst: true })`); gemessen behielt die Liste ohne die Reserve am
+> Anschlag 736 statt 751 px, mit ihr 752. Baum, Rahmen und die drei klebenden Spalten sind unverändert.
+
 ---
 
 ## 28. Tests, Regelbezug und was diese Runde nicht getan hat

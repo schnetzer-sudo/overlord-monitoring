@@ -88,8 +88,9 @@ Registers: **1018 bis 1022** für Chatbox und Karte, mit eingeschaltetem Assiste
 Aufträge“ ([`assistent-frontend.md`](assistent-frontend.md) §12.12). Seit 1.1.0 sind sie mit dem
 Mandanten `SYSTEM` zu fahren, dem einzigen freigeschalteten ([`tasks.md`](tasks.md) §3.9).
 Dazu **1055** für den Mittelklick auf eine Zeile an einer echten Maus unter Windows und den Cmd-Klick
-unter macOS ([`nachrichtendetail.md`](nachrichtendetail.md) §10.20), und **1060** für das Tippen auf
-einen Eigenschaftswert an einem echten Touchgerät, Safari und Android
+unter macOS ([`nachrichtendetail.md`](nachrichtendetail.md) §10.20), **1060** für das Tippen auf
+einen Eigenschaftswert an einem echten Touchgerät, Safari und Android, und **1062** für die ziehbare
+Panelbreite an einem echten Fenster um 1.280 px, per Finger und in Firefox und Safari
 ([`nachrichtendetail.md`](nachrichtendetail.md) §10.21).
 
 ---
@@ -122,7 +123,7 @@ einen Eigenschaftswert an einem echten Touchgerät, Safari und Android
 | [`authentifizierung.md`](authentifizierung.md) | Anmeldung, Sperre und Auskunftsdisziplin, Sitzung und Cookie je Profil, Passwortwechsel und Bootstrap des ersten Kontos. |
 | [`nachrichtenliste.md`](nachrichtenliste.md) | `GET /api/nachrichten` und die Liste: Pflicht-Zeitfenster, Cursor, Filter, Freitextsuche, Fensterverengung über den Rollup. Dazu die Oberfläche mit Spalten, Filtern in der URL und Blättern. |
 | [`prozessauswahl.md`](prozessauswahl.md) | `GET /api/prozesse`: die Prozesse des Mandanten als Auswahl für den Prozessfilter. |
-| [`nachrichtendetail.md`](nachrichtendetail.md) | Die Detail-Endpunkte mit Schrittfolge, Eigenschaften und offenem Zustand einer Nachricht. Dazu Panel und eigene Route mit Zeitleiste, Ketten- und BAM-Block, die Vollansicht in Liste, Suche und Prozessansicht, Strg- und Mittelklick auf eine Zeile, der Kopierknopf je Eigenschaftswert und der Rückweg aus Datei, Suche und Prozessansicht. |
+| [`nachrichtendetail.md`](nachrichtendetail.md) | Die Detail-Endpunkte mit Schrittfolge, Eigenschaften und offenem Zustand einer Nachricht. Dazu Panel und eigene Route mit Zeitleiste, Ketten- und BAM-Block, die Vollansicht in Liste, Suche und Prozessansicht, Strg- und Mittelklick auf eine Zeile, der Kopierknopf je Eigenschaftswert, die ziehbare Breite neben der Liste und der Rückweg aus Datei, Suche und Prozessansicht. |
 | [`verkettung.md`](verkettung.md) | Die Ketten-Endpunkte: Aufteilung und Zusammenführung als zwei Beziehungen, nach oben vollständig, nach unten mit Cursor. Dazu der Kettenblock im Detail. |
 | [`bam-werte.md`](bam-werte.md) | Die Belegdaten am Nachrichtendetail: `GET /api/nachrichten/{id}/bam` mit wahrer Zahl je Typ und höchstens 20 Werten je Gruppe. |
 | [`bam-sollaengen.md`](bam-sollaengen.md) | Die kuratierte Tabelle `bam_sollaenge`: auf welche Länge die Belegsuche je Mandant und Typ auffüllt und wann sie mit führendem Leerzeichen sucht. |

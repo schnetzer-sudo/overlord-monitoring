@@ -420,6 +420,35 @@ beide Verwender ist der Nachrüstweg derselbe: eine Spalte an `app_user`, das Co
 Zwischenspeicher — kein Umbau der Oberfläche. Geführt als offene Punkte 94 (Dichte) und in diesem
 Abschnitt für die Sprache.
 
+> ### ⚠️ Ergänzt am 17.11.2026 — die Panelbreite folgt dem Muster, mit einer benannten Abweichung (E‑1209)
+>
+> **Die Tabelle oben bleibt stehen; dazu kommt die Breite des Panels neben der Liste**
+> ([`nachrichtendetail.md`](nachrichtendetail.md) §10.21). Sie ist wie die Anzeigegröße eine
+> persönliche Einstellung und keine Ansicht, die jemand teilt — deshalb Cookie und nicht URL.
+>
+> |  | Sprache | Dichte | **Panelbreite** |
+> |---|---|---|---|
+> | Ordner | `src/i18n/` | `src/dichte/` | `lib/panelbreite.ts`, `lib/panelbreite-server.ts` |
+> | Cookie | `overlord_sprache` | `overlord_dichte` | `overlord_panelbreite`, Wert in rem auf 0,25 rem gerundet (`34.25`) |
+> | Eigenschaften | ein Jahr, `SameSite=Lax`, **nicht** `HttpOnly` | ebenso | ebenso, `path=/` |
+> | Leseweg | `server.ts` → `aktiveSprache()` | `server.ts` → `aktiveDichte()` | `panelbreite-server.ts` → `aktivePanelbreite()` |
+> | Am Dokument | `<html lang>` | `<html data-dichte>` | `<html style="--panelbreite:…rem">` |
+> | Umschalten | Server-Aktion im Formular + `revalidatePath("/", "layout")` | ebenso | **im Client, `document.cookie`** — die Abweichung |
+> | Unbekannter Wert | fällt auf `de` | fällt auf `m` | **keine Variable**, es gilt die Breite bis dahin |
+> | Im Client | `useTexte()` / `useSprache()` | `useDichte()` | — (CSS-Variable, kein Kontext) |
+>
+> **Die benannte Abweichung: geschrieben wird im Client, ohne Server-Aktion und ohne
+> `revalidatePath`.** Die Breite ist im Client schon angewandt, wenn das Cookie geschrieben wird, und
+> der Server braucht sie erst bei der nächsten Anfrage. Eine Server-Aktion wäre bei jedem Ziehen ein
+> RSC-Umlauf samt Verwurf des Router-Zwischenspeichers — Punkt 101 aus
+> [`dichte-umschalter.md`](dichte-umschalter.md) bei jeder Bewegung. Gemessen: Ziehen, Pfeiltaste und
+> Doppelklick lösen **keine** Anfrage aus. Der Nachrüstweg ist derselbe wie bei den beiden anderen
+> (Punkt 1061).
+>
+> **Gemeldet, nicht geändert:** Das Thema (`overlord_thema`, seit Schritt 11b,
+> [`dunkelmodus.md`](dunkelmodus.md) §12 ff.) folgt dem Muster ebenfalls und steht nicht in dieser
+> Tabelle. Die Panelbreite ist damit genau genommen der vierte Verwender.
+
 #### ⚠️ Ohne JavaScript trägt das Formular nur so weit wie das, worin es steht
 
 > **Gemessen war** am 01.09.2026: Die servergerenderte Antwort auf `/nachrichten` enthält, mit
@@ -748,6 +777,15 @@ begrenzten Bereich).
 > weicht ab `xl` die Liste, und das Panel steht in `main` wie auf der eigenen Route — keine klebende
 > Spalte, kein Rahmen, kein eigener Scrollbereich (`lib/klebende-spalte.ts` `VOLLANSICHT_AB_XL`). Es
 > entsteht also keine vierte Stelle, sondern in diesem Zustand keine.
+>
+> *Ergänzt am 17.11.2026 (E‑1208, [`nachrichtendetail.md`](nachrichtendetail.md) §10.21):* **Die Breite
+> der Panelhülle in der ersten und dritten Zeile ist nicht mehr fest.** Statt `xl:w-[26rem]
+> 2xl:w-[30rem]` trägt sie `PANEL_NEBEN_LISTE_AB_XL` aus `lib/panelbreite.ts`: 26 beziehungsweise
+> 30 rem als Minimum, darüber die gezogene Breite, höchstens so breit, dass der Liste ihre Grundmenge
+> bleibt. Der Griff dazu steht als Geschwister **vor** der Hülle in der Fuge `gap-4`, so hoch wie die
+> Zeile — er klebt nicht und scrollt nicht. **Es bleibt bei drei Stellen**, und am Dokument entsteht
+> keine Bildlaufleiste (gemessen an allen drei Einhängepunkten: `scrollHeight` gleich
+> `clientHeight`).
 
 **3. Jeder Scrollbereich ist zugleich Bezugspunkt — `relative`.** Nachgetragen am **06.08.2026**,
 nach einem Fehler, den die ersten beiden Bedingungen nicht abgedeckt haben und auch nicht abdecken

@@ -1054,7 +1054,9 @@ lib/routen.ts                                + die beiden Zielrouten des Umschal
 > **Fortgeschrieben am 17.11.2026 (§10.21).** Dazugekommen sind `components/kopier-knopf.tsx` — der
 > Kopierknopf samt Zustand (`KopierKnopf`, `useKopieren`), herausgelöst aus der `MessageID` in
 > `nachricht-detail.tsx` — und `kopieren.ts` mit der Entscheidung, wann ein Tippen auf einen Wert
-> kopiert (E‑1207).
+> kopiert (E‑1207). **Teil 2 vom selben Tag:** `components/panel-griff.tsx` — der Griff zwischen
+> Liste und Panel (E‑1208) —, dazu außerhalb des Features `lib/panelbreite.ts` (Breite, Grenzen,
+> Cookie) und `lib/panelbreite-server.ts` (der Leseweg im Wurzel-Layout, E‑1209).
 
 ### 10.1 Zwei Einhängepunkte, eine Komponente
 
@@ -1922,6 +1924,18 @@ aber erst beim Klick.
 >   mit offenem Panel. Es weichen Baum und Übertragungsliste.
 >
 > Gesamtbild, Tests und Sichtprüfung in §10.20.
+
+> ### ⚠️ Korrektur vom 17.11.2026 — die Breite neben der Liste ist ziehbar (E‑1208 bis E‑1210)
+>
+> **Der Absatz darunter gilt weiter für den Zustand ohne Cookie:** 26 rem ab `xl`, 30 rem ab `2xl`.
+> Seit E‑1208 sind das die **Mindestbreiten**: Ein Griff in der Fuge zwischen Liste und Panel zieht
+> das Panel breiter, mit Pfeiltasten je 1 rem, ein Doppelklick setzt zurück. Höchstens so breit, dass
+> der Liste ihre Grundmenge bleibt. Die Wahl liegt im Cookie `overlord_panelbreite` je Browser (E‑1209)
+> und gilt an allen drei Einhängepunkten neben einer Liste — `/nachrichten`, `/suche`, `/prozesse` mit
+> offener Nachricht —, nicht unter `xl`, nicht in der Vollansicht, nicht auf der eigenen Route. Die
+> Namensspalte der Eigenschaften wächst dort mit, bis 16 rem (E‑1210). Der Abschnitt
+> „Warum es den Umschalter gibt“ unten beschreibt das Missverhältnis ohne Cookie; der Umschalter und
+> die Vollansicht bleiben unverändert. Vollständig in §10.21.
 
 Ab `xl` (1280 px) steht das Panel **neben** der Liste (26 rem, ab `2xl` 30 rem), darunter **an ihrer
 Stelle**: Am Handy gibt es kein „neben der Liste", dort füllt die Ansicht den Bildschirm, und das
@@ -3404,14 +3418,13 @@ Kein Doppelklick. Kein Backend, kein Fenster in der Antwort der Liste. An der ei
 Prozessansicht. Keine zweispaltige Vollansicht. Baumzustand und Seitenstapel der Prozessansicht nach dem
 Umweg über eine Datei bleiben offen (Punkt 233).
 
-### 10.21 Kopierknopf je Eigenschaftswert und ziehbare Panelbreite *(17.11.2026, E‑1207, Zweig `feat/eigenschaft-kopieren`)*
+### 10.21 Kopierknopf je Eigenschaftswert und ziehbare Panelbreite *(17.11.2026, E‑1207 bis E‑1210, Zweige `feat/eigenschaft-kopieren` und `feat/panelbreite`)*
 
 **Der Anlass, gemeldet von mehreren Nutzern:** Im Detailpanel enden viele Werte der technischen
 Eigenschaften mit „…“. Der Vollwert steht nur im `title`, und herauskopieren lässt er sich nicht.
 Entschieden vom Auftraggeber am 17.11.2026, in zwei Teilen: **Teil 1** ein Kopierknopf je
 Eigenschaftswert (dieser Abschnitt), **Teil 2** eine ziehbare Breite des Panels neben der Liste mit
-mitwachsender Namensspalte. **Teil 2 ist nicht gebaut**; er beginnt nach der Freigabe von Teil 1 und
-wird hier angehängt. **Nur Frontend:** kein Endpunkt, kein Statement, kein Feld, keine Migration —
+mitwachsender Namensspalte (unten, „Teil 2“). **Nur Frontend:** kein Endpunkt, kein Statement, kein Feld, keine Migration —
 keine Abfrage, also keine Messung nach L7 und kein `EXPLAIN` in der Produktion.
 
 #### E‑1207: die Vorgabe des Auftraggebers
@@ -3492,7 +3505,7 @@ Kontext und dieselbe Ansage.
 | **Geräteemulation über das Protokoll** | „In der Geräteemulation der Entwicklerwerkzeuge“ ist über das Chrome-DevTools-Protokoll gefahren — `Emulation.setTouchEmulationEnabled` und `setDeviceMetricsOverride` mit `mobile: true`, derselbe Mechanismus wie der Gerätemodus der Oberfläche. Thema und Anzeigegröße sind per Cookie gesetzt, nicht über das Menü geklickt; geklickt, getippt und getastet ist die Prüfung selbst |
 | **Die Sichtbarkeitsregel ist gegen Tailwind geprüft** | Der Auftrag verlangt die Prüfung über die Klassen. Der Test liest die Klassen am gerenderten Knopf **und** übersetzt sie mit dem `globals.css` des Projekts: Die Regel des Überfahrens muss in `@media (hover: hover)` stehen, die des Fokus in keinem `@media`. Eine eigene `@custom-variant hover` fiele damit auf (Verletzungsprobe P11) |
 | **Ein bestehender Fall ist angepasst** | `tests/eigenschaften-block.test.tsx` zählte alle Knöpfe der Zeitleiste (`ol button`) als Zeilenschalter. Seit E‑1207 steht im Inhalt der Schrittzeile der Kopierknopf; der Fall zählt jetzt `ol button[aria-controls]` |
-| **Befund für Teil 2, nicht geändert** | Die Namensspalte der Eigenschaftszeile ist `w-2/5` der Zeile und hängt **nicht** am Token `--dichte-beschriftung` des BAM-Blocks. Auf der eigenen Route ist sie damit heute rund 40 % von 72 rem, nicht 16 rem. Teil 2 („auf der eigenen Route 16 rem wie bisher“) setzt Letzteres voraus — zu klären vor Teil 2 |
+| **Befund für Teil 2, nicht geändert** | Die Namensspalte der Eigenschaftszeile ist `w-2/5` der Zeile und hängt **nicht** am Token `--dichte-beschriftung` des BAM-Blocks. Auf der eigenen Route ist sie damit heute rund 40 % von 72 rem, nicht 16 rem. Teil 2 („auf der eigenen Route 16 rem wie bisher“) setzt Letzteres voraus — zu klären vor Teil 2. *Entschieden am 17.11.2026: Variante 1, der Deckel von 16 rem gilt nur neben der Liste (E‑1210, Teil 2)* |
 
 #### Tests
 
@@ -3591,6 +3604,236 @@ Kettenblock oder Liste. Kein Kopieren per Mausklick auf den Wert. Kein dauerhaft
 Touchgerät und kein Hinweistext dazu (Punkt 1058). Kein Toast, keine Animation, kein Übergang. Nichts an
 Kürzung, `title` und Kappungskennzeichen. Kein neuer Generatorbaustein (Skill `shadcn`: der vorhandene
 `Button`); keine neue Abhängigkeit.
+
+#### Teil 2: ziehbare Panelbreite und mitwachsende Namensspalte *(17.11.2026, E‑1208 bis E‑1210, Zweig `feat/panelbreite`, vom Stand von Teil 1)*
+
+**Freigegeben vom Auftraggeber am 17.11.2026** mit der Antwort auf die Frage zur Namensspalte
+(Variante 1, unten). Weiterhin nur Frontend: kein Endpunkt, keine Abfrage, keine Messung nach L7.
+
+| Nummer | Entscheidung des Auftraggebers | Umgesetzt in |
+|---|---|---|
+| **E‑1208** | **Die Verwerfung der ziehbaren Trennlinie vom 11.08.2026 ist aufgehoben** ([`IMPLEMENTIERUNGSPLAN_MVP.md`](IMPLEMENTIERUNGSPLAN_MVP.md), Nachbesserung 1, Korrekturblock). Ihre zwei Gründe: Die Spalten der Liste hingen an der Fensterbreite — durch E‑147/E‑148 erledigt, die Liste wählt ihre Spalten nach ihrem Container. Der Zustand kann nicht in die URL — gilt weiter, aber die Breite ist wie die Anzeigegröße eine persönliche Einstellung und keine Ansicht, die jemand teilt | `lib/panelbreite.ts` (`PANEL_NEBEN_LISTE_AB_XL`, `panelNebenListe`), `components/panel-griff.tsx`, die drei Ansichten |
+| **E‑1209** | **Die Breite liegt im Cookie `overlord_panelbreite`, je Browser** — ein weiterer Verwender des Cookie-Musters ([`frontend-grundlagen.md`](frontend-grundlagen.md) §4, Ergänzung), geschrieben im Client | `lib/panelbreite.ts` (`liesPanelbreite`, `panelbreiteCookie`, `panelbreiteStil`), `lib/panelbreite-server.ts`, `app/layout.tsx` |
+| **E‑1210** | **Die Namensspalte der Eigenschaften wächst mit dem Panel**, von ihrer heutigen Breite im Panel bis 16 rem. **Variante 1** (Antwort vom 17.11.2026 auf den Befund aus Teil 1): Der Deckel von 16 rem gilt nur neben der Liste; eigene Route und Vollansicht behalten ihre 40 % | `eigenschaft-zeile.tsx` (`max-w-(--eigenschaft-name-max)`), `PANEL_NEBEN_LISTE_AB_XL` (`xl:[--eigenschaft-name-max:16rem]`) |
+
+**Vergabe der Nummern**, vor dem Bau erneut gesucht wie in Teil 1: über alle Zweige und Arbeitsbäume
+außer der eigenen neuen Datei keine Fundstelle über **E‑1207**; im Register keine Zeile über **1060**.
+Folge: **E‑1208 bis E‑1210** für E‑B bis E‑D, die Punkte **1061** und **1062**.
+
+##### Was gebaut ist
+
+**Die Breite — eine Stelle, `lib/panelbreite.ts`, neben `lib/klebende-spalte.ts`.** An der Hülle
+neben der Liste steht statt `xl:w-[26rem] 2xl:w-[30rem]` die Klasse `PANEL_NEBEN_LISTE_AB_XL`, alles
+mit `xl:` oder `2xl:`:
+
+| | Regel | Wirkung |
+|---|---|---|
+| Minimum | `--panel-min` 26 rem ab `xl`, 30 rem ab `2xl`; `min-width` | ohne Cookie wie bisher |
+| Wert | `width: var(--panelbreite, var(--panel-min))` | die gezogene Breite |
+| Maximum | `max-width: calc(100% - var(--panel-abzug))` | lässt der Liste ihre Grundmenge |
+| Maximum unter Minimum | `min-width` schlägt `max-width` | um 1.280 px gilt das Minimum, wie heute |
+| Namensspalte | `--eigenschaft-name-max: 16rem` | Deckel der Namensspalte nur hier (E‑1210) |
+
+**`--panel-abzug` steht im `style` der Hülle**, gerechnet in `panelNebenListe(liste)`: der Abstand
+`gap-4`, der Rahmen der Tabellenhülle (2 px) und **die Grundmenge aus der Spaltendefinition**
+(`grundmengeInPixeln`, nicht abgeschrieben), in rem wie die Schwellen der Liste. Eine Klasse mit der
+Zahl darin gäbe es nicht: Tailwind findet nur, was wörtlich im Quelltext steht.
+
+| Einhängepunkt | Liste | Grundmenge | `--panel-abzug` |
+|---|---|---:|---|
+| `/nachrichten` | `NACHRICHTENLISTE` (`spalten.ts`) | 751 px = 46,9375 rem | `calc(1rem + 2px + 46.9375rem)` |
+| `/suche` | `TREFFERLISTE` mit Spalte „Treffer“, sonst `TREFFERLISTE_OHNE_TREFFER` (`treffer-spalten.ts`); vor der ersten Antwort die mit | 622 bzw. 342 px | `calc(1rem + 2px + 38.875rem)` bzw. `… + 21.375rem)` |
+| `/prozesse` | `NACHRICHTENLISTE` und Reserve für die eigene Bildlaufleiste der Liste | 751 px | `calc(1rem + 2px + 15px + 46.9375rem)` |
+
+**Der Griff** (`components/panel-griff.tsx`) ist ein eigener Baustein: `resizable` ist ausgeschlossen
+(Gruppe mit Prozentbreiten, verträgt sich nicht mit der klebenden Spalte und dem `display: none` der
+Liste), und `separator` aus dem Generator ist eine statische Linie (Skill `shadcn`: ihn zu verbreitern
+und umzufärben hieße, den Generatorbaustein zu überstimmen).
+
+- **Ort:** als Geschwister **vor** der Hülle in derselben Zeile; `-mx-4 w-4` legt ihn genau in die Fuge
+  `gap-4`, ohne den Abstand zu ändern. `self-stretch`: so hoch wie die Zeile, also über die ganze
+  sichtbare Höhe der klebenden Spalte und außerhalb ihres Scrollinhalts. **Er klebt nicht und scrollt
+  nicht** — keine vierte klebende Spalte. `hidden xl:block`, und in der Vollansicht gibt es ihn nicht.
+- **Zeichnung** (Skill `frontend-design`): eine Haarlinie `--border`, 1 px, mittig in der Fuge — mittig
+  und nicht auf der Kante des Panels, weil das Panel eine eigene Karte mit Rahmen ist. Beim Überfahren
+  (nur unter `(hover: hover)`) und während des Ziehens 2 px in `--muted-foreground`, beim Fokus 2 px in
+  `--ring` und ein Fokusring um die Fuge. Kein Übergang. Zeiger `col-resize`.
+- **Zugänglichkeit:** `role="separator"`, `aria-orientation="vertical"`, `aria-label` „Breite der
+  Detailansicht“, `title` mit dem Hinweis auf Ziehen, Pfeiltasten und Doppelklick, `tabIndex=0`.
+  `aria-valuenow`, `-min` und `-max` in rem schreibt der Griff selbst ans Element — nach jedem Rendern
+  (passiver Effekt, weil die Referenz der Hülle erst danach steht), beim Fokus und nach jeder Änderung.
+- **Grenzen abgelesen, nicht nachgerechnet:** Der Griff setzt an der Hülle kurz die Wunschbreite 0 und
+  100.000 px und liest, was das CSS daraus macht — das sind Minimum und Maximum. Synchron gesetzt und
+  zurückgenommen, ohne Zeichnen dazwischen. Gemessen werden weder Fenster noch `main`.
+  `getComputedStyle(…).maxWidth` ging nicht: Es liefert für `calc(100% - …)` den Ausdruck (unten,
+  Sichtprüfung).
+- **Tastatur:** Pfeil links verbreitert um 1 rem, Pfeil rechts verschmälert um 1 rem, begrenzt auf
+  Minimum und Maximum; mit Alt, Strg, Cmd oder Umschalt gehört die Taste dem Browser. Je Taste ein
+  Cookie.
+- **Doppelklick** setzt zurück: Variable weg, Cookie gelöscht.
+- **Ziehen** über Pointer Events mit `setPointerCapture`. Je Bewegung setzt der Griff **nur** die
+  Variable an der Hülle, gerundet auf 0,25 rem — kein React-Zustand, der Griff hat gar keinen. Beim
+  Loslassen geht der Wert ans `<html>` und **einmal** ins Cookie, die Variable an der Hülle fällt weg.
+  Ein Klick ohne Bewegung schreibt nichts. Textauswahl unterdrückt: `preventDefault` am Druck und
+  `user-select: none` am `<html>`, solange gezogen wird.
+
+**Das Cookie.** `overlord_panelbreite`, Wert in rem ohne Einheit, auf 0,25 rem gerundet (`34.25`);
+ein Jahr, `SameSite=Lax`, nicht `HttpOnly`, `path=/`. Gültig zwischen 26 und 320 rem — unten das
+kleinste Minimum, oben eine Plausibilitätsgrenze über jedem Panel auf einem 5K-Bildschirm; was für das
+Fenster zu breit ist, begrenzt das CSS. **Leseweg wie bei der Dichte:** `aktivePanelbreite()` im
+Wurzel-Layout, als `style="--panelbreite:…rem"` am `<html>`, vor dem ersten Paint; ein ungültiger oder
+fehlender Wert setzt keine Variable. **Geschrieben wird im Client** (`document.cookie`), ohne
+Server-Aktion und ohne `revalidatePath` — die benannte Abweichung vom Muster: Die Breite ist schon
+angewandt, und ein RSC-Umlauf je Ziehen wäre Punkt 101 bei jeder Bewegung.
+
+**Die Namensspalte** ist seit Schritt 5 `w-2/5` der Zeile und hängt **nicht** am Token
+`--dichte-beschriftung` des BAM-Blocks (Befund aus Teil 1). Sie wächst damit von selbst mit dem Panel;
+neu ist allein der Deckel `max-w-(--eigenschaft-name-max)`, und die Variable setzt nur die Hülle neben
+der Liste. Ohne sie ist `max-width` `none`. **[`bam-werte.md`](bam-werte.md) §11a ist deshalb
+unverändert**, und der BAM-Block wächst nicht mit.
+
+**cq-Einheiten im Panel**, geprüft per Suche über die Quellen: außer `max-h-[100cqh]` an der Hülle
+selbst keine; als Container nur `@container/zeitleiste`. Ein Inline-Größencontainer ist nicht
+dazugekommen (Abweichung, unten), also verliert keine Einheit ihren Bezug auf `main`.
+
+**Unverändert:** die drei klebenden Spalten, E‑114, der Fokus-Rückweg (E‑241), `Escape`, der
+Umschalter und die Vollansicht, die eigene Route mit 72 rem. `nachricht`, `voll` und die Breite stehen
+in keiner Anfrage; die Breite steht nicht in URL, `localStorage` oder `sessionStorage`.
+
+##### Abweichungen vom Auftrag, benannt
+
+| | |
+|---|---|
+| **Die Grundmenge ist 751 px, nicht 646** | Seit E‑1193 (17.11.2026, Nachrichtenliste am breiten Fenster) führt `spalten.ts` Status 156 und Ablauf 408 px: 187 + 156 + 408 = **751 px**. Das Projekt kommt erst ab `72.9375rem` (1.167 px bei 16 px), nicht ab 932 px. Weil die Grundmenge aus `spalten.ts` kommt, gilt der heutige Stand von selbst. Bei 1.920 px in `m` fehlt das Projekt schon bei der Mindestbreite (Liste 1.159 px); dass es am Anschlag wegfällt, zeigt die Prüfung in `xs` |
+| **Gerechnet gegen die Zeile (`100%`), nicht gegen `100cqw` von `main`** | Gemessen bei 1.920 px: `100cqw` ist in Chrome 1.672 px, der Inhalt von `main` ohne seine Bildlaufleiste 1.657 px — `cqw` zählt die Leiste mit. Am Anschlag behielt die Liste so 736 statt 751 px. `100%` ist die Zeile, die Liste und Panel teilen, an allen drei Einhängepunkten die Inhaltsbreite ohne Leiste; damit 751 px. Weiterhin in CSS gerechnet |
+| **15 px Reserve in der Prozessansicht** | Dort scrollt die Übertragungsliste für sich, ihre Leiste liegt in der Liste (gemessen 15 px, Windows). CSS kennt ihre Breite nicht. 15 px ist die breiteste vorkommende; ist sie schmaler oder legt sie sich über den Inhalt, bekommt die Liste etwas mehr als ihre Grundmenge, nie weniger. Ohne Reserve: 736 px |
+| **Kein Inline-Größencontainer am Panel** | Die Namensspalte ist `w-2/5` und wächst ohnehin mit dem Panel; ein Container wäre ein zweiter Mechanismus für dasselbe. Der Deckel hängt an einer Variable der Hülle |
+| **Die Namensspalte hängt nicht am Token des BAM-Blocks** | Befund aus Teil 1; entschieden als Variante 1. `bam-werte.md` §11a bleibt unverändert |
+| **Das Maximum wird auf 0,25 rem abgerundet** | Am Anschlag bekommt die Liste deshalb bis zu 4 px mehr als ihre Grundmenge: gemessen 623 statt 622 (Suche) und 752 statt 751 px (Prozessansicht) — nie weniger |
+| **Die Grenzen des Cookies (26 bis 320 rem)** | Der Auftrag nennt „außerhalb der Grenzen“ ohne Zahlen; unten das kleinste Minimum, oben eine Plausibilitätsgrenze |
+| **Der Wert steht ohne Einheit im Cookie** | `34.25` statt `34.25rem`; die Einheit setzt `panelbreiteStil` |
+| **Die Trefferliste vor der ersten Antwort** | Ohne Antwort ist offen, ob die Spalte „Treffer“ kommt; genommen ist die größere Grundmenge (622 px) |
+| **Cookie-Muster: eigentlich der vierte Verwender** | Das Thema (`overlord_thema`) folgt dem Muster und fehlt in der Tabelle von [`frontend-grundlagen.md`](frontend-grundlagen.md) §4. Die Panelbreite ist als weitere Spalte eingetragen, das Thema nicht nachgetragen — gemeldet |
+| **Auch [`process-view.md`](process-view.md) hat einen Korrekturblock** | Die Datei beschreibt die Hülle der Prozessansicht mit `xl:w-[26rem] 2xl:w-[30rem]`; der Auftrag nannte sie nicht |
+| **Die Skills sind erst in Teil 2 geladen** | `frontend-design` und `shadcn` standen im Auftrag für beide Teile. In Teil 1 sind sie nicht geladen worden; dort entstand kein neuer Generatorbaustein (der Knopf ist der vorhandene `Button`) |
+
+##### Tests
+
+**Vor Teil 2 1.708 Fälle in 59 Dateien, nach Teil 2 1.764 in 62; `pnpm check` grün.** Die gerenderten zählt
+`vitest.config.mts`: **399 in 32 Dateien**, vorher 386 in 31.
+
+| Datei | Fälle | Was |
+|---|---:|---|
+| `tests/panelbreite.test.ts` *(neu, rein)* | 30 | `liesPanelbreite`: gültig, gerundet, außerhalb der Grenzen, ungültig (zehn Formen), fehlend; `rundePanelbreite`; die Cookie-Zeile mit den Eigenschaften von `overlord_dichte` und ohne `HttpOnly`, das Löschen; die Variable am `<html>` und ohne Breite keine; das Maximum aus `grundmengeInPixeln` und nicht als zweite Zahl, Trefferliste mit und ohne „Treffer“, die Reserve der Prozessansicht; alle Klassen der Hülle erst ab `xl` |
+| `tests/panel-griff.test.tsx` *(neu, gerendert)* | 6 | Rolle, Ausrichtung, Name, `title`, `tabIndex`, ARIA-Werte in rem, `hidden xl:block`, kein Übergang; Pfeiltasten ±1 rem mit Cookie je Taste, Minimum, Modifier gehört dem Browser; das Maximum; Doppelklick setzt zurück und löscht; Ziehen setzt nur die Variable an der Hülle, **kein Commit von React unterwegs** (gezählt mit `<Profiler>`), Cookie genau einmal am Ende, Textauswahl unterdrückt, ein spätes `lostpointercapture` schreibt nicht noch einmal; Ziehen bis zum Maximum, ohne Bewegung kein Cookie |
+| `tests/wurzel-layout.test.ts` *(neu, rein)* | 8 | das Wurzel-Layout mit gestelltem Cookie: Variable bei gültigem Wert, gerundet, keine bei fünf ungültigen und ohne Cookie — der erste Test des Wurzel-Layouts |
+| `tests/detail-vollansicht.test.tsx` | +6 | je Ansicht: neben der Liste der Griff vor der Hülle, ihre Klassen und das `--panel-abzug` der richtigen Liste; in der Vollansicht weder Griff noch Breite |
+| `tests/eigenschaft-kopieren.test.tsx` | +1 | die Namensspalte: `w-2/5` und der Deckel allein aus der Variable, gegen Tailwind übersetzt |
+
+Dazu je ein Fall in `farbwerte` für die drei neuen Quelldateien und in `serverbausteine` für die beiden
+ohne `"use client"`. **Die bestehenden Tests von Umschalter, Rücksprung, Nachrichtenfilter und
+Neu laden sind unverändert grün.**
+
+**Was die Tests nicht gefunden hätten:** Die erste Fassung des Griffs las das Maximum aus
+`getComputedStyle(…).maxWidth`, und die gestellte Hülle im Test lieferte dort einen Pixelwert. Im
+Browser steht da `calc(100% - 769px)` — das Ziehen bewegte nichts. Gefunden hat es die Sichtprüfung;
+der Test stellt seither die Breite so, wie das CSS sie gibt (Wunschbreite in, Breite heraus).
+
+**Verletzungsproben** — wie in Teil 1: je eine Stelle geändert, die fünf betroffenen Testdateien gelaufen
+(101 Fälle), die Datei aus einer Kopie zurückgeschrieben. **Geeicht in beide Richtungen:** ohne Eingriff
+und mit einem folgenlosen Kommentar 0 rot. Danach glichen die Quellen der Sicherung, die vor dem Lauf
+gezogen war.
+
+| Probe | Eingriff | rot |
+|---|---|---:|
+| P0 | keiner (Eichung) | 0 |
+| PK | ein Kommentar in `panelbreite.ts` (Eichung: folgenlos) | 0 |
+| P1 | ohne Untergrenze beim Lesen des Cookies | 3 |
+| P2 | ohne Rundung beim Lesen | 1 |
+| P3 | Cookie ohne `Max-Age` (Sitzungscookie) | 4 |
+| P4 | Grundmenge abgeschrieben (646 px) statt aus `spalten.ts` | 2 |
+| P5 | die Breite schon unter `xl` | 2 |
+| P6 | Pfeile vertauscht | 3 |
+| P7 | Cookie je Bewegung statt am Ende | 2 |
+| P8 | Druck ohne `preventDefault` | 1 |
+| P9 | Doppelklick löscht das Cookie nicht | 1 |
+| P10 | ohne `aria-valuemax` | 2 |
+| P11 | das Layout setzt immer eine Variable | 6 |
+| P12 | das Layout setzt keine Variable | 2 |
+| P13 | React-Zustand je Bewegung | 1 |
+| P14 | Textauswahl unterwegs nicht unterdrückt | 1 |
+| P15 | der Griff auch in der Vollansicht (Liste) | 1 |
+| P16 | Prozessansicht ohne Reserve der Bildlaufleiste | 1 |
+| P17 | Namensspalte ohne Deckel | 1 |
+| P18 | Hülle ohne Deckel der Namensspalte | 1 |
+| P19 | Suche immer mit der Grundmenge „mit Treffer“ | 1 |
+| P20 | Pfeiltaste ohne Grenze | 2 |
+| P21 | Suche ohne Griff | 1 |
+
+> **Ein erster Lauf ist verworfen.** Er lief über einen Sitzungswechsel, brach mitten in P1 ab und
+> startete neu; die Mutation von P1 blieb in `lib/panelbreite.ts` stehen, und die Sicherung des
+> Neustarts enthielt sie mit. Aufgefallen ist es an der Eichung (P0 drei rot) und an „Eingriff nicht
+> gefunden“ bei P1. Die Untergrenze ist wiederhergestellt, die fünf Dateien liefen grün, dann ist neu
+> gesichert und neu gefahren — die Tabelle oben. Die Sichtprüfung lief vor dem ersten Probenlauf und
+> ist davon nicht berührt.
+
+
+##### Sichtprüfung im Browser (17.11.2026)
+
+Derselbe Aufbau wie in Teil 1: `next dev` des Zweigs auf `:3000`, Backend auf `:8080` (Profil `dev`),
+das Debug-Chrome mit Port 9222, angemeldet vom Auftraggeber (`admin`, `NEXANS`). Eigener Tab über das
+Protokoll, Fläche **1.920 × 1.000**, danach geschlossen. **Echte Eingaben:** Ziehen über
+`Input.dispatchMouseEvent` (Drücken, Bewegen in 40‑px-Schritten, Loslassen), Pfeiltasten über
+`Input.dispatchKeyEvent`, der Fokus auf den Griff per Klick auf die Überschrift des Panels und
+**Umschalt+Tab**, der Doppelklick als zweiter Klick mit `clickCount: 2`. Thema, Anzeigegröße und
+Ausgangsbreite sind per Cookie gesetzt. *Am Rande:* Der Auftraggeber hatte im selben Chrome den
+Griff schon selbst benutzt (Cookie `overlord_panelbreite=30`, später `36.25`); das Skript hat seine
+Cookies vorher gemerkt und danach zurückgeschrieben.
+
+| | `/nachrichten` | `/suche` (`9014:53781210`) | `/prozesse` (`40090_BMW_LAB_VDA`) |
+|---|---|---|---|
+| ohne Cookie | Hülle 480 px = 30 rem, ARIA `30 / 30 / 55.5` | 480 px, `30 / 30 / 63.5` | 480 px, `30 / 30 / 54.5` |
+| Haarlinie | 1 px `--border`, überfahren 2 px `--muted-foreground` | ebenso | ebenso |
+| **gezogen bis zum Anschlag** | Hülle 888 px = 55,5 rem, **Liste 751 px**, Spalten 187/156/408 | Hülle 1.016 px, **Liste 623 px**, Spalten 187/155/280 | Hülle 872 px, **Liste 752 px**, Spalten 187/156/409 |
+| Cookie beim Ziehen | **einmal**, `55.5`, am Ende | einmal, `63.5` | einmal, `54.5` |
+| Anfragen bei Ziehen, Tasten, Doppelklick | keine | keine | keine |
+| Textauswahl nach dem Ziehen | leer | leer | leer |
+| **Neuladen** | `<html … style="--panelbreite:55.5rem">` an Byte 15 des Dokuments; die Hülle hatte seit dem Laden nur eine Breite (888 px) | ebenso, 1.016 px | ebenso, 872 px |
+| Umschalt+Tab aus der Überschrift | Fokus am Griff, Fokusring | ebenso | ebenso |
+| ← ← → (von 34 rem) | 36 rem, Cookie `36`; dann 35 rem, Cookie `35` | ebenso | ebenso |
+| Doppelklick | 30 rem, Cookie gelöscht, Variable weg | ebenso | ebenso |
+| `xs`, hell, 40 rem | Wurzel 14 px, Hülle 560 px; am Anschlag Liste 660,5 px = 47,18 rem, **Projekt fällt weg** (vorher 250 px) | Liste am Anschlag 545 px = 38,93 rem | Projekt fällt weg, Liste 659,5 px |
+| `l`, dunkel, 40 rem | Wurzel 18 px, Hülle 720 px; am Anschlag 845,5 px = 46,97 rem; Linie in `--border` des Dunkelmodus | 701,5 px = 38,97 rem | 848,5 px = 47,14 rem |
+| **Öffnen am Listenende** (E‑114), 45 rem | `main` auf 1.030 px, letzte Zeile geklickt: Panel 16 px unter der Oberkante von `main` | `main` 1.100 px, 16 px | Liste im Rahmen gescrollt, Panel 88 px unter der Oberkante von `main` |
+| `scrollHeight` = `clientHeight` | 1.000 = 1.000, in jedem Schritt | ebenso | ebenso |
+
+**Die Namensspalte** (Block *Technische Eigenschaften*, `/nachrichten`): bei 30 rem Panel 10,97 rem
+(40 % der Zeile), bei 40 rem 14,97 rem, bei 55,5 rem **16 rem** (30,2 %). In der Vollansicht und auf
+der eigenen Route **28,15 rem** (40 %, `max-width: none`) — Variante 1.
+
+**Um 1.280 px**, über `Emulation.setDeviceMetricsOverride` und nicht an einem echten Fenster, mit
+Cookie `55.5`: bei 1.280 px Hülle **416 px** (das Minimum; das Maximum läge bei 263 px); bei 1.279
+und 1.200 px kein Griff (`display: none`) und die Hülle in voller Breite wie bisher.
+
+> **Belegvermerk** (Regel L10).
+> *Gesehen:* alle Zahlen der Tabelle und der beiden Absätze darunter, gelesen aus dem Dokument
+> (`getBoundingClientRect`, `getComputedStyle`, Attribute, `document.cookie` über einen Zähler im Tab,
+> `Network.getCookies`, `Network.requestWillBeSent`, der Quelltext des Dokuments per `fetch`), dazu die
+> Bilder von Ruhe, Überfahren, Fokus, Anschlag, `xs` und Dunkelmodus.
+> *Behauptet:* dass ein echtes Fenster um 1.280 px dasselbe zeigt wie die Emulation, und dass Ziehen per
+> Finger trägt (`touch-none` am Griff).
+> **Die Lücke:** beides nicht gesehen (Punkt 1062), ebenso Firefox und Safari. Die Reserve der
+> Prozessansicht ist an der Leiste von Chrome unter Windows gemessen.
+
+##### Was nicht gebaut ist
+
+Kein shadcn `resizable`, keine neue Abhängigkeit, kein neuer Generatorbaustein. Keine Breitenwahl unter
+`xl`, in der Vollansicht und auf der eigenen Route. Nichts am Backend: keine Migration, keine Spalte an
+`app_user` (Punkt 1061), kein Endpunkt. Die Breite nicht in URL, `localStorage` oder
+`sessionStorage`. Keine Animation, kein Übergang. Keine zweispaltige Anordnung im breiten Panel; die
+Zeitleiste bleibt senkrecht — dass sie ab 38,875 rem die Spalte „Ende“ zeigt, ist E‑1184 und kam von
+selbst. Keine Änderung an Sprach- oder Dichte-Umschalter, am BAM-Block und an Kürzung, `title` und
+Kappungskennzeichen.
 
 ---
 
@@ -3887,3 +4130,13 @@ aufgelöst — das ist Schritt 8.
   das `pointerup` derselben Geste — gebaut für Safari, das den Klick beim Tippen als `"mouse"` meldet
   (WebKit-Bug 282988) — ist nur im Test belegt. Nachzuholen an einem iPhone oder iPad mit Safari und an
   einem Android-Gerät: Tippen kopiert, das Häkchen erscheint, der Knopf bleibt danach nicht stehen.
+- **1061 — Panelbreite nur je Browser** (17.11.2026, E‑1209, §10.21). Die gezogene Breite liegt im
+  Cookie `overlord_panelbreite`; wer an zwei Rechnern arbeitet, zieht zweimal. Nachrüstweg wie bei der
+  Anzeigegröße (Punkt 94, [`frontend-grundlagen.md`](frontend-grundlagen.md) §4): eine Spalte an
+  `app_user`, das Cookie wird zum Zwischenspeicher — kein Umbau der Oberfläche.
+- **1062 — Ziehbare Panelbreite: was die Browsersteuerung nicht zeigt** (17.11.2026, §10.21). Gesehen
+  ist alles bei 1.920 px im Chrome unter Windows. Um und unter 1.280 px nur über
+  `Emulation.setDeviceMetricsOverride`, nicht an einem echten Fenster (`resize_window` wirkt nicht);
+  nicht gesehen: Ziehen per Finger an einem Touchgerät ab 1.280 px (`touch-none` am Griff), Firefox und
+  Safari.
+
