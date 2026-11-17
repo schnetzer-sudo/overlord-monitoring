@@ -8,6 +8,7 @@ import {
   PROZESSANSICHT_PARAMETER,
   absprungZiel,
   absprungfenster,
+  kalendertagfenster,
   baumabfrage,
   baumfensterFehler,
   hervorgehobeneGliederung,
@@ -310,8 +311,10 @@ describe("Das freie Zeitfenster", () => {
   });
 });
 
-describe("Der Absprung aus dem Detailpanel in den Prozessbaum (E‑103, E‑104, E‑111)", () => {
+describe("Der Absprung aus dem Detailpanel in den Prozessbaum (E‑103, E‑104, E‑111, E‑1196)", () => {
   const nachricht = new Date("2025-12-15T10:20:30.000Z");
+  /** Die Anwendungszone — die des Backends, mit zwei Umstellungstagen im Jahr. */
+  const ZONE = "Europe/Berlin";
 
   /**
    * **Nach außen auf volle Stunden gerundet**, weil der Baum nur stundengenaue
@@ -323,6 +326,7 @@ describe("Der Absprung aus dem Detailpanel in den Prozessbaum (E‑103, E‑104,
     const fenster = absprungfenster(
       { von: new Date("2025-11-30T04:14:07.000Z"), bis: new Date("2025-12-30T04:14:07.000Z") },
       nachricht,
+      ZONE,
     );
 
     expect(fenster).toEqual({
@@ -334,26 +338,43 @@ describe("Der Absprung aus dem Detailpanel in den Prozessbaum (E‑103, E‑104,
   it("lässt ein schon stundengenaues Fenster unverändert", () => {
     const von = new Date("2025-11-30T00:00:00.000Z");
     const bis = new Date("2025-12-30T00:00:00.000Z");
-    expect(absprungfenster({ von, bis }, nachricht)).toEqual({ von, bis });
+    expect(absprungfenster({ von, bis }, nachricht, ZONE)).toEqual({ von, bis });
   });
 
   /**
    * **Die Nachricht ist im Zielfenster per Konstruktion enthalten — und das
-   * wird geprüft, nicht angenommen.** Eine Nachricht außerhalb (tiefer Link auf
-   * einen Beleg außerhalb des Suchfensters) bekommt keinen Link: Ein Link, der in
-   * einem anderen Fenster landet als versprochen, ist schlechter als keiner.
+   * wird geprüft, nicht angenommen.** Liegt sie außerhalb des Herkunftsfensters
+   * (tiefer Link auf einen Beleg außerhalb des Suchfensters), gab es bis zum
+   * 17.11.2026 keinen Link. **Seit E‑1196 fällt der Absprung dann auf den
+   * Kalendertag der Nachricht zurück** — und der Wächter prüft weiterhin, dass
+   * sie im Ziel liegt.
    */
-  it("gibt keinen Link, wenn die Nachricht außerhalb des Fensters liegt", () => {
+  it("fällt auf den Kalendertag zurück, wenn die Nachricht außerhalb des Fensters liegt", () => {
     const fenster = {
       von: new Date("2025-11-30T00:00:00.000Z"),
       bis: new Date("2025-12-30T00:00:00.000Z"),
     };
+    const davor = new Date("2025-11-29T22:59:59.000Z");
+    const danach = new Date("2025-12-30T01:00:00.000Z");
 
-    expect(absprungfenster(fenster, new Date("2025-11-29T23:59:59.000Z"))).toBeNull();
-    expect(absprungfenster(fenster, new Date("2025-12-30T01:00:00.000Z"))).toBeNull();
-    // Innerhalb der letzten enthaltenen Stunde: dabei.
-    expect(absprungfenster(fenster, new Date("2025-12-30T00:59:59.000Z"))).not.toBeNull();
-    expect(absprungfenster(fenster, new Date("nicht lesbar"))).toBeNull();
+    expect(absprungfenster(fenster, davor, ZONE)).toEqual(kalendertagfenster(davor, ZONE));
+    expect(absprungfenster(fenster, danach, ZONE)).toEqual(kalendertagfenster(danach, ZONE));
+    // Innerhalb der letzten enthaltenen Stunde: das Herkunftsfenster, unverändert.
+    expect(absprungfenster(fenster, new Date("2025-12-30T00:59:59.000Z"), ZONE)).toEqual(fenster);
+    expect(absprungfenster(fenster, new Date("nicht lesbar"), ZONE)).toBeNull();
+  });
+
+  /**
+   * **Ohne Herkunftsfenster der Kalendertag** *(17.11.2026, E‑1196)* — im
+   * relativen Modus der Liste, auf der eigenen Route, in der Belegsuche vor der
+   * ersten Antwort. Gegen die Browseruhr wird dabei nicht gerechnet (Regel Z1):
+   * Der Tag kommt aus dem Zeitpunkt der Nachricht.
+   */
+  it("nimmt ohne Herkunftsfenster den Kalendertag der Nachricht in der Anwendungszone", () => {
+    expect(absprungfenster(undefined, nachricht, ZONE)).toEqual({
+      von: new Date("2025-12-14T23:00:00.000Z"),
+      bis: new Date("2025-12-15T22:00:00.000Z"),
+    });
   });
 
   /**
@@ -367,13 +388,15 @@ describe("Der Absprung aus dem Detailpanel in den Prozessbaum (E‑103, E‑104,
     const bis = new Date("2025-12-30T04:14:00.000Z");
     const jahr = { von: new Date(bis.getTime() - 365 * 24 * 60 * 60 * 1000), bis };
 
-    const fenster = absprungfenster(jahr, nachricht);
+    const fenster = absprungfenster(jahr, nachricht, ZONE);
 
     expect(fenster).not.toBeNull();
     expect(fenster!.bis).toEqual(new Date("2025-12-30T04:00:00.000Z"));
     // ausschließendes Ende 05:00 minus 365 Tage — nicht 04:00 des Vorjahres.
     expect(fenster!.von).toEqual(new Date("2024-12-30T05:00:00.000Z"));
-    expect(absprungfenster(jahr, new Date("2024-12-30T04:30:00.000Z"))).toBeNull();
+    // Die Stunde, die der Deckel abschneidet: seit E‑1196 der Kalendertag statt keines Links.
+    const verloren = new Date("2024-12-30T04:30:00.000Z");
+    expect(absprungfenster(jahr, verloren, ZONE)).toEqual(kalendertagfenster(verloren, ZONE));
   });
 
   /**
@@ -440,5 +463,141 @@ describe("Die Gliederung in der URL (E‑143)", () => {
     expect(hervorgehobeneGliederung(zustand({ gliederung: "PARTNER" }), "PROJEKT")).toBe("PARTNER");
     expect(hervorgehobeneGliederung(zustand(), "PROJEKT")).toBe("PROJEKT");
     expect(hervorgehobeneGliederung(zustand(), undefined)).toBeNull();
+  });
+});
+
+/**
+ * **Der Kalendertag der Nachricht** *(17.11.2026, E‑1196)* — der Rückfall des
+ * Absprungs, wenn kein Herkunftsfenster bekannt ist oder die Nachricht nicht
+ * darin liegt. `von` ist 00:00, `bis` 23:00 als **letzte enthaltene Stunde**
+ * (E‑94), beides in der Anwendungszone und mit denselben Umrechnungen wie das
+ * freie Fenster (`lib/format.ts`).
+ */
+describe("Der Kalendertag als Zielfenster (E‑1196)", () => {
+  const ZONE = "Europe/Berlin";
+  const STUNDE = 60 * 60 * 1000;
+  const laenge = (f: { von: Date; bis: Date }) =>
+    (f.bis.getTime() + STUNDE - f.von.getTime()) / STUNDE;
+
+  it("reicht im Winter und im Sommer von 00:00 bis 23:00 der Anwendungszone", () => {
+    expect(kalendertagfenster(new Date("2025-12-29T10:01:09Z"), ZONE)).toEqual({
+      von: new Date("2025-12-28T23:00:00.000Z"),
+      bis: new Date("2025-12-29T22:00:00.000Z"),
+    });
+    expect(kalendertagfenster(new Date("2026-07-08T09:30:00Z"), ZONE)).toEqual({
+      von: new Date("2026-07-07T22:00:00.000Z"),
+      bis: new Date("2026-07-08T21:00:00.000Z"),
+    });
+  });
+
+  it("nimmt den Tag der Anwendungszone und nicht den in UTC", () => {
+    // 23:30 UTC ist in Berlin schon 00:30 des Folgetags.
+    expect(kalendertagfenster(new Date("2025-12-14T23:30:00Z"), ZONE)?.von).toEqual(
+      new Date("2025-12-14T23:00:00.000Z"),
+    );
+    // 22:59 UTC ist 23:59 desselben Tags — in der letzten enthaltenen Stunde.
+    expect(kalendertagfenster(new Date("2025-12-15T22:59:59Z"), ZONE)?.bis).toEqual(
+      new Date("2025-12-15T22:00:00.000Z"),
+    );
+  });
+
+  it("hat am Tag der Vorstellung 23 Stunden", () => {
+    const tag = kalendertagfenster(new Date("2026-03-29T12:00:00Z"), ZONE);
+
+    expect(tag).toEqual({
+      von: new Date("2026-03-28T23:00:00.000Z"),
+      bis: new Date("2026-03-29T21:00:00.000Z"),
+    });
+    expect(laenge(tag!)).toBe(23);
+    // Die Nachricht aus der letzten Stunde des Tags liegt darin.
+    expect(absprungfenster(undefined, new Date("2026-03-29T21:59:59Z"), ZONE)).toEqual(tag);
+  });
+
+  it("hat am Tag der Rückstellung 25 Stunden", () => {
+    const tag = kalendertagfenster(new Date("2026-10-25T12:00:00Z"), ZONE);
+
+    expect(tag).toEqual({
+      von: new Date("2026-10-24T22:00:00.000Z"),
+      bis: new Date("2026-10-25T22:00:00.000Z"),
+    });
+    expect(laenge(tag!)).toBe(25);
+    // Beide Stunden zwischen 02:00 und 03:00 Ortszeit gehören zum Tag.
+    expect(absprungfenster(undefined, new Date("2026-10-25T00:30:00Z"), ZONE)).toEqual(tag);
+    expect(absprungfenster(undefined, new Date("2026-10-25T01:30:00Z"), ZONE)).toEqual(tag);
+  });
+
+  it("liegt auf vollen Stunden, die der Baum annimmt (E‑95)", () => {
+    for (const zeitpunkt of [
+      "2025-12-29T10:01:09Z",
+      "2026-03-29T12:00:00Z",
+      "2026-10-25T12:00:00Z",
+    ]) {
+      const tag = kalendertagfenster(new Date(zeitpunkt), ZONE)!;
+      expect(tag.von.getTime() % STUNDE, zeitpunkt).toBe(0);
+      expect(tag.bis.getTime() % STUNDE, zeitpunkt).toBe(0);
+    }
+  });
+
+  /**
+   * **Der Wächter bleibt — und er greift**, wo die letzte Stunde des Tags nicht
+   * die einzige ab 23:00 ist: In `America/Santiago` endet die Sommerzeit um
+   * Mitternacht, am 04.04.2026 gibt es die Stunde ab 23:00 zweimal. `bis` ist die
+   * erste; eine Nachricht aus der zweiten läge **nach** dem Zielfenster, und statt
+   * eines Links, der sie nicht zeigt, gibt es keinen. In `Europe/Berlin` tritt
+   * der Fall nicht auf (die Umstellung liegt um 02:00 und 03:00).
+   */
+  it("gibt keinen Link, wenn die Nachricht nicht in ihrem Kalendertag liegt", () => {
+    const SANTIAGO = "America/Santiago";
+    const zweite = new Date("2026-04-05T03:30:00Z"); // 23:30 Ortszeit, zum zweiten Mal
+
+    expect(kalendertagfenster(zweite, SANTIAGO)).toEqual({
+      von: new Date("2026-04-04T03:00:00.000Z"),
+      bis: new Date("2026-04-05T02:00:00.000Z"),
+    });
+    expect(absprungfenster(undefined, zweite, SANTIAGO)).toBeNull();
+    // Gegenprobe: 23:30 zum ersten Mal liegt darin.
+    expect(absprungfenster(undefined, new Date("2026-04-05T02:30:00Z"), SANTIAGO)).not.toBeNull();
+  });
+
+  it("gibt bei unlesbarem Zeitpunkt oder unbrauchbarer Zone keinen Link", () => {
+    expect(kalendertagfenster(new Date("nicht lesbar"), ZONE)).toBeNull();
+    expect(kalendertagfenster(new Date("2025-12-29T10:01:09Z"), "Nirgendwo/Erfunden")).toBeNull();
+    expect(absprungfenster(undefined, new Date("nicht lesbar"), ZONE)).toBeNull();
+  });
+
+  it("führt auf die bestehende Route mit dem Tag als absolutem Fenster", () => {
+    const tag = kalendertagfenster(new Date("2025-12-29T10:01:09Z"), ZONE)!;
+
+    expect(absprungZiel("p-1", "m-1", tag)).toBe(
+      "/prozesse?von=2025-12-28T23%3A00%3A00.000Z&bis=2025-12-29T22%3A00%3A00.000Z&prozess=p-1&nachricht=m-1",
+    );
+  });
+});
+
+/**
+ * **Die Vollansicht in der Prozessansicht** *(17.11.2026, E‑1194)* — derselbe
+ * Parameter wie in Liste und Belegsuche. Er steht in der URL und in keiner
+ * Abfrage: weder in der des Baums noch in der der Übertragungsliste.
+ */
+describe("Die Vollansicht in der URL der Prozessansicht", () => {
+  it("läuft rund und steht nur darin, solange sie gilt", () => {
+    const offen = zustand({ zeitraum: "30T", prozess: "p1", nachricht: "m1" });
+
+    expect(urlVon({ ...offen, voll: true })).toContain("voll=true");
+    expect(urlVon(offen)).not.toContain("voll");
+    expect(ausSuchparametern(alsSuchparameter({ ...offen, voll: true }))).toEqual({
+      ...offen,
+      voll: true,
+    });
+    expect(PROZESSANSICHT_PARAMETER.voll.history).toBe("push");
+  });
+
+  it("ändert weder die Abfrage des Baums noch die der Übertragungsliste", () => {
+    const ohne = zustand({ zeitraum: "30T", prozess: "p1" });
+    const mit = zustand({ zeitraum: "30T", prozess: "p1", nachricht: "m1", voll: true });
+
+    expect(baumabfrage(mit)).toBe(baumabfrage(ohne));
+    expect(alsAbfrage(listenfilter(mit, FENSTER)!)).toBe(alsAbfrage(listenfilter(ohne, FENSTER)!));
+    expect(listenfilter(mit, FENSTER)?.voll).toBe(false);
   });
 });

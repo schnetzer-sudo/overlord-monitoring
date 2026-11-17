@@ -10,8 +10,13 @@ import { defineConfig } from "vitest/config";
  * Das sind alles reine Funktionen. Ein gerenderter Baum brächte hier nichts
  * außer Laufzeit und Abhängigkeiten.
  *
- * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 10.11.2026 sind es
- * **dreihundertacht in achtundzwanzig Dateien** (einer mehr in
+ * **Die Ausnahmen sind gezählt, nicht gewachsen** — Stand 17.11.2026 sind es
+ * **dreihundertvierundfünfzig in neunundzwanzig Dateien** (sechsundvierzig mehr für die Vollansicht,
+ * Strg- und Mittelklick und den Absprung, E‑1194 bis E‑1197, aus dem Lauf gezählt: vierzig in der neuen
+ * `tests/detail-vollansicht.test.tsx`, je drei in `tests/in-sicht-bringen.test.tsx` und
+ * `tests/artefakt-ansicht.test.tsx`; der Lauf über alle 56 Dateien trägt **1.632** Fälle, 1.552 +
+ * 78 neue + je einer in `farbwerte` und `serverbausteine` für `features/nachrichten/zeilenbedienung.ts`;
+ * davor, Stand 10.11.2026, dreihundertacht in achtundzwanzig Dateien, einer mehr in
  * `tests/auftraege-block.test.tsx` für den neu gegliederten Block, E‑1188 bis E‑1191, aus dem
  * Lauf gezählt;
  * davor, am selben Tag, dreihundertsieben in achtundzwanzig Dateien, zwei mehr in
@@ -297,7 +302,7 @@ import { defineConfig } from "vitest/config";
  * > darunter noch einhundertsechzehn; die Tabellensumme stimmte mit dem Kopf.
  * > Berichtigt ist der Satz.
  *
- * Allen zweihundertsechsundfünfzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
+ * Allen dreihundertvierundfünfzig ist dasselbe gemeinsam: **Es gibt keinen anderen Ort, an dem sie
  * belegbar wären.** Das ist die Bedingung, nicht „es ließe sich so leichter
  * prüfen". Sie schalten ihre Umgebung selbst über `// @vitest-environment jsdom`
  * um — die Voreinstellung bleibt `node`, damit die übrigen Dateien nichts von

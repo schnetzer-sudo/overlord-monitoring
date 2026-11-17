@@ -357,7 +357,10 @@ describe("Die Ziele an der Zeitleiste", () => {
     const { behaelter, abbauen } = await rendereDetail({ schritte: achtSchritte }, viele);
 
     try {
-      const ziele = [...behaelter.querySelectorAll("a")];
+      // Ohne den Absprung in den Prozessbaum: Er steht seit dem 17.11.2026 auch
+      // ohne Herkunftsfenster im Kopf (E‑1196) und ist kein Ziel der Zeitleiste.
+      const ziele = [...behaelter.querySelectorAll("a:not([data-absprung])")];
+      expect(behaelter.querySelectorAll("a[data-absprung]")).toHaveLength(1);
       expect(ziele).toHaveLength(15);
 
       const adressen = ziele.map((verweis) => verweis.getAttribute("href") ?? "");

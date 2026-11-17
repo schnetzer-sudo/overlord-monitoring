@@ -6,6 +6,7 @@ import {
   type Zeitfensterzustand,
 } from "@/lib/filter";
 import { istZeitgrenze, ProblemFehler } from "@/lib/http";
+import { VOLL_PARAMETER } from "@/lib/routen";
 import { STATUSARTEN, type Statusart } from "@/lib/status-farbe";
 
 /**
@@ -107,6 +108,35 @@ export function istSortierung(wert: string | null | undefined): wert is Sortieru
 export const parseAsSortierung = literalParser(SORTIERUNGEN);
 
 /**
+ * **Die Vollansicht** *(17.11.2026, E‑1194, `docs/nachrichtendetail.md` §10.20)* —
+ * ab `xl` nimmt das Panel die Inhaltsbreite, und die Liste weicht. Ein Zustand
+ * der Seite und kein Routenwechsel: Er gilt für `/nachrichten`, `/suche` und
+ * `/prozesse` gleich, und alle drei lesen ihn über **diesen** Parser.
+ *
+ * - **Nur in der URL, solange er gilt.** Die Vorgabe ist „aus", und `nuqs`
+ *   entfernt einen Wert, der ihr gleicht (`clearOnDefault`, seit nuqs 2 die
+ *   Voreinstellung) — dieselbe Form wie `langeSuche` und `nurMitVerkehr`. Ein
+ *   Standardwert, der etwas *zulässt*, gehört nicht in die URL.
+ * - **`history: "push"`** wie `nachricht`: Umschalten ist eine Station, und das
+ *   Zurück des Browsers geht Schritt für Schritt.
+ * - **In keiner Abfrage** — {@link alsAbfrage} kennt ihn nicht. Sonst lüde jedes
+ *   Maximieren die Liste neu und setzte ihre Seite zurück.
+ * - **Er wirkt nur zusammen mit `nachricht`** ({@link istVoll}); allein ist er
+ *   folgenlos, und Schließen entfernt beide.
+ */
+export const parseAsVoll = parseAsBoolean.withDefault(false).withOptions({ history: "push" });
+
+/**
+ * **Steht die Ansicht in der Vollansicht?** Nur, wenn eine Nachricht offen ist —
+ * ein `voll` ohne `nachricht` (eine von Hand gebaute Adresse) ändert nichts.
+ * Eine Stelle für alle drei Ansichten, damit die Bedingung nicht dreimal
+ * nachgebaut wird.
+ */
+export function istVoll(zustand: { nachricht: string | null; voll: boolean }): boolean {
+  return zustand.nachricht !== null && zustand.voll;
+}
+
+/**
  * Die Parameter, so wie sie in der URL stehen.
  *
  * **Nur `langeSuche` trägt ein `withDefault`**, und auch das nur, weil ein
@@ -143,6 +173,8 @@ export const NACHRICHTEN_PARAMETER = {
    * eigenen Verlaufseintrag spränge es an der Liste vorbei.
    */
   nachricht: parseAsString.withOptions({ history: "push" }),
+  /** Die Vollansicht — {@link parseAsVoll}, unter dem Namen aus `lib/routen.ts`. */
+  [VOLL_PARAMETER]: parseAsVoll,
   // **Ohne** `clearOnDefault: false`: Hier wird nichts weggelassen, sondern etwas
   // zugelassen. Steht der Parameter nicht da, gilt die Grenze — und das ist der
   // Normalfall, den keine URL erwähnen muss.
@@ -161,6 +193,8 @@ export type Nachrichtenfilter = Zeitfensterzustand & {
    * aber **kein Parameter der Liste**: {@link alsAbfrage} lässt sie weg.
    */
   nachricht: string | null;
+  /** Die Vollansicht (E‑1194) — wie `nachricht` kein Parameter der Liste. */
+  voll: boolean;
 };
 
 /**
@@ -465,6 +499,10 @@ export function alsSuchparameter(filter: Nachrichtenfilter): URLSearchParams {
   if (filter.nachricht !== null && filter.nachricht !== "") {
     parameter.set("nachricht", filter.nachricht);
   }
+  // Nur, solange sie gilt — und hinter der Kennung, zu der sie gehört.
+  if (filter.voll) {
+    parameter.set(VOLL_PARAMETER, "true");
+  }
 
   return parameter;
 }
@@ -491,6 +529,7 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
   // gebauten URL (`?nachricht=`) und öffnete sonst ein Panel, das garantiert
   // nichts findet.
   const nachricht = suchparameter.get("nachricht");
+  const voll = suchparameter.get(VOLL_PARAMETER);
 
   return {
     zeitraum: zeitraum === "24h" || zeitraum === "7d" || zeitraum === "30d" ? zeitraum : null,
@@ -505,5 +544,7 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Nachrichtenfi
     sortierung:
       sortierung === "neueste" || sortierung === "aelteste" ? (sortierung as Sortierung) : null,
     nachricht: nachricht === null || nachricht === "" ? null : nachricht,
+    // Derselbe Parser wie zur Laufzeit: Alles außer `true` ist „aus".
+    voll: voll === null ? false : (parseAsVoll.parse(voll) ?? false),
   };
 }

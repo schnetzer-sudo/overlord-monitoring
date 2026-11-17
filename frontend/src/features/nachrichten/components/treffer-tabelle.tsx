@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import type { BamTreffer, BamTrefferWert } from "../api";
 import { trefferTypen } from "../suche";
 import { TREFFER_SICHTBAR } from "../treffer-spalten";
+import { zeilenbedienung } from "../zeilenbedienung";
 import { AblaufZelle, ZeitpunktZelle } from "./nachrichten-tabelle";
 import { StatusPlakette } from "./status-plakette";
 
@@ -86,6 +87,7 @@ export function TrefferTabelle({
   aufAuswahl,
   mitTrefferspalte,
   gewaehlteZeile,
+  neuerTab,
 }: {
   zeilen: BamTreffer[];
   /** Die geöffnete Nachricht — sie kommt aus der URL, nicht aus dieser Tabelle. */
@@ -99,6 +101,13 @@ export function TrefferTabelle({
    * Nachrichtentabelle. Freiwillig, und die Tabelle tut selbst nichts damit.
    */
   gewaehlteZeile?: Ref<HTMLTableRowElement>;
+  /**
+   * **Das Ziel im neuen Tab** *(17.11.2026, E‑1195)* — für Strg-, Cmd- und
+   * Mittelklick und Strg+Enter auf eine Zeile, im Ereignis gerechnet
+   * (`lib/routen.ts` `zeileImNeuenTab`). Freiwillig; ohne öffnet auch ein
+   * Strg-Klick das Panel.
+   */
+  neuerTab?: (messageId: string) => string;
 }) {
   const texte = useTexte();
 
@@ -143,21 +152,8 @@ export function TrefferTabelle({
               tabIndex={0}
               aria-label={texte.nachrichten.zeileOeffnen}
               aria-current={zeile.messageId === gewaehlt ? "true" : undefined}
-              onClick={(ereignis) => {
-                if ((ereignis.target as HTMLElement).closest("a, button, input, label")) {
-                  return;
-                }
-                aufAuswahl(zeile.messageId);
-              }}
-              onKeyDown={(ereignis) => {
-                if (ereignis.target !== ereignis.currentTarget) {
-                  return;
-                }
-                if (ereignis.key === "Enter" || ereignis.key === " ") {
-                  ereignis.preventDefault();
-                  aufAuswahl(zeile.messageId);
-                }
-              }}
+              // Dieselbe Bedienung wie in der Nachrichtenliste (E‑1195).
+              {...zeilenbedienung(zeile.messageId, aufAuswahl, neuerTab)}
               className={cn(
                 "h-zeile focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:-outline-offset-2 focus-visible:outline-none",
                 zeile.messageId === gewaehlt ? "bg-accent hover:bg-accent" : "hover:bg-muted",

@@ -212,6 +212,51 @@ export function scrollbereichVon(ziel: Element | null): Element | null {
   return null;
 }
 
+/**
+ * **Ein gemerkter Bildlauf** — je Scrollbereich sein Stand, vom Element aufwärts
+ * *(17.11.2026, E‑1194)*.
+ */
+export type Bildlaufstand = ReadonlyArray<readonly [Element, number]>;
+
+/**
+ * Merkt sich den Stand **jedes** Scrollbereichs vom Element aufwärts — das
+ * Element selbst eingeschlossen, wenn es einer ist.
+ *
+ * **Für die Vollansicht** (E‑1194): Beim Maximieren weicht die Liste per
+ * `display: none`. Der Browser klemmt dann den Stand von `main` auf das, was
+ * übrig bleibt, und ein Scrollbereich, der selbst weicht — die
+ * Übertragungsliste der Prozessansicht —, verliert seinen. Beim Verkleinern soll
+ * die Liste aber auf demselben Stand stehen wie vorher. **Gemerkt wird deshalb
+ * im Ereignis, bevor die Liste weicht** — dieselbe Bauform wie der Stand des
+ * Baums in der Prozessansicht (E‑115, `prozessansicht.tsx`): Wenn ein Effekt
+ * läuft, ist der Stand schon geklemmt.
+ *
+ * Nichts davon steht außerhalb der Komponente: Der Stand lebt in einer Referenz
+ * der Ansicht, solange sie eingehängt ist, und ist keine Einstellung, die man
+ * teilt (`docs/frontend-grundlagen.md` §8).
+ */
+export function merkeBildlauf(element: Element | null): Bildlaufstand {
+  const stand: (readonly [Element, number])[] = [];
+  for (let el = element; el !== null; el = el.parentElement) {
+    if (istScrollkasten(el)) {
+      stand.push([el, el.scrollTop]);
+    }
+  }
+  return stand;
+}
+
+/**
+ * Stellt einen gemerkten Bildlauf wieder her. Ein Scrollbereich, der nicht mehr
+ * im Dokument hängt, wird übergangen; ohne Stand geschieht nichts.
+ */
+export function stelleBildlaufHer(stand: Bildlaufstand | null): void {
+  for (const [el, oben] of stand ?? []) {
+    if (el.isConnected) {
+      el.scrollTop = oben;
+    }
+  }
+}
+
 /** Ob das Element ein Scrollkasten ist — unabhängig davon, ob gerade etwas überläuft. */
 function istScrollkasten(el: Element): boolean {
   const overflowY = getComputedStyle(el).overflowY;

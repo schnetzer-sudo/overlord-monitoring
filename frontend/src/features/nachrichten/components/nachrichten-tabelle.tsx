@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import type { Nachricht } from "../api";
 import type { Sortierung } from "../filter";
 import { NACHRICHTEN_SICHTBAR } from "../spalten";
+import { zeilenbedienung } from "../zeilenbedienung";
 import { StatusPlakette } from "./status-plakette";
 
 /**
@@ -121,6 +122,7 @@ export function NachrichtenTabelle({
   gewaehlt,
   aufAuswahl,
   gewaehlteZeile,
+  neuerTab,
 }: {
   zeilen: Nachricht[];
   sortierung: Sortierung;
@@ -135,6 +137,13 @@ export function NachrichtenTabelle({
    * hält, und tut selbst nichts damit.
    */
   gewaehlteZeile?: Ref<HTMLTableRowElement>;
+  /**
+   * **Das Ziel im neuen Tab** *(17.11.2026, E‑1195)* — für Strg-, Cmd- und
+   * Mittelklick und Strg+Enter auf eine Zeile, im Ereignis gerechnet
+   * (`lib/routen.ts` `zeileImNeuenTab`). Freiwillig; ohne öffnet auch ein
+   * Strg-Klick das Panel.
+   */
+  neuerTab?: (messageId: string) => string;
 }) {
   const texte = useTexte();
 
@@ -184,25 +193,10 @@ export function NachrichtenTabelle({
               // Die geöffnete Zeile ist auch in der Liste erkennbar — sonst wäre
               // nicht zu sehen, wozu das Panel daneben gehört.
               aria-current={zeile.messageId === gewaehlt ? "true" : undefined}
-              onClick={(ereignis) => {
-                // Ein Klick auf einen Verweis oder eine Schaltfläche *in* der
-                // Zeile öffnet das Panel nicht mit.
-                if ((ereignis.target as HTMLElement).closest("a, button, input, label")) {
-                  return;
-                }
-                aufAuswahl(zeile.messageId);
-              }}
-              onKeyDown={(ereignis) => {
-                if (ereignis.target !== ereignis.currentTarget) {
-                  return;
-                }
-                if (ereignis.key === "Enter" || ereignis.key === " ") {
-                  // Sonst blättert die Leertaste die Ansicht weiter, während sie
-                  // öffnet.
-                  ereignis.preventDefault();
-                  aufAuswahl(zeile.messageId);
-                }
-              }}
+              // Klick, `Enter` und `Leertaste` öffnen das Panel; Strg-, Cmd- und
+              // Mittelklick und Strg+Enter die Nachricht im neuen Tab (E‑1195).
+              // Ein Klick auf einen Verweis *in* der Zeile bleibt dessen Sache.
+              {...zeilenbedienung(zeile.messageId, aufAuswahl, neuerTab)}
               className={cn(
                 "h-zeile focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:-outline-offset-2 focus-visible:outline-none",
                 // Die blasse Akzenttönung, dieselbe wie am aktiven

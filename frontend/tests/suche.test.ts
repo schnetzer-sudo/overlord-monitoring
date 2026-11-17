@@ -52,6 +52,7 @@ const zustand = (teil: Partial<Suchzustand>): Suchzustand => ({
   bis: null,
   modus: null,
   nachricht: null,
+  voll: false,
   ...teil,
 });
 
@@ -173,6 +174,21 @@ describe("Die Abfrage an das Backend", () => {
 
     expect(
       alsAbfrage(zustand({ begriff, nachricht: "8f3a1c2e-0000-4000-8000-000000000001" })),
+    ).toBe(alsAbfrage(zustand({ begriff })));
+  });
+
+  /**
+   * **Und mit der Vollansicht** *(17.11.2026, E‑1194)*: `voll` steht wie
+   * `nachricht` in der URL und in keiner Abfrage — sonst liefe beim Maximieren die
+   * teuerste Abfrage dieses Projekts noch einmal.
+   */
+  it("ist auch in der Vollansicht Zeichen für Zeichen dieselbe", () => {
+    const begriff = [{ typ: 9012, wert: "4711815" }];
+
+    expect(
+      alsAbfrage(
+        zustand({ begriff, nachricht: "8f3a1c2e-0000-4000-8000-000000000001", voll: true }),
+      ),
     ).toBe(alsAbfrage(zustand({ begriff })));
   });
 

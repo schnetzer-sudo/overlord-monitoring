@@ -80,14 +80,22 @@ import { Zeitleiste } from "./zeitleiste";
  *   Route führt an die **Liste** und nicht an die Suche (`lib/routen.ts`). Ein
  *   Umschalter, der woanders endet als dort, wo er herkam, ist keiner. Fehlen sie,
  *   erscheint er nicht; alles Übrige bleibt unverändert.
+ *
+ *   <p><b>Seit dem 17.11.2026 (E‑1194) geben ihn alle vier Einhängepunkte mit.</b>
+ *   In Liste, Belegsuche und Prozessansicht ist das Maximieren ein Zustand der
+ *   Seite (`voll`) und führt nicht mehr auf die eigene Route; der Rückweg endet
+ *   damit dort, wo er herkam. Die eigene Route behält „Neben der Liste anzeigen".
  * @param aufUmschalten der Weg dorthin, wieder vom Einhängepunkt gestellt.
  * @param prozessbaumFenster das Fenster, **aus dem gesprungen wird** — für den
  *   Absprung „Im Prozessbaum anzeigen" (E‑103, `docs/property-suche.md` §12).
  *   Der Einhängepunkt stellt es, wenn er ein **absolutes** kennt: die Belegsuche
  *   aus ihrer Antwort, die Nachrichtenliste aus `von`/`bis` der URL. Fehlt es
- *   — relativer Modus der Liste, eigene Route, Prozessansicht —, gibt es keinen
- *   Link: Ein Link, der in einem anderen Fenster landet als versprochen, ist
- *   schlechter als kein Link (E‑104).
+ *   — relativer Modus der Liste, eigene Route —, gab es bis zum 17.11.2026
+ *   keinen Link. **Seit E‑1196 ist das Ziel dann der Kalendertag der
+ *   Nachricht** (`prozessansicht.ts` `absprungfenster`).
+ * @param ohneAbsprung **nur die Prozessansicht** setzt es *(17.11.2026,
+ *   E‑1196)*: Dort ist man schon, und ein Verweis auf die Ansicht, in der man
+ *   steht, wäre keiner. Bis dahin entschied das fehlende Fenster darüber.
  * @param fokusNachDatei ob nach der Rückkehr aus einer Datei ihr Ziel den Fokus
  *   bekommt *(14.10.2026, E‑241, S4)*. Freiwillig wie der Umschalter: Die Angabe
  *   setzt jeder Einhängepunkt, zu dem der Schritt zurück aus der Dateiansicht
@@ -103,6 +111,7 @@ export function NachrichtDetail({
   umschaltenZu,
   aufUmschalten,
   prozessbaumFenster,
+  ohneAbsprung = false,
   fokusNachDatei = false,
 }: {
   messageId: string;
@@ -112,6 +121,7 @@ export function NachrichtDetail({
   umschaltenZu?: Umschaltziel;
   aufUmschalten?: () => void;
   prozessbaumFenster?: { von: Date; bis: Date };
+  ohneAbsprung?: boolean;
   fokusNachDatei?: boolean;
 }) {
   const texte = useTexte();
@@ -168,8 +178,9 @@ export function NachrichtDetail({
         </h2>
         {/* Erst umschalten, dann schließen — die Reihenfolge im DOM ist die
             Reihenfolge unter `Tab`, und „anders zeigen" steht vor „weg damit".
-            Ohne Ziel gibt es ihn nicht: Die Suche hat keinen zweiten
-            Einhängepunkt, an den er zurückführen könnte. */}
+            Ohne Ziel gibt es ihn nicht; seit E‑1194 geben ihn alle
+            Einhängepunkte mit — in Liste, Suche und Prozessansicht ist er der
+            Schalter der Vollansicht. */}
         {umschaltenZu === undefined || aufUmschalten === undefined ? null : (
           <AnsichtUmschalter zu={umschaltenZu} aufUmschalten={aufUmschalten} />
         )}
@@ -192,7 +203,11 @@ export function NachrichtDetail({
         <DetailFehler fehler={anfrage.error} aufWiederholen={() => void anfrage.refetch()} />
       ) : anfrage.data ? (
         <>
-          <Kopf detail={anfrage.data} prozessbaumFenster={prozessbaumFenster} />
+          <Kopf
+            detail={anfrage.data}
+            prozessbaumFenster={prozessbaumFenster}
+            ohneAbsprung={ohneAbsprung}
+          />
           <BamBlock
             key={`bam-${anfrage.data.messageId}`}
             messageId={anfrage.data.messageId}
@@ -386,9 +401,11 @@ function Ablauf({
 function Kopf({
   detail,
   prozessbaumFenster,
+  ohneAbsprung,
 }: {
   detail: Nachrichtendetail;
   prozessbaumFenster?: { von: Date; bis: Date };
+  ohneAbsprung: boolean;
 }) {
   const texte = useTexte();
   const sprache = useSprache();
@@ -404,11 +421,15 @@ function Kopf({
    * außerhalb, gibt es keinen Link. **Hier im Panel und nicht als Kontextmenü
    * oder Spalte** — Tastatur- und Berührungserreichbarkeit, dieselbe Disziplin
    * wie bei den Berührungsflächen des Baums.
+   *
+   * **Seit dem 17.11.2026 überall außer in der Prozessansicht** (E‑1196): Ohne
+   * Herkunftsfenster, oder wenn die Nachricht nicht darin liegt, ist das Ziel
+   * der Kalendertag der Nachricht — in der Zone, in der hier alles angezeigt
+   * wird (`useAnzeigezone`, dieselbe wie die des Backends).
    */
-  const baumfenster =
-    prozessbaumFenster === undefined
-      ? null
-      : absprungfenster(prozessbaumFenster, new Date(detail.zeitpunkt));
+  const baumfenster = ohneAbsprung
+    ? null
+    : absprungfenster(prozessbaumFenster, new Date(detail.zeitpunkt), zone);
 
   const zeit = (wert: string | null) => {
     if (wert === null) {

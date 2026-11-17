@@ -8,7 +8,15 @@ import {
   type InfiniteData,
 } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
-import { useCallback, useEffect, useState, useSyncExternalStore, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from "react";
 
 import {
   mitFreiemFenster,
@@ -21,6 +29,14 @@ import type { Baumgliederung } from "@/lib/baumgliederung";
 import type { Rollupzeitraum } from "@/lib/rollupzeitraum";
 import { dateiansichtAus } from "@/lib/routen";
 import { folgendeAdresse } from "@/lib/browserverlauf";
+import {
+  bringeInSicht,
+  merkeBildlauf,
+  stelleBildlaufHer,
+  useBeginntOben,
+  useZuletztGeschlossen,
+  type Bildlaufstand,
+} from "@/lib/in-sicht-bringen";
 
 import type { Darstellung } from "./darstellung";
 import { DARSTELLUNG_PARAMETER } from "./darstellung/parameter";
@@ -227,6 +243,83 @@ export function useFokusAufDateiziel(
 }
 
 /**
+ * **Die Vollansicht einer Ansicht mit Panel** *(17.11.2026, E‑1194, E‑1197,
+ * `docs/nachrichtendetail.md` §10.20)* — für `/nachrichten`, `/suche` und
+ * `/prozesse` derselbe Haken.
+ *
+ * Maximieren ist ein Zustand der Seite (`voll` in der URL) und kein
+ * Routenwechsel: Die Liste weicht per `display: none` und bleibt eingehängt, das
+ * Panel nimmt ab `xl` die Inhaltsbreite. Was dazu gehört und nicht in der
+ * Klasse steht, steht hier:
+ *
+ * - **Beim Maximieren beginnt das Panel oben** (E‑114). Es klebt in der
+ *   Vollansicht nicht mehr und hat keinen eigenen Scrollbereich; ins Bild kommt
+ *   es über `main`.
+ * - **Beim Verkleinern steht die Liste, wo sie stand.** Ihr Bildlauf wird beim
+ *   Maximieren **im Ereignis** gemerkt ({@link merkeBildlauf}) — wenn ein Effekt
+ *   liefe, wäre er schon geklemmt — und beim Verlassen der Vollansicht
+ *   wiederhergestellt, gleich auf welchem Weg: Umschalter, `Escape`, Zurück des
+ *   Browsers oder das X. Danach gilt E‑114 wie beim Schließen: Steht die
+ *   geöffnete Zeile nicht im Bild, kommt sie hinein — **nur, wenn sie überhaupt
+ *   dasteht**; unter `xl` tritt das Panel an die Stelle der Liste, und eine
+ *   ausgeblendete Zeile hat keine Lage.
+ * - **Ohne gemerkten Stand** — eine Adresse mit `voll`, neu geladen oder über
+ *   Vor im Verlauf erreicht — gilt allein E‑114.
+ *
+ * **Der Haken steht vor dem Rückweg der Ansicht** (`useInSicht` mit dem
+ * Schlüssel des Schließens) und in der Prozessansicht vor dem gemerkten Stand
+ * des Baums: Layout-Effekte laufen in der Reihenfolge ihrer Haken, und beim
+ * Schließen aus der Vollansicht soll erst der Stand der Liste stehen und dann
+ * der Baum seinen eigenen bekommen.
+ *
+ * @param voll ob die Ansicht in der Vollansicht steht — `istVoll`, also nur mit
+ *   geöffneter Nachricht
+ * @param liste das, was weicht; sein Bildlauf und der jedes Scrollbereichs
+ *   darüber wird gemerkt
+ */
+export function useVollansicht({
+  voll,
+  setzeVoll,
+  liste,
+  panel,
+  zeile,
+}: {
+  voll: boolean;
+  setzeVoll: (voll: boolean) => void;
+  liste: RefObject<HTMLElement | null>;
+  panel: RefObject<HTMLElement | null>;
+  zeile: RefObject<HTMLElement | null>;
+}): { maximiere: () => void; verkleinere: () => void } {
+  const stand = useRef<Bildlaufstand | null>(null);
+
+  const maximiere = useCallback(() => {
+    stand.current = merkeBildlauf(liste.current);
+    setzeVoll(true);
+  }, [liste, setzeVoll]);
+  const verkleinere = useCallback(() => setzeVoll(false), [setzeVoll]);
+
+  useBeginntOben(panel, voll ? VOLLANSICHT : null);
+
+  const verlassen = useZuletztGeschlossen(voll ? VOLLANSICHT : null);
+  useLayoutEffect(() => {
+    if (verlassen === null) {
+      return;
+    }
+    stelleBildlaufHer(stand.current);
+    stand.current = null;
+    const gewaehlt = zeile.current;
+    if (gewaehlt !== null && gewaehlt.isConnected && gewaehlt.getClientRects().length > 0) {
+      bringeInSicht(gewaehlt);
+    }
+  }, [verlassen, zeile]);
+
+  return { maximiere, verkleinere };
+}
+
+/** Der Schlüssel der Vollansicht für die Haken aus `lib/in-sicht-bringen.ts`. */
+const VOLLANSICHT = "voll";
+
+/**
  * Der Filterzustand, gebunden an die URL.
  *
  * Die beiden Zeitfenstermodi schließen einander aus, und **das Frontend lässt den
@@ -300,9 +393,30 @@ export function useNachrichtenfilter() {
      *
      * Der Verlaufseintrag entsteht am Parser (`history: "push"` in
      * `filter.ts`), nicht hier: Er gehört zum Parameter und nicht zum Aufrufer.
+     *
+     * *Seit dem 17.11.2026 (E‑1194):* Schließen entfernt **auch `voll`** — die
+     * Vollansicht gilt nur mit einer Nachricht und bliebe sonst verwaist in der
+     * Adresse stehen. Ein anderes Glied der Kette bleibt in der Vollansicht.
      */
     setzeNachricht: useCallback(
-      (messageId: string | null) => void setzeFilter({ nachricht: messageId }),
+      (messageId: string | null) =>
+        void setzeFilter(
+          messageId === null ? { nachricht: null, voll: null } : { nachricht: messageId },
+        ),
+      [setzeFilter],
+    ),
+    /**
+     * Öffnet eine Nachricht **aus einer Zeile der Liste** — neben der Liste und
+     * nie gleich in der Vollansicht (E‑1194): Ein `voll` ohne Nachricht, etwa aus
+     * einer von Hand gebauten Adresse, bleibt folgenlos.
+     */
+    waehleZeile: useCallback(
+      (messageId: string) => void setzeFilter({ nachricht: messageId, voll: null }),
+      [setzeFilter],
+    ),
+    /** Maximiert oder verkleinert das Panel (E‑1194); `push` bringt der Parser mit. */
+    setzeVoll: useCallback(
+      (voll: boolean) => void setzeFilter({ voll: voll ? true : null }),
       [setzeFilter],
     ),
   };
@@ -527,9 +641,25 @@ export function useSuchzustand() {
      * **`null` schließt und lässt den übrigen Zustand unberührt** — es wird genau
      * ein Parameter entfernt und nicht die URL neu gebaut. Der Verlaufseintrag
      * entsteht am Parser (`history: "push"` in `filter.ts`) und nicht hier.
+     *
+     * *Seit dem 17.11.2026 (E‑1194)* nimmt Schließen `voll` mit — wie neben der
+     * Liste.
      */
     setzeNachricht: useCallback(
-      (messageId: string | null) => void setzeZustand({ nachricht: messageId }),
+      (messageId: string | null) =>
+        void setzeZustand(
+          messageId === null ? { nachricht: null, voll: null } : { nachricht: messageId },
+        ),
+      [setzeZustand],
+    ),
+    /** Öffnet aus einer Trefferzeile — neben der Liste, nie gleich voll (E‑1194). */
+    waehleZeile: useCallback(
+      (messageId: string) => void setzeZustand({ nachricht: messageId, voll: null }),
+      [setzeZustand],
+    ),
+    /** Maximiert oder verkleinert das Panel (E‑1194). */
+    setzeVoll: useCallback(
+      (voll: boolean) => void setzeZustand({ voll: voll ? true : null }),
       [setzeZustand],
     ),
   };
@@ -1006,7 +1136,9 @@ export function useProzessansichtzustand() {
      * sondern der Normalfall des Weiterklickens im Baum.
      */
     setzeProzess: useCallback(
-      (processId: string | null) => void setzeZustand({ prozess: processId, nachricht: null }),
+      // Mit der Nachricht geht auch ihre Vollansicht (E‑1194).
+      (processId: string | null) =>
+        void setzeZustand({ prozess: processId, nachricht: null, voll: null }),
       [setzeZustand],
     ),
     /**
@@ -1014,10 +1146,23 @@ export function useProzessansichtzustand() {
      *
      * **`null` schließt und lässt den übrigen Zustand unberührt** — es wird
      * genau ein Parameter entfernt. Der Verlaufseintrag entsteht am Parser und
-     * nicht hier.
+     * nicht hier. *Seit dem 17.11.2026 (E‑1194)* nimmt Schließen `voll` mit.
      */
     setzeNachricht: useCallback(
-      (messageId: string | null) => void setzeZustand({ nachricht: messageId }),
+      (messageId: string | null) =>
+        void setzeZustand(
+          messageId === null ? { nachricht: null, voll: null } : { nachricht: messageId },
+        ),
+      [setzeZustand],
+    ),
+    /** Öffnet aus einer Zeile der Übertragungsliste — nie gleich voll (E‑1194). */
+    waehleZeile: useCallback(
+      (messageId: string) => void setzeZustand({ nachricht: messageId, voll: null }),
+      [setzeZustand],
+    ),
+    /** Maximiert oder verkleinert das Panel (E‑1194). */
+    setzeVoll: useCallback(
+      (voll: boolean) => void setzeZustand({ voll: voll ? true : null }),
       [setzeZustand],
     ),
     /**

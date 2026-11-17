@@ -29,6 +29,11 @@ export type Umschaltziel = "ohneListe" | "nebenListe";
  * **Es entsteht dabei kein neuer Mechanismus und keine neue Route.** Beide Ziele
  * gibt es seit Schritt 5; gebaut ist nur der Weg dazwischen.
  *
+ * > **Seit dem 17.11.2026 (E‑1194) schaltet er im Panel die Vollansicht der Seite**
+ * > (`voll` in der URL) — in Nachrichtenliste, Belegsuche und Prozessansicht — und
+ * > führt nicht mehr auf die eigene Route. Was ein Klick bedeutet, entscheidet wie
+ * > bisher der Einhängepunkt; an diesem Baustein hat sich nichts geändert.
+ *
  * ## Er tritt neben den Schließen-Knopf, nicht an seine Stelle
  *
  * Zwei Knöpfe, zwei verschiedene Aussagen: *diese Nachricht anders zeigen* gegen

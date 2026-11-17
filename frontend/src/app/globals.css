@@ -751,6 +751,17 @@ html[data-dichte="l"] {
   --dichte-beschriftung: 16rem;
 }
 
+/* Dieselbe Breite ab xl — fuer die Vollansicht des Panels (E-1194,
+   docs/nachrichtendetail.md §10.20). Dort steht das Panel ab xl in der Breite der
+   eigenen Route; darunter tritt es ohnehin an die Stelle der Liste und behaelt
+   die 10 rem des Panels, und die Vollansicht aendert dort nichts. @variant statt
+   einer zweiten Zahl fuer den Umbruchpunkt: xl ist der des Projekts. */
+.beschriftung-breit-ab-xl {
+  @variant xl {
+    --dichte-beschriftung: 16rem;
+  }
+}
+
 /* ── Das Erscheinungsbild — drei Werte an der Wurzel ─────────────────────────
    Bis zum 03.09.2026 stand hier der Block `.dark`, und nichts schaltete ihn je
    ein (belegt in docs/dunkelmodus.md §1). Seit Schritt 11b haengt er an dem

@@ -126,3 +126,21 @@ export const IM_RAHMEN_SCROLLT_AB_MD =
  */
 export const IM_RAHMEN_SCROLLT_AB_XL =
   "xl:relative xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain";
+
+/**
+ * **Die Vollansicht** *(17.11.2026, E‑1194, `docs/nachrichtendetail.md` §10.20)* —
+ * das Gegenstück zu den Spalten oben: **Hier klebt nichts, und nichts scrollt für
+ * sich.**
+ *
+ * Ab `xl` nimmt das Panel die Breite der eigenen Route ein — `max-w-inhalt`,
+ * linksbündig, eine Spalte (`nachricht-seite.tsx`) — und steht in `main` wie
+ * jeder andere Inhalt. Die Liste daneben weicht per `display: none`; eine
+ * klebende Spalte hätte nichts mehr, neben dem sie stehen bleiben müsste. Damit
+ * entsteht **keine vierte Stelle** mit eigenem Scrollbereich, sondern in diesem
+ * Zustand keine.
+ *
+ * `beschriftung-breit-ab-xl` hebt die Beschriftungsspalte des Belegdaten-Blocks
+ * auf die 16 rem der eigenen Route (`globals.css`, `docs/bam-werte.md` §11a) —
+ * erst ab `xl`, denn darunter ändert die Vollansicht nichts.
+ */
+export const VOLLANSICHT_AB_XL = "xl:w-full xl:max-w-inhalt beschriftung-breit-ab-xl";
