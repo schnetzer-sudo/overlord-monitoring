@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1053.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1057.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -45,17 +45,17 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
 | offen — Verbesserung | 50 | 0 | — |
-| offen — Entscheidung offen | 53 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 66 | 13 | — |
-| **offen gesamt** | **201** | **13** | — |
-| ungeprüft | — | — | 357 |
-| erledigt | 67 | 0 | 64 |
+| offen — Entscheidung offen | 54 | 0 | — |
+| offen — Sichtprüfung oder Messung offen | 67 | 13 | — |
+| **offen gesamt** | **203** | **13** | — |
+| ungeprüft | — | — | 356 |
+| erledigt | 69 | 0 | 65 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 271 | 13 | 426 |
+| **Zeilen** | 275 | 13 | 426 |
 
-Offen sind damit **214** nummerierte Punkte; dazu kommen 357 ungeprüfte lokale (Teil 1 gezählt am
-10.11.2026 über die Tabelle, nach „Ihre Aufträge neu gegliedert“ per Skript nachgezählt; Teil 3 vom
-06.11.2026). Davon
+Offen sind damit **216** nummerierte Punkte; dazu kommen 356 ungeprüfte lokale (Teil 1 und Teil 3
+gezählt am 17.11.2026 nach „Vollansicht überall“ per Skript über die Tabellen; Teil 3 zuvor vom
+06.11.2026, seither nur `property-suche.md` §15 Nr. 14 aufgegriffen). Davon
 stammen 37 aus der Linie `assistent` und ihrer Zusammenführung (1000 bis 1006 aus A1; 1010 und 1012
 bis 1015 aus A2; 1017 bis 1022 aus A3; 1023 bis 1032 aus A4; 1033 bis 1037 aus 1.1.0; 1038 bis 1041
 aus dem Nachtrag zu 1.1.0, der Deployment-Routine). Dazu kommen 1042 bis 1044 aus dem Fix „Antworten
@@ -64,7 +64,9 @@ ohne Innenleben“ vom 26.10.2026; 1042 ist seit M1009 am selben Tag erledigt. 1
 (M1010) am selben Tag erledigt. 1046 und 1047 kommen aus „Ersteller am Auftrag“ vom 06.11.2026; 1047 ist seit der Auskunft des
 Auftraggebers am selben Tag erledigt. 1048 und 1049 (beide am 09.11.2026 erledigt) und 1050 kommen
 aus den Fixes an „Ihre Aufträge“ vom 09. und 10.11.2026, 1051 und 1052 aus „Ihre Aufträge neu
-gegliedert“ vom 10.11.2026. 1009 ist
+gegliedert“ vom 10.11.2026, 1053 bis 1056 aus „Vollansicht überall“ vom 17.11.2026 (1053 ist der
+aufgegriffene lokale Punkt `property-suche.md` §15 Nr. 14 und am selben Tag erledigt, 1054 ebenso
+am selben Tag). 1009 ist
 seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
 M1003 erledigt. Am selben Tag erledigt: 255, 260 und 261 (`betrieb.md` §9).
 
@@ -282,7 +284,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 229 | Belegsuche/Feldsuche lassen nach Abbruch die Trefferzeile der verworfenen Antwort stehen | [`nachrichtenliste.md`](nachrichtenliste.md) §9 | Fehler | offen |
 | 230 | Rückweg über eine Datei hält Seitenstapel, Σ, Versatz und Schalter der Liste nicht | [`nachrichtenliste.md`](nachrichtenliste.md) §9 | Entscheidung offen | **erledigt** — `nachrichtenliste.md` §9: entschieden 14.10.2026, „so lassen“ |
 | 231 | Rückweg aus Datei endet in Prozessansicht und Belegsuche auf Vollseite und Standardliste | [`nachrichtendetail.md`](nachrichtendetail.md) §13 | Fehler | **erledigt** — `nachrichtendetail.md` §13: entschieden 14.10.2026 (E‑243); Rest als Punkt 233 |
-| 232 | Vier Widersprüche zwischen Doku und Code (Fokus, Rückweg samt Filtern, bam-suche §13, Cursor-Regel) | [`nachrichtendetail.md`](nachrichtendetail.md) §13 | Fehler | offen |
+| 232 | Vier Widersprüche zwischen Doku und Code (Fokus, Rückweg samt Filtern, bam-suche §13, Cursor-Regel) | [`nachrichtendetail.md`](nachrichtendetail.md) §13 | Fehler | offen — Nr. 3 seit 17.11.2026 gegenstandslos (`nachrichtendetail.md` §13, E‑1194: die Suche hat den Umschalter, sein Rückweg endet dort) |
 | 233 | Baumzustand und Seitenstapel gehen nach dem Umweg über eine Datei verloren | [`process-view.md`](process-view.md) §18 · Nummer vergeben in `nachrichtendetail.md` §10.18 | Verbesserung | offen |
 | 247 | Ob die Fensterverengung aufsteigend (AELTESTE) rechnen kann, ist nicht geprüft | [`nachrichtenliste.md`](nachrichtenliste.md) §9 · bis 16.10.2026 doppelt als 136 geführt | Sichtprüfung oder Messung offen | offen |
 | 248 | Schwelle 90 % für das EBCDIC-Muster gesetzt, nicht gemessen | [`rohdaten.md`](rohdaten.md) §13 · bis 16.10.2026 doppelt als 186 geführt | Sichtprüfung oder Messung offen | offen |
@@ -354,6 +356,10 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1050 | Die Karte im Gespräch zeigt bei einem Typ ohne Schlüssel „Eintrag <n>“ als Überschrift jedes Eintrags (E‑1080); „Ihre Aufträge“ zeigt seit E‑1185 keinen Ersatz mehr. Gemeldet, nicht geändert: Der Auftrag schloss die Karte aus | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.14 · 10.11.2026 | Entscheidung offen | offen |
 | 1051 | Die Typdefinition hat keine Feldart; „Ihre Aufträge“ entscheidet an der Länge des Werts, ob ein Feld eine Spalte oder die ganze Breite bekommt (E‑1192), kein Wert in `--text-basis`. Nach Art ginge es erst mit einer Feldart in der Definition, ihrer Prüfung und ihr in der Antwort — gemeldet, nicht gebaut | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.15 · 10.11.2026 | Entscheidung offen | offen |
 | 1052 | Die Nachrichten-ID passt in „Ihre Aufträge“ bei 1.280 px in keiner Anzeigegröße in eine Zeile (in `xs` 7,1 px zu wenig), bei 1.440 px in `m` und `l` nicht; sie endet dort mit Auslassungspunkten (M1016) | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.15 · 10.11.2026 | Entscheidung offen | offen |
+| 1053 | Die Antwort der Nachrichtenliste nennt ihr aufgelöstes Fenster nicht; Absprung in den Prozessbaum nur im freien Modus (bis 17.11.2026 lokaler Punkt `property-suche.md` §15 Nr. 14, aufgegriffen) | [`property-suche.md`](property-suche.md) §15, Punkt 14 · [`nachrichtendetail.md`](nachrichtendetail.md) §10.20 · 17.11.2026 | Verbesserung | **erledigt** — `property-suche.md` §15: „Erledigt am 17.11.2026 (E‑1196), projektweit Punkt 1053: Ohne Fenster in der Antwort führt der Absprung auf den Kalendertag der Nachricht; der Backend-Bau entfällt“ |
+| 1054 | Vollansicht in Prozessansicht und Belegsuche, eigene Route mit Absprung und der Bildlauf der Übertragungsliste nach dem Verkleinern im Browser ungesehen; die Sichtprüfung brach nach der Nachrichtenliste ab | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | **erledigt** — `nachrichtendetail.md` §10.20: „Nachgeholt am 17.11.2026 … Damit ist Punkt 1054 erledigt“ |
+| 1055 | Strg-, Cmd- und Mittelklick auf eine Zeile: ob der Mittelklick unter Windows das automatische Scrollen wirklich nicht startet, ob der neue Tab wie bei einem Verweis im Hintergrund aufgeht, und der Cmd-Klick unter macOS — über das Chrome-DevTools-Protokoll nicht zu sehen | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | offen — teilweise gesehen: Strg-Klick öffnet im Hintergrund (`nachrichtendetail.md` §10.20, „Nachgeholt“); offen Mittelklick samt automatischem Scrollen an echter Maus und Cmd-Klick unter macOS |
+| 1056 | Eine Adresse mit `voll` unter `xl`: Die Vollansicht ändert dort nichts, der Umschalter ist unsichtbar, und `Escape` verkleinert zuerst ohne sichtbare Wirkung — wer am schmalen Fenster einen solchen Link öffnet, drückt `Escape` zweimal | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Entscheidung offen | offen |
 
 ---
 
@@ -831,7 +837,7 @@ aber nirgends als erledigt vermerkt. *Erledigt* oder *gegenstandslos* steht nur,
 | §9 Nr. 11 | Message.ProcessName vorab in Kennungen auflösen (Form der Nachrichtenliste) | §9 | Verbesserung | **erledigt** — `property-suche.md` §9: „Erledigt am 08.09.2026 (Teil 2): gebaut und gemessen, §10.…“ |
 | §9 Nr. 12 | Feldbegriff ohne Treffer kostet den vollen Wertbereich (1,35 s für leere Antwort); Warnung offen | §9 | Verbesserung | ungeprüft |
 | §15 Nr. 13 | Prozessname mit mehreren Kennungen (IN (?, ?)) nicht gemessen | §15 | Sichtprüfung oder Messung offen | ungeprüft |
-| §15 Nr. 14 | Antwort der Nachrichtenliste nennt ihr aufgelöstes Fenster nicht; Absprung nur im freien Modus | §15 | Verbesserung | ungeprüft |
+| §15 Nr. 14 | Antwort der Nachrichtenliste nennt ihr aufgelöstes Fenster nicht; Absprung nur im freien Modus | §15 | Verbesserung | **erledigt** — aufgegriffen am 17.11.2026 als **1053** (Teil 1); `property-suche.md` §15: „Erledigt am 17.11.2026 (E‑1196)“ |
 | §15 Nr. 15 | Präfix-Knopf bei gemischter Suche wirkt nur auf Belegnummern; Oberfläche sagt es nicht | §15 | Entscheidung offen | ungeprüft |
 | §15 Nr. 16 | Kein Hinweis auf geringe Deckung eines Feldes (DestinationFilename, ReceiverID) | §15 | Verbesserung | ungeprüft |
 | §15 Nr. 17 | Drei über ein Jahr abbrechende Felder im Angebot nicht gekennzeichnet | §15 | Verbesserung | ungeprüft |

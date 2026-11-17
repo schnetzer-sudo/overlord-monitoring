@@ -3,7 +3,13 @@
 import { act, useEffect, useRef, useState } from "react";
 import { describe, expect, it } from "vitest";
 
-import { useBeginntOben, useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
+import {
+  merkeBildlauf,
+  stelleBildlaufHer,
+  useBeginntOben,
+  useInSicht,
+  useZuletztGeschlossen,
+} from "@/lib/in-sicht-bringen";
 
 import { rendere } from "./hilfe/rendern";
 
@@ -345,5 +351,96 @@ describe("Der Rückweg useZuletztGeschlossen", () => {
     } finally {
       await abbauen();
     }
+  });
+});
+
+/**
+ * **Der Bildlauf über die Vollansicht** *(17.11.2026, E‑1194)*. Beim Maximieren
+ * weicht die Liste per `display: none`; der Browser klemmt den Stand von `main`
+ * auf das, was übrig ist, und ein Scrollbereich, der selbst weicht, verliert
+ * seinen. Gemerkt wird deshalb **im Ereignis** jeder Stand vom Element aufwärts
+ * — dieselbe Bauform wie der Stand des Baums in der Prozessansicht (E‑115) —,
+ * und beim Verkleinern wiederhergestellt.
+ */
+describe("Der Bildlauf über die Vollansicht", () => {
+  /** Ein Kasten mit gestelltem Scrollstand — `jsdom` rechnet keinen. */
+  function kasten(scrollt: boolean, staende: Map<Element, number>, stand = 0): HTMLDivElement {
+    const el = document.createElement("div");
+    if (scrollt) {
+      el.style.overflowY = "auto";
+    }
+    staende.set(el, stand);
+    Object.defineProperty(el, "scrollTop", {
+      configurable: true,
+      get: () => staende.get(el),
+      set: (wert: number) => staende.set(el, wert),
+    });
+    return el;
+  }
+
+  it("merkt sich jeden Scrollbereich vom Element aufwärts und stellt ihn wieder her", () => {
+    const staende = new Map<Element, number>();
+    const main = kasten(true, staende, 1234);
+    const rahmen = kasten(false, staende);
+    const liste = kasten(true, staende, 456);
+    main.append(rahmen);
+    rahmen.append(liste);
+    document.body.append(main);
+
+    try {
+      const stand = merkeBildlauf(liste);
+      staende.set(main, 0);
+      staende.set(liste, 0);
+
+      stelleBildlaufHer(stand);
+
+      expect(staende.get(main)).toBe(1234);
+      expect(staende.get(liste)).toBe(456);
+      // Was nicht scrollt, wird nicht angefasst.
+      expect(staende.get(rahmen)).toBe(0);
+    } finally {
+      main.remove();
+    }
+  });
+
+  it("nimmt bei einem Element ohne eigenen Scrollbereich nur die Kästen darüber", () => {
+    const staende = new Map<Element, number>();
+    const main = kasten(true, staende, 800);
+    const spalte = kasten(false, staende, 0);
+    main.append(spalte);
+    document.body.append(main);
+
+    try {
+      const stand = merkeBildlauf(spalte);
+      staende.set(main, 0);
+      staende.set(spalte, 99);
+
+      stelleBildlaufHer(stand);
+
+      expect(staende.get(main)).toBe(800);
+      expect(staende.get(spalte)).toBe(99);
+    } finally {
+      main.remove();
+    }
+  });
+
+  it("übergeht einen Kasten, der nicht mehr im Dokument hängt, und tut ohne Stand nichts", () => {
+    const staende = new Map<Element, number>();
+    const main = kasten(true, staende, 300);
+    const liste = kasten(true, staende, 40);
+    main.append(liste);
+    document.body.append(main);
+
+    const stand = merkeBildlauf(liste);
+    main.remove();
+    staende.set(main, 0);
+    staende.set(liste, 0);
+
+    stelleBildlaufHer(stand);
+    stelleBildlaufHer(null);
+
+    expect(staende.get(main)).toBe(0);
+    expect(staende.get(liste)).toBe(0);
+    expect(merkeBildlauf(null)).toEqual([]);
   });
 });

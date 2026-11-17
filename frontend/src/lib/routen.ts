@@ -49,7 +49,21 @@ export const WEITER_PARAMETER = "weiter";
 export const NACHRICHT_PARAMETER = "nachricht";
 
 /**
- * Die Abfragezeichenkette in ihre Paare zerlegt — **ohne `nachricht`.**
+ * Der Suchparameter der **Vollansicht** *(17.11.2026, E‑1194)*: Das Panel nimmt
+ * ab `xl` die Inhaltsbreite, die Liste weicht. Er gilt nur zusammen mit
+ * {@link NACHRICHT_PARAMETER} und steht in derselben Ansicht wie dieser — in
+ * `/nachrichten`, `/suche` und `/prozesse`.
+ *
+ * Hier aus demselben Grund wie `nachricht`: {@link ansichtOhneListe} entfernt
+ * ihn, und `lib` importiert nicht aus `features`. Dass die drei Ansichten
+ * denselben Namen meinen, hält `tests/routen.test.ts` fest.
+ */
+export const VOLL_PARAMETER = "voll";
+
+/**
+ * Die Abfragezeichenkette in ihre Paare zerlegt — **ohne `nachricht`** und seit
+ * dem 17.11.2026 auch **ohne `voll`** (E‑1194): Beide beschreiben das Panel
+ * einer Ansicht, und auf der eigenen Route gibt es keins.
  *
  * Zerlegt und nicht über `URLSearchParams` geführt, und das ist der Punkt: Jene
  * Klasse baut die Zeichenkette beim Ausgeben neu auf und kodiert dabei um
@@ -74,13 +88,20 @@ function uebrigeParameter(abfragezeichenkette: string): string[] {
     .filter((paar) => {
       const gleich = paar.indexOf("=");
       const name = gleich === -1 ? paar : paar.slice(0, gleich);
-      return name !== NACHRICHT_PARAMETER;
+      return name !== NACHRICHT_PARAMETER && name !== VOLL_PARAMETER;
     });
 }
 
 /**
  * Das Ziel für „Ohne Liste anzeigen" — die Detailansicht auf ihrer **eigenen
  * Route**.
+ *
+ * > **Seit dem 17.11.2026 ist das nicht mehr das Ziel des Umschalters** (E‑1194):
+ * > Maximieren ist ein Zustand der Seite ({@link VOLL_PARAMETER}) und kein
+ * > Routenwechsel mehr. Die Funktion bleibt und ist jetzt das Ziel von Strg-,
+ * > Cmd- und Mittelklick auf eine Zeile der Nachrichtenliste
+ * > ({@link zeileImNeuenTab}, E‑1195) — dieselbe Adresse, die der Umschalter bis
+ * > dahin ansteuerte.
  *
  * **`nachricht` wird entfernt.** Sonst stünde die Kennung zweimal im Ziel: einmal
  * im Pfad, einmal als Parameter. Welche von beiden dann gälte, wäre eine Frage,
@@ -175,6 +196,36 @@ export function nachrichtAnsicht(messageId: string): string {
   return `${ROUTEN.nachrichten}/${encodeURIComponent(messageId)}`;
 }
 
+/** Eine der drei Ansichten, die eine Nachricht als Panel neben sich tragen. */
+export type Panelansicht = typeof ROUTEN.nachrichten | typeof ROUTEN.suche | typeof ROUTEN.prozesse;
+
+/**
+ * **Wohin eine Zeile im neuen Tab führt** *(17.11.2026, E‑1195)* — bei Strg-,
+ * Cmd- und Mittelklick und bei Strg+Enter auf der fokussierten Zeile. Immer auf
+ * die eigene Route der Nachricht; die Ausgangsseite bleibt, wie sie ist.
+ *
+ * - **Aus der Nachrichtenliste mit ihrer Abfragezeichenkette**, ohne `nachricht`
+ *   und `voll` — dieselbe Adresse, die bis dahin „Ohne Liste anzeigen" ansteuerte
+ *   ({@link ansichtOhneListe}). Das Schließen auf der eigenen Route führt mit
+ *   genau dieser Zeichenkette in die Liste zurück, also in denselben Ausschnitt.
+ * - **Aus Prozessansicht und Belegsuche ohne Abfragezeichenkette.** Deren
+ *   Parameter (`begriff`, `feld`, `prozess`, die Rollup-Zeiträume) sind keine der
+ *   Liste; auf die eigene Route mitgenommen, landeten sie beim Schließen in der
+ *   Nachrichtenliste, die sie nicht kennt.
+ *
+ * Die Abfragezeichenkette liest der Aufrufer **im Ereignis** aus
+ * `window.location.search` — wie bei den übrigen Wegen auf die eigene Route.
+ */
+export function zeileImNeuenTab(
+  ansicht: Panelansicht,
+  messageId: string,
+  abfragezeichenkette: string,
+): string {
+  return ansicht === ROUTEN.nachrichten
+    ? ansichtOhneListe(messageId, abfragezeichenkette)
+    : nachrichtAnsicht(messageId);
+}
+
 /**
  * Eine Adresse aus dem Verlauf, zerlegt — oder `null`, wenn es keine ist oder
  * sie eine **andere Herkunft** hat. Nur was nachweislich in dieser Anwendung
@@ -233,6 +284,12 @@ const PANEL_ANSICHTEN: readonly string[] = [ROUTEN.nachrichten, ROUTEN.suche, RO
  * Ansichten"); seit E‑243 gelten sie. Weiterhin verlangt ist **dieselbe
  * Nachricht** — eine Lockerung auf „irgendeine Seite der Anwendung" ist
  * ausgeschlossen.
+ *
+ * **Die Vollansicht ist Beleg wie das Panel** *(17.11.2026, E‑1194)*: Ihre
+ * Adresse trägt dieselbe Nachricht in `nachricht` und daneben
+ * {@link VOLL_PARAMETER}. Der Schritt zurück stellt sie samt `voll` her, und die
+ * Nachricht steht wieder in der Vollansicht. Gefragt wird dafür nichts Neues —
+ * `voll` ist für den Beleg ein Parameter wie jeder andere.
  *
  * @param adresse die volle Adresse eines Verlaufseintrags, `null` ohne Beleg
  * @param herkunft die eigene Herkunft, `window.location.origin`

@@ -1002,6 +1002,30 @@ describe("Eine Ebene zurück", () => {
     }
   });
 
+  /**
+   * **Aus der Vollansicht** *(17.11.2026, E‑1194)*: Die Adresse trägt `voll`, und
+   * sie ist Beleg wie jede Ansicht mit dieser Nachricht im Panel. Der Schritt
+   * zurück stellt sie samt `voll` her — die Nachricht steht wieder in der
+   * Vollansicht.
+   */
+  it.each([
+    `/nachrichten?zeitraum=7d&nachricht=${MESSAGE_ID}&voll=true`,
+    `/suche?begriff=:4711&nachricht=${MESSAGE_ID}&voll=true`,
+    `/prozesse?zeitraum=48H&prozess=P-0815&nachricht=${MESSAGE_ID}&voll=true`,
+  ])("geht aus der Vollansicht einen Schritt zurück: %s", async (vorher) => {
+    stelleVerlauf([vorher, DATEI]);
+    const { abbauen } = await rendereAnsicht(anzeige());
+
+    try {
+      await escape();
+
+      expect(navigation.back).toHaveBeenCalledOnce();
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      await abbauen();
+    }
+  });
+
   it("bleibt ohne Beleg beim Ziel des Verweises: Direktaufruf, andere Nachricht, andere Ansicht", async () => {
     for (const verlauf of [
       // Direktaufruf: ein geteilter Verweis im neuen Tab. (F5 im selben Tab

@@ -9,6 +9,13 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Neu
 
+- **Strg-, Cmd- und Mittelklick auf eine Zeile öffnen die Nachricht in einem neuen Tab**
+  (Entscheidung des Auftraggebers vom 17.11.2026, E‑1195,
+  [`docs/nachrichtendetail.md`](docs/nachrichtendetail.md) §10.2 und §10.20). Gilt für die
+  Nachrichtenliste, die Übertragungsliste der Prozessansicht und die Trefferliste der Suche, dazu
+  Strg+Enter auf der fokussierten Zeile. Ziel ist die eigene Route `/nachrichten/<id>`, aus der Liste
+  mit ihren Filtern, aus Prozessansicht und Suche ohne. Die Ausgangsseite bleibt, wie sie ist; der
+  gewöhnliche Klick öffnet weiter das Panel. Kein Doppelklick.
 - **Das Nachrichtendetail zeigt je Schritt das Ende, sobald die Zeitleiste breit genug ist**
   (Entscheidung des Auftraggebers vom 09.11.2026, E‑1184,
   [`docs/nachrichtendetail.md`](docs/nachrichtendetail.md) §10.19). Grund: Gewünscht ist die Uhrzeit,
@@ -139,6 +146,21 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Behoben
 
+- **Das Nachrichtendetail lässt sich in Prozessansicht und Belegsuche maximieren** (gemeldet in der
+  Produktion, Entscheidungen des Auftraggebers vom 17.11.2026, E‑1194 und E‑1197,
+  [`docs/nachrichtendetail.md`](docs/nachrichtendetail.md) §10.7 und §10.20). Maximieren ist jetzt
+  ein Zustand der Seite (`voll` in der Adresse) und kein Wechsel auf die eigene Route mehr — ein
+  Mechanismus für alle drei Ansichten. Die Liste weicht und bleibt geladen; Verkleinern zeigt sie mit
+  derselben Seite und demselben Bildlauf, ohne neue Abfrage. `Escape` verkleinert in der Vollansicht
+  erst auf das Panel, das X schließt ganz. Die eigene Route `/nachrichten/<id>` bleibt unverändert.
+- **„Im Prozessbaum anzeigen“ steht überall außer in der Prozessansicht** (gemeldet in der
+  Produktion, E‑1196, [`docs/property-suche.md`](docs/property-suche.md) §12). Bis dahin fehlte der
+  Absprung im relativen Zeitraum der Liste — dem Standardfall —, auf der eigenen Route und in der
+  Belegsuche vor der ersten Antwort. Ohne bekanntes Fenster führt er jetzt auf den Kalendertag der
+  Nachricht (00:00 bis 23:00 der Anwendungszone, an den Umstellungstagen 23 und 25 Stunden). Nur
+  Frontend; das Fenster in der Antwort der Liste, das dafür vorgesehen war (Punkt 1053), wird nicht
+  gebraucht. `docs/README.md` nennt die offene Sichtprüfung 1055 (Mittelklick und Cmd-Klick an
+  echter Hardware); 1054 ist am selben Tag im Browser nachgeholt.
 - **„Ihre Aufträge“ zeigt bei einem Auftragstyp ohne Schlüssel keine Ersatzbeschriftung mehr**
   (Entscheidungen des Auftraggebers vom 10.11.2026, E‑1185 bis E‑1187,
   [`docs/assistent-frontend.md`](docs/assistent-frontend.md) §12.14). Befund: Ein Neudurchlauf eines

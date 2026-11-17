@@ -369,6 +369,12 @@ export const SUCHE_PARAMETER = {
    * Ansicht; was in der Abfrage steht, die Frage an das Backend.
    */
   nachricht: NACHRICHTEN_PARAMETER.nachricht,
+  /**
+   * Die Vollansicht *(17.11.2026, E‑1194)* — **derselbe Parser wie neben der
+   * Liste**, und wie `nachricht` in der URL und in keiner Abfrage
+   * ({@link alsAbfrage}).
+   */
+  voll: NACHRICHTEN_PARAMETER.voll,
 };
 
 export type Suchzustand = {
@@ -378,6 +384,8 @@ export type Suchzustand = {
   bis: Date | null;
   modus: Suchmodus | null;
   nachricht: string | null;
+  /** Die Vollansicht (E‑1194) — gilt nur zusammen mit `nachricht`. */
+  voll: boolean;
 };
 
 /** Die Begriffe, immer als Liste — `null` heißt „keiner", nicht „unbekannt". */

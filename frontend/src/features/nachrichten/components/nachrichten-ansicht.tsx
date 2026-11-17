@@ -1,19 +1,19 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { NeuLaden } from "@/components/neu-laden";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { Button } from "@/components/ui/button";
 import { useTexte } from "@/i18n/provider";
 import { useBeginntOben, useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
-import { KLEBENDE_SPALTE_AB_XL } from "@/lib/klebende-spalte";
-import { ansichtOhneListe } from "@/lib/routen";
+import { KLEBENDE_SPALTE_AB_XL, VOLLANSICHT_AB_XL } from "@/lib/klebende-spalte";
+import { ROUTEN, zeileImNeuenTab } from "@/lib/routen";
 import { cn } from "@/lib/utils";
 
 import {
   feldFehler,
+  istVoll,
   listenanzeige,
   sucheTraegt,
   suchfeldFehler,
@@ -26,6 +26,7 @@ import {
   useFokusZurueck,
   useNachrichtenSeite,
   useNachrichtenfilter,
+  useVollansicht,
 } from "../hooks";
 import { Blaettern } from "./blaettern";
 import { Filterleiste } from "./filterleiste";
@@ -45,7 +46,6 @@ import { NachrichtenTabelle } from "./nachrichten-tabelle";
  */
 export function NachrichtenAnsicht() {
   const texte = useTexte();
-  const router = useRouter();
   const { filter, ...steuerung } = useNachrichtenfilter();
   // Nicht in der URL: Der Schalter betrifft die Arbeitsweise des Betrachters,
   // nicht den gezeigten Ausschnitt.
@@ -97,12 +97,9 @@ export function NachrichtenAnsicht() {
 
   const gewaehlt = filter.nachricht;
   const schliesse = steuerung.setzeNachricht;
-
-  // `Escape` schließt das Panel. Die Regel samt ihren zwei Ausnahmen steht in
-  // `useEscapeSchliesst` — an einer Stelle, weil die eigene Route dieselbe Taste
-  // trägt (`nachricht-seite.tsx`).
+  // Die Vollansicht (E‑1194) — nur mit geöffneter Nachricht.
+  const voll = istVoll(filter);
   const schliessePanel = useCallback(() => schliesse(null), [schliesse]);
-  useEscapeSchliesst(gewaehlt !== null, schliessePanel);
 
   /*
    * **Was neu erscheint, kommt ins Bild** (E‑114, `lib/in-sicht-bringen.ts`):
@@ -128,6 +125,27 @@ export function NachrichtenAnsicht() {
       zuletztGewaehlteZeile.current = zeile;
     }
   }, []);
+
+  /*
+   * **Die Vollansicht** (E‑1194, `useVollansicht`): Maximieren merkt sich den
+   * Bildlauf der Liste und setzt `voll`; das Verlassen stellt ihn wieder her.
+   * Steht **vor** dem Rückweg darunter — erst der Stand, dann E‑114.
+   */
+  const listenspalte = useRef<HTMLDivElement>(null);
+  const { maximiere, verkleinere } = useVollansicht({
+    voll,
+    setzeVoll: steuerung.setzeVoll,
+    liste: listenspalte,
+    panel,
+    zeile: zuletztGewaehlteZeile,
+  });
+
+  // `Escape` schließt das Panel — und verkleinert in der Vollansicht erst auf
+  // das Panel, eine Ebene wie aus der Datei (E‑1197). Die Regel samt ihren zwei
+  // Ausnahmen steht in `useEscapeSchliesst` — an einer Stelle, weil die eigene
+  // Route dieselbe Taste trägt (`nachricht-seite.tsx`).
+  useEscapeSchliesst(gewaehlt !== null, voll ? verkleinere : schliessePanel);
+
   const geschlossen = useZuletztGeschlossen(gewaehlt);
   useInSicht(zuletztGewaehlteZeile, geschlossen);
   // Und der Fokus geht an dieselbe Zeile zurück (E‑241, S4) — über das X, über
@@ -153,7 +171,9 @@ export function NachrichtenAnsicht() {
      */
     <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
       <div
-        className={
+        ref={listenspalte}
+        className={cn(
+          "min-w-0 flex-1 flex-col gap-4",
           /*
            * Am schmalen Fenster gibt es kein „neben der Liste": Dort füllt die
            * Ansicht den Bildschirm, und das Zurück des Browsers schließt sie,
@@ -163,11 +183,13 @@ export function NachrichtenAnsicht() {
            * dem Bild und aus der Tastaturreihenfolge, lässt ihren Zustand aber
            * stehen. Wer das Panel schließt, findet dieselbe Seite wieder, ohne
            * dass eine zweite Abfrage auf die Produktionsdatenbank geht.
+           *
+           * **In der Vollansicht weicht sie auch ab `xl`** (E‑1194) — dieselbe
+           * Bauform, also derselbe Gewinn: Wer verkleinert, findet dieselbe
+           * Seite wieder, ohne Abruf.
            */
-          gewaehlt !== null
-            ? "hidden min-w-0 flex-1 flex-col gap-4 xl:flex"
-            : "flex min-w-0 flex-1 flex-col gap-4"
-        }
+          gewaehlt === null ? "flex" : voll ? "hidden" : "hidden xl:flex",
+        )}
       >
         <h1 className="text-ueberschrift font-semibold">
           {texte.navigation.eintraege.nachrichten}
@@ -226,8 +248,14 @@ export function NachrichtenAnsicht() {
               sortierung={filter.sortierung ?? "neueste"}
               aufSortierung={steuerung.setzeSortierung}
               gewaehlt={gewaehlt}
-              aufAuswahl={steuerung.setzeNachricht}
+              aufAuswahl={steuerung.waehleZeile}
               gewaehlteZeile={merkeZeile}
+              // Strg-, Cmd- und Mittelklick (E‑1195): die eigene Route mit der
+              // Abfragezeichenkette, die **im Augenblick des Klicks** dasteht —
+              // ohne `nachricht` und `voll`.
+              neuerTab={(messageId) =>
+                zeileImNeuenTab(ROUTEN.nachrichten, messageId, window.location.search)
+              }
             />
             <UngeklaertFusszeile zeilen={zeigeSeite?.items ?? []} />
           </div>
@@ -247,7 +275,17 @@ export function NachrichtenAnsicht() {
       {gewaehlt === null ? null : (
         <div
           ref={panel}
-          className={cn("min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", KLEBENDE_SPALTE_AB_XL)}
+          className={cn(
+            "min-w-0",
+            /*
+             * Neben der Liste die klebende Spalte (E‑115); in der Vollansicht
+             * die Breite der eigenen Route, und nichts klebt (E‑1194,
+             * `lib/klebende-spalte.ts`).
+             */
+            voll
+              ? VOLLANSICHT_AB_XL
+              : cn("xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", KLEBENDE_SPALTE_AB_XL),
+          )}
         >
           <NachrichtDetail
             // Ein Wechsel der Nachricht ist eine neue Ansicht und kein neuer
@@ -268,28 +306,25 @@ export function NachrichtenAnsicht() {
              * freien Modus** (`von`/`bis` in der URL). Im relativen Modus kennt
              * die Oberfläche das aufgelöste Fenster nicht — die Antwort der
              * Liste nennt es nicht, und gegen die Browseruhr wird nicht
-             * gerechnet (Regel Z1). Dann gibt es keinen Link statt eines, der in
-             * einem anderen Fenster landet (`docs/property-suche.md` §12).
+             * gerechnet (Regel Z1). **Seit E‑1196 führt er dann auf den
+             * Kalendertag der Nachricht** statt zu fehlen
+             * (`docs/property-suche.md` §12).
              */
             prozessbaumFenster={
               filter.von !== null && filter.bis !== null
                 ? { von: filter.von, bis: filter.bis }
                 : undefined
             }
-            umschaltenZu="ohneListe"
             /*
-             * Auf die eigene Route, mit derselben Abfragezeichenkette — nur ohne
-             * `nachricht`, sonst stünde die Kennung zweimal im Ziel.
-             *
-             * Gelesen wird `window.location.search` **im Ereignis**, genau wie
-             * beim Schließen auf der eigenen Route (`nachrichtendetail.md`
-             * §10.6): kein `useSearchParams`, keine neue Suspense-Grenze. Nicht
-             * `alsSuchparameter(filter)`, obwohl der Filter hier zur Hand wäre —
-             * das baute die Zeichenkette nach eigener Ordnung neu auf, statt die
-             * stehende weiterzureichen, und ein unbekannter Parameter aus einem
-             * geteilten Link fiele dabei weg.
+             * **Maximieren ist seit dem 17.11.2026 ein Zustand der Seite**
+             * (E‑1194): `voll` in der URL, die Liste weicht und bleibt
+             * eingehängt. Bis dahin führte der Umschalter auf die eigene Route
+             * (`ansichtOhneListe`), und der Weg zurück kostete eine
+             * Listenabfrage; dieses Ziel tragen jetzt Strg- und Mittelklick
+             * auf eine Zeile (E‑1195).
              */
-            aufUmschalten={() => router.push(ansichtOhneListe(gewaehlt, window.location.search))}
+            umschaltenZu={voll ? "nebenListe" : "ohneListe"}
+            aufUmschalten={voll ? verkleinere : maximiere}
             // Der Schritt zurück aus einer Datei führt hierher (E‑241); dann
             // bekommt ihr Ziel den Fokus.
             fokusNachDatei

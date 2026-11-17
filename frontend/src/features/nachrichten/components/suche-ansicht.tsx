@@ -18,14 +18,17 @@ import {
 } from "@/lib/format";
 import { ProblemFehler, istPraefixfensterZuGross } from "@/lib/http";
 import { useBeginntOben, useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
-import { KLEBENDE_SPALTE_AB_XL } from "@/lib/klebende-spalte";
+import { KLEBENDE_SPALTE_AB_XL, VOLLANSICHT_AB_XL } from "@/lib/klebende-spalte";
+import { ROUTEN, zeileImNeuenTab } from "@/lib/routen";
 import { cn } from "@/lib/utils";
 
 import type { BamSuchergebnis } from "../api";
+import { istVoll } from "../filter";
 import {
   useBamSuche,
   useEscapeSchliesst,
   useFokusZurueck,
+  useVollansicht,
   useSuchfelder,
   useSuchzustand,
 } from "../hooks";
@@ -96,15 +99,26 @@ const ABGEBROCHEN = "suche-abgebrochen";
  */
 export function SucheAnsicht() {
   const texte = useTexte();
-  const { zustand, marken, felder, modus, setzeMarken, setzeFenster, setzeModus, setzeNachricht } =
-    useSuchzustand();
+  const {
+    zustand,
+    marken,
+    felder,
+    modus,
+    setzeMarken,
+    setzeFenster,
+    setzeModus,
+    setzeNachricht,
+    waehleZeile,
+    setzeVoll,
+  } = useSuchzustand();
   const abfrage = alsAbfrage(zustand);
   const anfrage = useBamSuche(abfrage, marken.length > 0);
   const ergebnis = anfrage.data;
 
   const gewaehlt = zustand.nachricht;
+  // Die Vollansicht (E‑1194) — nur mit geöffneter Nachricht.
+  const voll = istVoll(zustand);
   const schliesse = useCallback(() => setzeNachricht(null), [setzeNachricht]);
-  useEscapeSchliesst(gewaehlt !== null, schliesse);
 
   /*
    * **Was neu erscheint, kommt ins Bild** (E‑114, `lib/in-sicht-bringen.ts`) —
@@ -123,6 +137,20 @@ export function SucheAnsicht() {
       zuletztGewaehlteZeile.current = zeile;
     }
   }, []);
+
+  // Die Vollansicht wie neben der Liste (E‑1194): vor dem Rückweg darunter,
+  // damit erst der Bildlauf der Trefferliste steht und dann E‑114 gilt.
+  const trefferspalte = useRef<HTMLDivElement>(null);
+  const { maximiere, verkleinere } = useVollansicht({
+    voll,
+    setzeVoll,
+    liste: trefferspalte,
+    panel,
+    zeile: zuletztGewaehlteZeile,
+  });
+  // `Escape` verkleinert in der Vollansicht erst auf das Panel (E‑1197).
+  useEscapeSchliesst(gewaehlt !== null, voll ? verkleinere : schliesse);
+
   const geschlossen = useZuletztGeschlossen(gewaehlt);
   useInSicht(zuletztGewaehlteZeile, geschlossen);
   // Und der Fokus geht an dieselbe Trefferzeile zurück — wie neben der
@@ -234,11 +262,13 @@ export function SucheAnsicht() {
      */
     <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
       <div
-        className={
-          gewaehlt !== null
-            ? "hidden min-w-0 flex-1 flex-col gap-4 xl:flex"
-            : "flex min-w-0 flex-1 flex-col gap-4"
-        }
+        ref={trefferspalte}
+        className={cn(
+          "min-w-0 flex-1 flex-col gap-4",
+          // In der Vollansicht weicht die Trefferliste auch ab `xl` — ausgeblendet,
+          // nicht ausgehängt; beim Verkleinern geht keine Suche hinaus (E‑1194).
+          gewaehlt === null ? "flex" : voll ? "hidden" : "hidden xl:flex",
+        )}
       >
         <h1 className="text-ueberschrift font-semibold">{texte.suche.titel}</h1>
 
@@ -301,8 +331,13 @@ export function SucheAnsicht() {
                 <TrefferTabelle
                   zeilen={ergebnis?.nachrichten ?? []}
                   gewaehlt={gewaehlt}
-                  aufAuswahl={setzeNachricht}
+                  aufAuswahl={waehleZeile}
                   gewaehlteZeile={merkeZeile}
+                  // Strg-, Cmd- und Mittelklick (E‑1195): die eigene Route,
+                  // ohne Abfragezeichenkette — die der Suche kennt die Liste nicht.
+                  neuerTab={(messageId) =>
+                    zeileImNeuenTab(ROUTEN.suche, messageId, window.location.search)
+                  }
                   // Entschieden an der Frage (dem Zitat der Antwort), nicht an
                   // den Zellen — E-110, `suche.ts` `zeigtTrefferspalte`.
                   mitTrefferspalte={zeigtTrefferspalte({
@@ -318,7 +353,12 @@ export function SucheAnsicht() {
       {gewaehlt === null ? null : (
         <div
           ref={panel}
-          className={cn("min-w-0 xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", KLEBENDE_SPALTE_AB_XL)}
+          className={cn(
+            "min-w-0",
+            voll
+              ? VOLLANSICHT_AB_XL
+              : cn("xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", KLEBENDE_SPALTE_AB_XL),
+          )}
         >
           <NachrichtDetail
             // Ein Wechsel der Nachricht ist eine neue Ansicht und kein neuer
@@ -335,8 +375,9 @@ export function SucheAnsicht() {
              * Der Absprung in den Prozessbaum (E-103) bekommt das Fenster **aus
              * der Antwort** — das tatsächlich verwendete, gegen die
              * Anwendungsuhr aufgelöst (Regel Z1). Solange keine da ist (Laden,
-             * Abbruch), gibt es keinen Link statt eines gegen die Browseruhr
-             * gerechneten.
+             * Abbruch), gab es bis zum 17.11.2026 keinen Link; **seit E‑1196
+             * führt er dann auf den Kalendertag der Nachricht** — gegen die
+             * Browseruhr wird weiterhin nichts gerechnet.
              */
             prozessbaumFenster={
               ergebnis === undefined
@@ -346,6 +387,14 @@ export function SucheAnsicht() {
             // Der Schritt zurück aus einer Datei führt seit E‑243 auch hierher;
             // dann bekommt ihr Ziel den Fokus.
             fokusNachDatei
+            /*
+             * **Seit dem 17.11.2026 mit Umschalter** (E‑1194): Er setzt `voll` auf
+             * dieser Seite und führt nicht mehr auf die eigene Route — sein
+             * Rückweg endet damit in der Suche, und der Grund, aus dem er hier
+             * seit Schritt 7 fehlte, ist entfallen.
+             */
+            umschaltenZu={voll ? "nebenListe" : "ohneListe"}
+            aufUmschalten={voll ? verkleinere : maximiere}
           />
         </div>
       )}

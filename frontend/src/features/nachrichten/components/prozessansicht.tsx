@@ -38,9 +38,10 @@ import {
   IM_RAHMEN_SCROLLT_AB_XL,
   KLEBENDER_RAHMEN_AB_MD,
   KLEBENDER_RAHMEN_AB_XL,
+  VOLLANSICHT_AB_XL,
 } from "@/lib/klebende-spalte";
 import { angezeigterBaumfenstermodus, hervorgehobenerBaumzeitraum } from "@/lib/rollupzeitraum";
-import { ROUTEN } from "@/lib/routen";
+import { ROUTEN, zeileImNeuenTab } from "@/lib/routen";
 import { cn } from "@/lib/utils";
 
 import type { Baumgliederung } from "@/lib/baumgliederung";
@@ -52,13 +53,14 @@ import {
   type Prozessbaum,
   type Prozessknoten,
 } from "../api";
-import type { Nachrichtenfilter, Sortierung } from "../filter";
+import { istVoll, type Nachrichtenfilter, type Sortierung } from "../filter";
 import {
   useEscapeSchliesst,
   useFokusZurueck,
   useNachrichtenSeite,
   useProzessansichtzustand,
   useProzessbaum,
+  useVollansicht,
 } from "../hooks";
 import {
   baumabfrage,
@@ -153,6 +155,8 @@ export function ProzessAnsicht() {
     setzeFreiesFenster,
     setzeProzess,
     setzeNachricht,
+    waehleZeile,
+    setzeVoll,
     setzeNurMitVerkehr,
     setzeSortierung,
     setzeGliederung,
@@ -290,7 +294,9 @@ export function ProzessAnsicht() {
   const zuordnung = zuordnungVon(baum, zustand.prozess);
 
   const schliesse = useCallback(() => setzeNachricht(null), [setzeNachricht]);
-  useEscapeSchliesst(zustand.nachricht !== null, schliesse);
+  // Die Vollansicht (E‑1194) — nur mit geöffneter Nachricht. `Escape` hängt
+  // weiter unten an `useVollansicht`, weil es in ihr erst verkleinert (E‑1197).
+  const voll = istVoll(zustand);
 
   /**
    * **Unter `md` weicht der Baum — und mit ihm die Zeile, die gerade den Fokus
@@ -433,6 +439,26 @@ export function ProzessAnsicht() {
       zuletztGewaehlteZeile.current = zeile;
     }
   }, []);
+
+  /*
+   * **Die Vollansicht** (E‑1194, `useVollansicht`): Sie merkt sich beim
+   * Maximieren den Bildlauf der Übertragungsliste — die weicht und verlöre als
+   * eigener Scrollbereich ihren Stand — und den von `main`. **Vor** dem Rückweg
+   * und vor dem gemerkten Stand des Baums darunter: Schließt jemand aus der
+   * Vollansicht, steht erst die Liste, dann kommt der Baum auf seinen Stand.
+   */
+  const listenbereich = useRef<HTMLDivElement>(null);
+  const { maximiere, verkleinere } = useVollansicht({
+    voll,
+    setzeVoll,
+    liste: listenbereich,
+    panel: panelBereich,
+    zeile: zuletztGewaehlteZeile,
+  });
+  // `Escape` schließt das Panel und verkleinert in der Vollansicht erst auf das
+  // Panel — eine Ebene (E‑1197).
+  useEscapeSchliesst(zustand.nachricht !== null, voll ? verkleinere : schliesse);
+
   const geschlossen = useZuletztGeschlossen(zustand.nachricht);
   useInSicht(zuletztGewaehlteZeile, geschlossen);
   // Und der Fokus geht an dieselbe Zeile der Übertragungsliste zurück — wie
@@ -466,9 +492,14 @@ export function ProzessAnsicht() {
         const bereich = scrollbereichVon(baumSpalte.current);
         baumStand.current = bereich === null ? null : bereich.scrollTop;
       }
-      setzeNachricht(messageId);
+      // Aus einer Zeile neben der Liste, nie gleich in der Vollansicht (E‑1194).
+      if (messageId === null) {
+        setzeNachricht(null);
+      } else {
+        waehleZeile(messageId);
+      }
     },
-    [setzeNachricht, zustand.nachricht],
+    [setzeNachricht, waehleZeile, zustand.nachricht],
   );
   useLayoutEffect(() => {
     if (zustand.nachricht !== null || baumStand.current === null) {
@@ -644,7 +675,9 @@ export function ProzessAnsicht() {
           <div
             className={cn(
               "min-w-0 flex-1",
-              panelOffen ? KLEBENDER_RAHMEN_AB_XL : KLEBENDER_RAHMEN_AB_MD,
+              // In der Vollansicht kein Rahmen: Das Panel steht in `main` und
+              // scrollt mit ihm, wie auf der eigenen Route (E‑1194).
+              panelOffen ? !voll && KLEBENDER_RAHMEN_AB_XL : KLEBENDER_RAHMEN_AB_MD,
               !etwasGewaehlt && "hidden md:block",
             )}
           >
@@ -688,10 +721,13 @@ export function ProzessAnsicht() {
                       und scrollen darin für sich. `items-start` ließe ihnen
                       ihre Inhaltshöhe, und die sprengte den Rahmen. */}
                   <div
+                    ref={listenbereich}
                     className={cn(
                       "min-w-0 flex-1",
                       IM_RAHMEN_SCROLLT_AB_MD,
-                      panelOffen && "hidden xl:block",
+                      // In der Vollansicht weicht sie auch ab `xl` (E‑1194) —
+                      // ausgeblendet, nicht ausgehängt.
+                      panelOffen && (voll ? "hidden" : "hidden xl:block"),
                     )}
                   >
                     <Uebertragungen
@@ -701,6 +737,11 @@ export function ProzessAnsicht() {
                       aufNachricht={oeffneNachricht}
                       aufSortierung={setzeSortierung}
                       gewaehlteZeile={merkeZeile}
+                      // Strg-, Cmd- und Mittelklick (E‑1195): die eigene Route
+                      // ohne Abfragezeichenkette.
+                      neuerTab={(messageId) =>
+                        zeileImNeuenTab(ROUTEN.prozesse, messageId, window.location.search)
+                      }
                     />
                   </div>
 
@@ -726,8 +767,12 @@ export function ProzessAnsicht() {
                       ref={panelBereich}
                       tabIndex={-1}
                       className={cn(
-                        "min-w-0 focus-visible:outline-none xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]",
-                        IM_RAHMEN_SCROLLT_AB_XL,
+                        "min-w-0 focus-visible:outline-none",
+                        // In der Vollansicht die Breite der eigenen Route, ohne
+                        // eigenen Scrollbereich (E‑1194, `lib/klebende-spalte.ts`).
+                        voll
+                          ? VOLLANSICHT_AB_XL
+                          : cn("xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", IM_RAHMEN_SCROLLT_AB_XL),
                       )}
                     >
                       <NachrichtDetail
@@ -744,7 +789,16 @@ export function ProzessAnsicht() {
                          * und damit woanders hin, als er herkam — genau die
                          * Überlegung, mit der die Belegsuche ihn seit dem
                          * 13.08.2026 weglässt (`docs/nachrichtendetail.md` §10.7).
+                         *
+                         * **Überholt am 17.11.2026 (E‑1194):** Der Umschalter
+                         * setzt jetzt `voll` auf dieser Seite und führt nicht mehr
+                         * auf die eigene Route. Sein Rückweg endet hier.
                          */
+                        umschaltenZu={voll ? "nebenListe" : "ohneListe"}
+                        aufUmschalten={voll ? verkleinere : maximiere}
+                        // Kein Absprung in den Prozessbaum — man ist schon dort
+                        // (E‑1196). Bis dahin entschied das fehlende Fenster.
+                        ohneAbsprung
                         // Der Schritt zurück aus einer Datei führt seit E‑243
                         // auch hierher; dann bekommt ihr Ziel den Fokus.
                         fokusNachDatei
@@ -1112,6 +1166,7 @@ function Uebertragungen({
   aufNachricht,
   aufSortierung,
   gewaehlteZeile,
+  neuerTab,
 }: {
   /** Über ihn ruft der Kopf der Ansicht „Neu laden" für die Liste. */
   ref: Ref<Listensteuerung>;
@@ -1121,6 +1176,8 @@ function Uebertragungen({
   aufSortierung: (sortierung: Sortierung) => void;
   /** Durchgereicht an die Tabelle — der Rückweg nach dem Schließen (E‑114). */
   gewaehlteZeile: (zeile: HTMLTableRowElement | null) => void;
+  /** Durchgereicht an die Tabelle — das Ziel im neuen Tab (E‑1195). */
+  neuerTab: (messageId: string) => string;
 }) {
   const texte = useTexte();
   // Keine automatische Aktualisierung (E‑164) — nur „Neu laden" im Kopf.
@@ -1165,6 +1222,7 @@ function Uebertragungen({
           gewaehlt={gewaehlteNachricht}
           aufAuswahl={aufNachricht}
           gewaehlteZeile={gewaehlteZeile}
+          neuerTab={neuerTab}
         />
       </div>
       <Blaettern

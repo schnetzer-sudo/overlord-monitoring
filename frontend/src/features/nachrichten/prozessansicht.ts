@@ -5,6 +5,7 @@ import {
   parseAsBaumgliederung,
   type Baumgliederung,
 } from "@/lib/baumgliederung";
+import { wanduhrzeitFuerEingabe, zeitpunktAusWanduhrzeit } from "@/lib/format";
 import { ProblemFehler } from "@/lib/http";
 import {
   baumfensterAlsParameter,
@@ -12,13 +13,14 @@ import {
   parseAsRollupzeitraum,
   type Rollupzeitraum,
 } from "@/lib/rollupzeitraum";
-import { NACHRICHT_PARAMETER, ROUTEN } from "@/lib/routen";
+import { NACHRICHT_PARAMETER, ROUTEN, VOLL_PARAMETER } from "@/lib/routen";
 
 import type { Fenster } from "./api";
 import {
   LANGE_SUCHE_VORGABE,
   istSortierung,
   parseAsSortierung,
+  parseAsVoll,
   type Nachrichtenfilter,
   type Sortierung,
 } from "./filter";
@@ -140,6 +142,13 @@ export const PROZESSANSICHT_PARAMETER = {
   gliederung: parseAsBaumgliederung,
   prozess: parseAsKennung.withOptions({ history: "push" }),
   [NACHRICHT_PARAMETER]: parseAsKennung.withOptions({ history: "push" }),
+  /**
+   * Die Vollansicht *(17.11.2026, E‑1194)* — derselbe Parser wie in Liste und
+   * Belegsuche (`filter.ts` `parseAsVoll`), samt `push`. Er steht in keiner
+   * Abfrage: weder in der des Baums ({@link baumabfrage}) noch in der der
+   * Übertragungsliste ({@link listenfilter}).
+   */
+  [VOLL_PARAMETER]: parseAsVoll,
   nurMitVerkehr: parseAsBoolean.withDefault(NUR_MIT_VERKEHR_VORGABE),
   /**
    * **Die Übertragungsliste behält ihren Sortierumschalter**, und damit gehört
@@ -172,6 +181,8 @@ export type Prozessansichtzustand = {
   prozess: string | null;
   /** Die geöffnete Nachricht. `null` heißt: rechts steht die Übertragungsliste. */
   nachricht: string | null;
+  /** Die Vollansicht (E‑1194) — gilt nur zusammen mit `nachricht`. */
+  voll: boolean;
   nurMitVerkehr: boolean;
   /** `null` heißt „nicht gewählt" — die Vorgabe `neueste` setzt der Endpunkt. */
   sortierung: Sortierung | null;
@@ -184,6 +195,7 @@ export const LEERE_PROZESSANSICHT: Prozessansichtzustand = {
   gliederung: null,
   prozess: null,
   nachricht: null,
+  voll: false,
   nurMitVerkehr: NUR_MIT_VERKEHR_VORGABE,
   sortierung: null,
 };
@@ -222,6 +234,9 @@ export function alsSuchparameter(zustand: Prozessansichtzustand): URLSearchParam
   if (zustand.nachricht !== null && zustand.nachricht !== "") {
     parameter.set(NACHRICHT_PARAMETER, zustand.nachricht);
   }
+  if (zustand.voll) {
+    parameter.set(VOLL_PARAMETER, "true");
+  }
   return parameter;
 }
 
@@ -240,6 +255,7 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Prozessansich
   const gliederung = suchparameter.get("gliederung");
   const prozess = suchparameter.get("prozess");
   const nachricht = suchparameter.get(NACHRICHT_PARAMETER);
+  const voll = suchparameter.get(VOLL_PARAMETER);
   const nurMitVerkehr = suchparameter.get("nurMitVerkehr");
   const sortierung = suchparameter.get("sortierung");
 
@@ -259,6 +275,7 @@ export function ausSuchparametern(suchparameter: URLSearchParams): Prozessansich
     gliederung: istBaumgliederung(gliederung) ? gliederung : null,
     prozess: kennung(prozess),
     nachricht: kennung(nachricht),
+    voll: voll === null ? false : (parseAsVoll.parse(voll) ?? false),
     nurMitVerkehr: nurMitVerkehr === null ? NUR_MIT_VERKEHR_VORGABE : nurMitVerkehr === "true",
     sortierung: istSortierung(sortierung) ? sortierung : null,
   };
@@ -344,6 +361,8 @@ export function listenfilter(
      * aber sie hier zu setzen hieße, sich auf diese Auslassung zu verlassen.
      */
     nachricht: null,
+    /** Ebenso die Vollansicht (E‑1194) — sie beschreibt das Panel, nicht die Liste. */
+    voll: false,
   };
 }
 
@@ -417,6 +436,21 @@ const BAUM_JAHR_TAGE = 365;
  * **Das Fenster, das der Absprung an den Prozessbaum weiterreicht** — aus dem
  * Fenster, aus dem man kommt, und **nie aus dem relativen Modus**.
  *
+ * > ### Seit dem 17.11.2026 mit Rückfall auf den Kalendertag (E‑1196)
+ * >
+ * > Ist ein Herkunftsfenster bekannt und liegt die Nachricht darin, gilt alles
+ * > unten unverändert (E‑104, E‑111). **Sonst ist das Ziel der Kalendertag der
+ * > Nachricht in der Anwendungszone** ({@link kalendertagfenster}): im relativen
+ * > Modus der Liste, auf der eigenen Route, in der Belegsuche vor ihrer ersten
+ * > Antwort, bei einem tiefen Link auf eine Nachricht außerhalb des Suchfensters
+ * > und in der Stunde, die der Jahresdeckel abschneidet. Bis dahin gab es in
+ * > diesen Fällen keinen Link. **Gegen die Browseruhr wird weiterhin nicht
+ * > gerechnet** (Regel Z1): Der Tag kommt aus dem Zeitpunkt der Nachricht.
+ * >
+ * > **Der Wächter bleibt:** Auch der Kalendertag wird darauf geprüft, dass die
+ * > Nachricht darin liegt; liegt sie nicht darin — eine Zone, deren Tag nicht auf
+ * > vollen Stunden beginnt —, gibt es keinen Link.
+ *
  * ## Warum absolut (E‑104)
  *
  * Die relativen Zeiträume von Liste und Baum fallen paarweise nicht zusammen
@@ -450,13 +484,41 @@ const BAUM_JAHR_TAGE = 365;
  * weiter zurück als {@link BAUM_JAHR_TAGE} vor dem ausschließenden Ende; liegt
  * die Nachricht danach außerhalb, gibt es **keinen Link** statt eines falschen.
  *
+ * @param fenster das Herkunftsfenster, `undefined`, wenn der Einhängepunkt
+ *   keines kennt
  * @param zeitpunkt der `zeitpunkt` der Nachricht aus dem Detail. Liegt er
- *   außerhalb — etwa bei einem tiefen Link auf eine Nachricht außerhalb des
- *   Suchfensters —, ist die Antwort `null`: Ein Link, der in einem anderen
+ *   außerhalb des Herkunftsfensters, gilt seit E‑1196 der Kalendertag; liegt er
+ *   auch dort nicht, ist die Antwort `null`: Ein Link, der in einem anderen
  *   Fenster landet als versprochen, ist schlechter als kein Link
+ * @param zone die Anwendungszone (`useAnzeigezone`), in der der Kalendertag
+ *   gebildet wird
  * @returns das Baumfenster (`bis` als letzte enthaltene Stunde) oder `null`
  */
 export function absprungfenster(
+  fenster: { von: Date; bis: Date } | undefined,
+  zeitpunkt: Date,
+  zone: string,
+): { von: Date; bis: Date } | null {
+  const ausHerkunft = fenster === undefined ? null : herkunftsfenster(fenster, zeitpunkt);
+  if (ausHerkunft !== null) {
+    return ausHerkunft;
+  }
+  const tag = kalendertagfenster(zeitpunkt, zone);
+  return tag !== null && liegtIm(tag, zeitpunkt) ? tag : null;
+}
+
+/** Liegt der Zeitpunkt im Baumfenster — `bis` als letzte **enthaltene** Stunde (E‑94)? */
+function liegtIm(fenster: { von: Date; bis: Date }, zeitpunkt: Date): boolean {
+  const t = zeitpunkt.getTime();
+  return t >= fenster.von.getTime() && t < fenster.bis.getTime() + STUNDE_MS;
+}
+
+/**
+ * Das Herkunftsfenster, nach außen gerundet und am Jahr gedeckelt (E‑104,
+ * E‑111) — oder `null`, wenn die Nachricht danach nicht darin liegt. Bis zum
+ * 17.11.2026 war das {@link absprungfenster} selbst.
+ */
+function herkunftsfenster(
   fenster: { von: Date; bis: Date },
   zeitpunkt: Date,
 ): { von: Date; bis: Date } | null {
@@ -472,6 +534,42 @@ export function absprungfenster(
     return null;
   }
   return { von: new Date(von), bis: new Date(bisStunde) };
+}
+
+/**
+ * **Der Kalendertag der Nachricht in der Anwendungszone** *(17.11.2026, E‑1196)*
+ * — `von` um 00:00, `bis` um 23:00 als **letzte enthaltene Stunde** (E‑94).
+ *
+ * **Dieselben Zonenumrechnungen wie das freie Fenster** (`lib/format.ts`): Der
+ * Tag wird mit {@link wanduhrzeitFuerEingabe} aus dem Zeitpunkt abgelesen, und
+ * seine beiden Stunden werden mit {@link zeitpunktAusWanduhrzeit} zurück auf die
+ * Zeitachse gelegt — zwei Durchgänge, damit der Versatz am richtigen Zeitpunkt
+ * gilt. Damit stimmt er an beiden Umstellungstagen: **23 Stunden** am Tag der
+ * Vorstellung, **25** am Tag der Rückstellung. Beide Grenzen liegen auf vollen
+ * Stunden der Zone, und nur solche nimmt der Baum an (E‑95).
+ *
+ * **Gegen die Browseruhr wird nicht gerechnet** (Regel Z1) — der Tag gehört zum
+ * Zeitpunkt der Nachricht und zu nichts sonst.
+ *
+ * @returns `null` bei einem unlesbaren Zeitpunkt oder einer Zone, die `Intl`
+ *   nicht kennt — dann gibt es keinen Link statt eines geratenen
+ */
+export function kalendertagfenster(zeitpunkt: Date, zone: string): { von: Date; bis: Date } | null {
+  if (Number.isNaN(zeitpunkt.getTime())) {
+    return null;
+  }
+  try {
+    const tag = wanduhrzeitFuerEingabe(zeitpunkt, zone).slice(0, 10);
+    const von = zeitpunktAusWanduhrzeit(`${tag}T00:00`, zone);
+    const bis = zeitpunktAusWanduhrzeit(`${tag}T23:00`, zone);
+    if (von === null || bis === null || Number.isNaN(von.getTime() + bis.getTime())) {
+      return null;
+    }
+    return { von, bis };
+  } catch {
+    // `Intl` wirft bei einer unbekannten Zone einen `RangeError`.
+    return null;
+  }
 }
 
 /**

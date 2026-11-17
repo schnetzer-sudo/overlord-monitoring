@@ -1,16 +1,20 @@
 import { describe, expect, it } from "vitest";
 
 import { NACHRICHTEN_PARAMETER } from "@/features/nachrichten/filter";
+import { PROZESSANSICHT_PARAMETER } from "@/features/nachrichten/prozessansicht";
+import { SUCHE_PARAMETER } from "@/features/nachrichten/suche";
 import { NAVIGATION, istAktiv } from "@/lib/navigation";
 import {
   NACHRICHT_PARAMETER,
   ROUTEN,
+  VOLL_PARAMETER,
   ansichtNebenListe,
   ansichtOhneListe,
   artefaktAnsicht,
   dateiansichtAus,
   sicheresZiel,
   zeigtNachricht,
+  zeileImNeuenTab,
 } from "@/lib/routen";
 
 /**
@@ -327,4 +331,78 @@ it("hält „Nachrichten“ auf dem ganzen Weg aktiv", () => {
  */
 it("meint denselben Parameter wie die Nachrichtenliste", () => {
   expect(NACHRICHTEN_PARAMETER).toHaveProperty(NACHRICHT_PARAMETER);
+});
+
+/**
+ * **Strg-, Cmd- und Mittelklick auf eine Zeile** *(17.11.2026, E‑1195)* — das Ziel
+ * je Einhängepunkt, als reine Funktion (`docs/nachrichtendetail.md` §10.2).
+ *
+ * Aus der Nachrichtenliste führt die Zeile auf die eigene Route **mit** der
+ * Abfragezeichenkette der Liste, ohne `nachricht` — wie bisher „Ohne Liste
+ * anzeigen". Aus Prozessansicht und Belegsuche **ohne** Abfragezeichenkette: Deren
+ * Parameter sind keine der Liste, und die eigene Route führt beim Schließen in
+ * die Liste.
+ */
+describe("Die Zeile im neuen Tab", () => {
+  it("führt aus der Nachrichtenliste auf die eigene Route samt Abfragezeichenkette ohne `nachricht`", () => {
+    expect(zeileImNeuenTab(ROUTEN.nachrichten, KENNUNG, `?${FILTER}`)).toBe(
+      `/nachrichten/${KENNUNG}?${FILTER}`,
+    );
+    expect(zeileImNeuenTab(ROUTEN.nachrichten, KENNUNG, `?${FILTER}&nachricht=alt`)).toBe(
+      `/nachrichten/${KENNUNG}?${FILTER}`,
+    );
+    expect(zeileImNeuenTab(ROUTEN.nachrichten, KENNUNG, "")).toBe(`/nachrichten/${KENNUNG}`);
+  });
+
+  it("lässt dabei auch `voll` weg — die eigene Route kennt keine Vollansicht", () => {
+    expect(zeileImNeuenTab(ROUTEN.nachrichten, KENNUNG, `?${FILTER}&voll=true`)).toBe(
+      `/nachrichten/${KENNUNG}?${FILTER}`,
+    );
+    expect(ansichtOhneListe(KENNUNG, `?voll=true&${FILTER}&nachricht=alt`)).toBe(
+      `/nachrichten/${KENNUNG}?${FILTER}`,
+    );
+  });
+
+  it("führt aus Prozessansicht und Belegsuche auf die eigene Route ohne Abfragezeichenkette", () => {
+    expect(
+      zeileImNeuenTab(ROUTEN.prozesse, KENNUNG, `?zeitraum=48H&prozess=P-0815&nachricht=alt`),
+    ).toBe(`/nachrichten/${KENNUNG}`);
+    expect(zeileImNeuenTab(ROUTEN.suche, KENNUNG, `?begriff=:4711&voll=true`)).toBe(
+      `/nachrichten/${KENNUNG}`,
+    );
+  });
+
+  it("kodiert Kennungen mit Sonderzeichen", () => {
+    const ROH = "a b/c?d&e=f#g";
+    const ziel = zeileImNeuenTab(ROUTEN.suche, ROH, "");
+
+    expect(ziel).toBe(`/nachrichten/${encodeURIComponent(ROH)}`);
+    expect(zeigtNachricht(`https://overlord.example${ziel}`, ROH, "https://overlord.example")).toBe(
+      true,
+    );
+  });
+});
+
+/**
+ * **Die Vollansicht ist ein Beleg für den Schritt zurück** *(17.11.2026, E‑1194)*:
+ * Wer eine Datei aus der Vollansicht öffnet, kommt mit `Escape` in die
+ * Vollansicht zurück. Der Schritt zurück stellt die Adresse aus dem Verlauf her
+ * — samt `voll`.
+ */
+it("nimmt eine Adresse der Vollansicht als Beleg, in allen drei Ansichten", () => {
+  const HERKUNFT = "https://overlord.example";
+  for (const adresse of [
+    `/nachrichten?zeitraum=7d&nachricht=${KENNUNG}&voll=true`,
+    `/suche?begriff=:4711&nachricht=${KENNUNG}&voll=true`,
+    `/prozesse?zeitraum=48H&prozess=P-0815&nachricht=${KENNUNG}&voll=true`,
+  ]) {
+    expect(zeigtNachricht(`${HERKUNFT}${adresse}`, KENNUNG, HERKUNFT), adresse).toBe(true);
+  }
+});
+
+/** **Zwei Stellen, ein Name** — wie bei `nachricht`, für alle drei Ansichten. */
+it("meint mit `voll` denselben Parameter wie die drei Ansichten", () => {
+  expect(NACHRICHTEN_PARAMETER).toHaveProperty(VOLL_PARAMETER);
+  expect(SUCHE_PARAMETER).toHaveProperty(VOLL_PARAMETER);
+  expect(PROZESSANSICHT_PARAMETER).toHaveProperty(VOLL_PARAMETER);
 });

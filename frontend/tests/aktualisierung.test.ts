@@ -33,6 +33,7 @@ const LEER: Nachrichtenfilter = {
   langeSuche: false,
   sortierung: null,
   nachricht: null,
+  voll: false,
 };
 
 describe("Das Intervall der automatischen Aktualisierung", () => {

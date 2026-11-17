@@ -1192,6 +1192,14 @@ den jemand sucht, *weil* er nichts trägt** — und das ist der Fall, für den e
 >
 > `replace` wie die übrigen Filter; der Parser hat keine Vorgabe (`lib/baumgliederung.ts`).
 
+> ### Ergänzt am 17.11.2026 — die Vollansicht (E‑1194)
+>
+> | Parameter | Verlauf | Warum |
+> |---|---|---|
+> | `voll` | **`push`** | maximiert das Panel ab `xl` auf die Inhaltsbreite; Umschalten ist eine Station. Derselbe Parser wie in Liste und Belegsuche (`filter.ts` `parseAsVoll`), nur in der URL, solange er gilt, und nur zusammen mit `nachricht` wirksam. **In keiner Abfrage** — weder in der des Baums (`baumabfrage`) noch in der der Übertragungsliste (`listenfilter`). Ein Prozesswechsel und das Schließen nehmen ihn mit `nachricht` weg |
+>
+> Gesamtbild in [`nachrichtendetail.md`](nachrichtendetail.md) §10.20; hier §18, Korrektur vom 17.11.2026.
+
 ---
 
 ## 16. Die Baumspalte — gemessen, nicht gewählt
@@ -1971,6 +1979,31 @@ und ohne sie erscheint der Knopf nicht. **Dafür war nichts zu bauen.**
 > **Zwei Dinge hängen daran und stehen an ihrer Stelle:** die Sonderregel der verdeckten Liste (der
 > Kasten weiter oben, entfallen) und der Fokus, wenn der Baum unter ihm weggeblendet wird (§27, die
 > zweite Hälfte der Regel aus §15).
+
+> ### ⚠️ Korrektur vom 17.11.2026 — **mit Ansichtsumschalter: die Vollansicht** (E‑1194 bis E‑1197)
+>
+> **Der Satz „Ohne Ansichtsumschalter — sein Rückweg führt an die Nachrichtenliste" gilt nicht mehr.**
+> Gemeldet hat der Auftraggeber am 17.11.2026 in der Produktion, dass sich das Detail hier nicht
+> maximieren lässt. Der Umschalter setzt seit E‑1194 den Parameter `voll` **auf dieser Seite** und
+> führt nicht mehr auf die eigene Route; sein Rückweg endet hier, und der Grund, aus dem er fehlte, ist
+> entfallen ([`nachrichtendetail.md`](nachrichtendetail.md) §10.7, Korrektur, und §10.20).
+>
+> - **Was weicht:** ab `xl` auch die Übertragungsliste, per `display: none` und eingehängt — der Baum
+>   weicht bei offenem Panel ohnehin (E‑57). **Seitenkopf und Prozesskopf bleiben**: dieselbe Gestalt
+>   wie hier unter `xl` mit offenem Panel. Das Panel nimmt die Breite der eigenen Route ein
+>   (`max-w-inhalt`, linksbündig, Beschriftungsspalte 16 rem) und hat keinen eigenen Scrollbereich;
+>   **der klebende Rahmen der rechten Spalte entfällt in diesem Zustand** (E‑115 ruht, §47).
+> - **Verkleinern** stellt die Seite der Übertragungsliste, ihren eigenen Bildlauf und den von `main`
+>   wieder her, ohne Abruf: gemerkt beim Maximieren im Ereignis, wie der Stand des Baums (§47). Wird
+>   aus der Vollansicht geschlossen, steht erst die Liste und danach der Baum auf seinem eigenen Stand.
+> - **`Escape`** verkleinert in der Vollansicht erst auf das Panel (E‑1197); das X schließt ganz.
+> - **Kein Absprung „Im Prozessbaum anzeigen"** — man ist schon dort. Seit E‑1196 entscheidet das die
+>   Angabe `ohneAbsprung`, nicht mehr das fehlende Fenster.
+> - **Strg-, Cmd- und Mittelklick und Strg+Enter** auf eine Zeile der Übertragungsliste öffnen die
+>   Nachricht auf ihrer eigenen Route ohne Abfragezeichenkette im neuen Tab (E‑1195).
+>
+> Baumzustand und Seitenstapel nach dem Umweg über eine Datei bleiben offen (**Punkt 233**); innerhalb
+> der Seite gehen sie beim Maximieren nicht verloren.
 
 ### M119 — ⚠️ Der Befund: Bei 1280 px steht die Liste nicht vollständig
 

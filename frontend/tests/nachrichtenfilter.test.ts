@@ -8,6 +8,7 @@ import {
   letzteLieferung,
   listenanzeige,
   NACHRICHTEN_PARAMETER,
+  istVoll,
   sucheTraegt,
   suchfeldFehler,
   zeitfensterFehler,
@@ -44,6 +45,7 @@ const LEER: Nachrichtenfilter = {
   langeSuche: false,
   sortierung: null,
   nachricht: null,
+  voll: false,
 };
 
 describe("URL → Zustand", () => {
@@ -63,6 +65,7 @@ describe("URL → Zustand", () => {
       langeSuche: false,
       sortierung: "aelteste",
       nachricht: null,
+      voll: false,
     });
   });
 
@@ -749,5 +752,48 @@ describe("Die Einordnung QUITTUNG_AUSSTEHEND", () => {
     expect(ausSuchparametern(new URLSearchParams("status=QUITTUNG_AUSSTEHEND")).status).toEqual([
       "QUITTUNG_AUSSTEHEND",
     ]);
+  });
+});
+
+/**
+ * **Die Vollansicht steht in der URL — und in keiner Anfrage** *(17.11.2026, E‑1194,
+ * `docs/nachrichtendetail.md` §10.7)*.
+ *
+ * `voll` ist ein Zustand der Seite wie `nachricht`: Was man sieht, muss man teilen
+ * und neu laden können. In den Abfrageschlüssel der Liste gehört er nicht — sonst
+ * lüde jedes Maximieren die Liste neu und setzte ihre Seite zurück.
+ */
+describe("Die Vollansicht", () => {
+  const kennung = "8f3a1c2e-0000-4000-8000-000000000001";
+
+  it("steht nur in der URL, solange sie gilt", () => {
+    const offen: Nachrichtenfilter = { ...LEER, zeitraum: "7d", nachricht: kennung };
+
+    expect(alsSuchparameter({ ...offen, voll: true }).get("voll")).toBe("true");
+    expect(alsSuchparameter(offen).has("voll")).toBe(false);
+    expect(ausSuchparametern(alsSuchparameter({ ...offen, voll: true }))).toEqual({
+      ...offen,
+      voll: true,
+    });
+    expect(ausSuchparametern(new URLSearchParams("voll=nein")).voll).toBe(false);
+  });
+
+  it("ist ein Verlaufseintrag und fällt ohne Wert auf „aus“", () => {
+    expect(NACHRICHTEN_PARAMETER.voll.history).toBe("push");
+    expect(NACHRICHTEN_PARAMETER.voll.parse("true")).toBe(true);
+    expect(NACHRICHTEN_PARAMETER.voll.defaultValue).toBe(false);
+  });
+
+  it("ergibt mit geöffnetem Panel in der Vollansicht Zeichen für Zeichen dieselbe Abfrage", () => {
+    const ohne: Nachrichtenfilter = { ...LEER, zeitraum: "24h", status: ["FEHLER"] };
+
+    expect(alsAbfrage({ ...ohne, nachricht: kennung, voll: true })).toBe(alsAbfrage(ohne));
+    expect(alsAbfrage({ ...ohne, voll: true })).not.toContain("voll");
+  });
+
+  it("wirkt nur zusammen mit einer geöffneten Nachricht", () => {
+    expect(istVoll({ nachricht: kennung, voll: true })).toBe(true);
+    expect(istVoll({ nachricht: null, voll: true })).toBe(false);
+    expect(istVoll({ nachricht: kennung, voll: false })).toBe(false);
   });
 });
