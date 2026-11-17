@@ -984,6 +984,12 @@ des Kontos** (E5). Eine Pfeiltaste, die nebenbei abmeldet, ist kein Verhalten, d
 > Höhen nicht und ließ beide stehen (Sichtprüfung vom 17.11.2026, 37,5 statt 30 px). Tests: `tests/rollen-auswahl.test.tsx`
 > von vier auf **sieben** Fälle; Verletzungsprobe „beginnt nie von vorn“ rot
 > ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Korrektur vom 17.11.2026).
+>
+> **Und die Höhe der offenen Liste (E‑1206, am selben Tag):** höchstens 18 rem (`max-h-72`, dieselbe
+> Höhe wie die Prozessauswahl), darin scrollt sie. Die Stundenwahl klappte mit 25 Zeilen bis an den
+> unteren Bildrand auf; im Browser jetzt 257 px bei 844 px Inhalt. Rolle und Baumgliederung haben zwei
+> beziehungsweise drei Zeilen und ändern sich nicht. Der Fokus auf der gewählten Zeile holt sie beim
+> Öffnen ins Bild. Test: ein Fall mehr in `tests/rollen-auswahl.test.tsx` (acht).
 
 ### Nachgesehen in Chromium — gemessen, nicht angesehen
 
@@ -1094,13 +1100,14 @@ Gesucht per `grep` über `frontend/src` nach `<select`, `type="date"`, `type="da
 > | `<select>` | `features/benutzer/components/konto-anlegen.tsx:186` | unverändert |
 > | `<select>` | `features/katalog/components/massenzuordnung.tsx:171` | unverändert |
 > | ~~`datetime-local` ×6~~ | ~~`filterleiste.tsx`, `suche-ansicht.tsx`, `baumfenster-felder.tsx`~~ | **entfallen** am 17.11.2026; `baumfenster-felder.tsx` gibt es nicht mehr |
-> | `type="date"` | `features/nachrichten/components/zeitfensterfelder.tsx:276` | das Datum je Zeitpunkt — **ein** Element im Quelltext, gerendert **sechsmal** an drei Stellen: freies Fenster der Nachrichtenliste, Zeitfenster der Belegsuche, freies Fenster der Prozessansicht |
-> | `type="time"` | `features/nachrichten/components/zeitfensterfelder.tsx:315` | die freiwillige Uhrzeit je Zeitpunkt in Liste und Belegsuche, gerendert **viermal** |
+> | `type="date"` | `features/nachrichten/components/zeitfensterfelder.tsx:276` (seit `005e6e4`: `:251`) | das Datum je Zeitpunkt — **ein** Element im Quelltext, gerendert **sechsmal** an drei Stellen: freies Fenster der Nachrichtenliste, Zeitfenster der Belegsuche, freies Fenster der Prozessansicht |
+> | ~~`type="time"`~~ | ~~`features/nachrichten/components/zeitfensterfelder.tsx:315`~~ | die freiwillige Uhrzeit je Zeitpunkt in Liste und Belegsuche — **entfallen am selben Tag** (E‑1203): Auch dort steht seither die Stundenwahl der Anwendung |
 >
 > **Die Stunde der Prozessansicht ist kein natives Feld**, sondern die Liste der Anwendung aus
 > `components/auswahl-feld.tsx` (E‑1199) — ihre Fläche trägt `--popover`. **`type="date"` kommt damit
 > jetzt vor**; der Satz darüber gilt nur noch für `type="file"`. Die aufgeklappten Kalender- und
-> Uhrflächen der zehn gerenderten Felder zeichnet weiterhin der Browser — **Punkt 180 bleibt offen**
+> Uhrflächen der zehn gerenderten Felder zeichnet weiterhin der Browser — seit E‑1203 nur noch die
+> Kalenderflächen der sechs Datumsfelder; **Punkt 180 bleibt offen**
 > und ist mit diesem Auftrag ausdrücklich nicht gelöst.
 
 

@@ -4067,6 +4067,11 @@ nichts Fachliches geändert hat; die Beobachtung steht in §33, nicht in der Zus
 >
 > **Unverändert:** Zustand und URL (Tabelle „Zustand und URL“ oben), wo die Meldungen stehen
 > (`AM_BAUMFENSTER`), der letzte gelieferte Baum bleibt stehen, „Frei“ beginnt leer.
+>
+> **Nachtrag vom selben Tag (E‑1203, E‑1206):** Dieselbe Stundenwahl steht seither auch in
+> der Nachrichtenliste und in der Belegsuche. Ihre offene Liste ist höchstens 18 rem hoch und scrollt —
+> sie klappte mit 25 Zeilen bis an den unteren Bildrand auf. An dieser Ansicht ändert sich sonst
+> nichts ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Nachtrag).
 
 
 ### Zustand und URL

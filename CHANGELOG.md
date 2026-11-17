@@ -69,20 +69,23 @@ Tags und die Definition of Done für ein Release stehen in
 ### Geändert
 
 - **Freies Zeitfenster: Ein Datum ohne Uhrzeit sucht den ganzen Tag** (Entscheidung des
-  Auftraggebers vom 17.11.2026, E‑1198 bis E‑1201; E‑1202 als Vorschlag,
+  Auftraggebers vom 17.11.2026, E‑1198 bis E‑1206; E‑1202 und E‑1204 als Vorschlag,
   [`docs/nachrichtenliste.md`](docs/nachrichtenliste.md) §8.2, [`docs/bam-suche.md`](docs/bam-suche.md)
   §11.6, [`docs/process-view.md`](docs/process-view.md) §41). Grund: „Frei“ war schwer zu bedienen; ein
   `datetime-local` liefert erst mit Datum **und** Uhrzeit einen Wert, wer nur ein Datum eintrug, bekam
-  eine Meldung statt eines Ergebnisses. Jetzt je Zeitpunkt ein Datum und eine freiwillige Uhrzeit, ein
+  eine Meldung statt eines Ergebnisses. Jetzt je Zeitpunkt ein Datum und eine freiwillige Stunde, ein
   Baustein für das freie Fenster der Nachrichtenliste, das Zeitfenster der Belegsuche und das freie
-  Fenster der Prozessansicht. Ohne Uhrzeit beginnt „Von“ um 00:00 und endet „Bis“ um 23:59:59 in Liste
-  und Suche (dort ist `bis` einschließend und sekundengenau, am Code geprüft) und um 23:00 in der
-  Prozessansicht (dort ist `bis` die letzte enthaltene Stunde). Die Prozessansicht wählt die Stunde aus
-  einer Liste der Anwendung („Ganzer Tag“, „Bis“ nennt das Ende der Stunde), mit Sprung per Zeichen.
+  Fenster der Prozessansicht; Minuten entfallen. Ohne Stunde beginnt „Von“ um 00:00 und endet „Bis“ um
+  23:59:59 in Liste und Suche (dort ist `bis` einschließend und sekundengenau, am Code geprüft) und um
+  23:00 in der Prozessansicht (dort ist `bis` die letzte enthaltene Stunde). Die Stunde kommt überall
+  aus einer Liste der Anwendung („Ganzer Tag“, „Bis“ nennt das Ende der Stunde, in Liste und Suche ist
+  „Bis 14:59“ 14:59:59), mit Sprung per Zeichen; die offene Liste ist höchstens 18 rem hoch und
+  scrollt. „Auf ein Jahr erweitern“ rundet auf volle Stunden und rechnet in Kalendertagen — vorher war
+  das Jahresfenster ein `400`, wenn nur sein Ende in der Sommerzeit lag.
   Eine halbe Eingabe meldet sich am Feld und ändert die Adresse nicht. `zeitfenster-zu-gross` steht
   in Liste und Suche am Feld; die Belegsuche zeigt Antworten zum Zeitfenster am Feld statt als
   Fehlerbaustein und lässt die zuletzt gelieferte Antwort stehen. Kein Kalender, keine neue
-  Abhängigkeit, keine Änderung am Backend; die nativen Datums- und Uhrflächen bleiben Punkt 180.
+  Abhängigkeit, keine Änderung am Backend; die Kalenderfläche der nativen Datumsfelder bleibt Punkt 180.
 - **Nachrichtenliste am breiten Fenster: Zeitpunkt und Projekt fest, Status und Ablauf teilen den
   Rest** (Entscheidung des Auftraggebers vom 17.11.2026, E‑1193,
   [`docs/spaltenwahl.md`](docs/spaltenwahl.md) §5.4, [`docs/nachrichtenliste.md`](docs/nachrichtenliste.md)

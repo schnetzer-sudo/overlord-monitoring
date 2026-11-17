@@ -1482,8 +1482,8 @@ Hier vermerkt, damit der nächste Lauf nicht darauf hereinfällt:
 > deren Kalender- und Uhrflächen zeichnet der Browser genauso.
 >
 > **Nachgeführt am 17.11.2026 (E‑1198):** Die sechs `datetime-local` sind Datum und Uhrzeit
-> geworden — sechs `type="date"` an drei Stellen, vier `type="time"` in Liste und Belegsuche, die
-> Stunde der Prozessansicht über die Liste der Anwendung. Kalender- und Uhrflächen zeichnet weiterhin
+> geworden — sechs `type="date"` an drei Stellen und die Stunde über die Liste der Anwendung; die
+> vier `type="time"` in Liste und Belegsuche sind am selben Tag wieder entfallen (E‑1203). Kalender- und Uhrflächen zeichnet weiterhin
 > der Browser; Punkt 180 bleibt offen ([`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md)
 > §18, Nachtrag unter der Tabelle der nativen Formularelemente).
 

@@ -1396,6 +1396,17 @@ Trefferzahl und nicht in den Voreinstellungen.
 > `tests/freies-zeitfenster.test.tsx` (sechs gerenderte Fälle zur Belegsuche, darunter „Auf ein Jahr
 > erweitern“ und `zeitfenster-zu-gross` ohne frühere Antwort). Gesamtbild, Verletzungsproben und
 > Sichtprüfung: [`nachrichtenliste.md`](nachrichtenliste.md) §8.2.
+>
+> **Nachtrag vom selben Tag (E‑1203, E‑1205):** Statt des Uhrzeitfelds steht auch hier die
+> Stundenwahl der Prozessansicht, ohne Minuten; „Bis 14:59“ ist 14:59:59. **„Auf ein Jahr erweitern“
+> rundet das `bis` der Antwort auf das Ende seiner Stunde auf**, „Von“ beginnt 365 Kalendertage davor
+> zur nächsten vollen Stunde — im Browser aus dem Anker 04:33 „30.12.2024, 05:00“ bis „30.12.2025,
+> 04:59“, vom Backend angenommen. Punkt 1057 ist damit erledigt. **Die Präfixsuche und „Fenster
+> verkleinern“** lassen `bis` stehen und rücken `von` auf die nächste volle Stunde vor: Das Fenster
+> bleibt ein Ausschnitt des alten (§23) und unter dem Deckel. Alle drei rechnen seither in
+> Kalendertagen der Anzeigezone statt in 24-Stunden-Schritten; vorher war „Auf ein Jahr erweitern“
+> ein `400`, wenn nur `bis` in der Sommerzeit lag ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2,
+> Nachtrag).
 
 
 **Die Nulltreffer-Zeile.** Jede Marke verengt. Landet die dritte bei null, sieht der Nutzer nicht,

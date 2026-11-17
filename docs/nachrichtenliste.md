@@ -2681,11 +2681,68 @@ Umstellungstage im Jahr treffen.
 > Belegsuche gibt es dunkel nur das Bild nach „Auf ein Jahr erweitern“, die Meldung am Feld ist dunkel
 > nur über das DOM belegt.
 >
-> **Punkt 1057** — „Auf ein Jahr erweitern“ schreibt das `bis` der Antwort mit Sekunden und
+> **Punkt 1057** *(erledigt am selben Tag durch E‑1205, Nachtrag unten)* — „Auf ein Jahr erweitern“ schreibt das `bis` der Antwort mit Sekunden und
 > Millisekunden in die Adresse, und die Uhrzeitfelder zeigen sie seit E‑1198 mit (`04:35:49,253`):
 > korrekt und zeichengleich, aber unruhig für ein Feld, das Minuten erwartet. Ob der Anker auf die
 > Minute gerundet werden soll — das Fenster verschöbe sich dabei um weniger als eine Minute —, ist eine
 > Entscheidung des Auftraggebers.
+>
+> #### Nachtrag vom 17.11.2026, später am Tag — überall die Stundenwahl, ohne Minuten (E‑1203 bis E‑1206, `005e6e4`)
+>
+> **Die Zeile „Uhrzeit“ der Tabelle oben ist für Liste und Belegsuche überholt.** Der Auftraggeber
+> hat die beiden Stellen im Browser gesehen: Die aufgeklappte Fläche des `input type="time"`
+> zeichnet Chrome in seinem eigenen Blau (Punkt 180), und die Bedienung war eine andere als in der
+> Prozessansicht. **Seither steht an allen drei Stellen dieselbe Stundenwahl**, Minuten entfallen.
+>
+> | Nr. | Entscheidung | Herkunft |
+> |---|---|---|
+> | **E‑1203** | Liste und Belegsuche bekommen die Stundenwahl der Prozessansicht (`components/auswahl-feld.tsx`); kein Uhrzeitfeld mehr, keine Minuten. Die Texte `zeitraum.uhrzeit` und `zeitraum.uhrzeitUnvollstaendig` entfallen | A, 17.11.2026 |
+> | **E‑1204** | Im Sekundenvertrag von Liste und Suche ist „Bis 14:59“ **14:59:59** — die ganze Stunde eingeschlossen, dieselbe Bedeutung wie in der Prozessansicht, deren „Bis 14:59“ die letzte enthaltene Stunde 14:00 ist. „Von 14:00“ ist überall 14:00:00. Die Werte stehen in `stundeneintraege` (`lib/format.ts`), zeichengleich mit dem, was `datumUndUhrzeitFuerEingabe` zurückgibt | V, abgeleitet aus der Beschriftung „14:59“ |
+> | **E‑1205** | „Auf ein Jahr erweitern“ rundet das `bis` der Antwort auf das Ende seiner Stunde **auf**, „Von“ beginnt 365 Kalendertage davor zur nächsten vollen Stunde — beide landen auf Einträgen der Stundenwahl. Erledigt damit **Punkt 1057**. Über den Wortlaut hinaus, weil es dieselbe Funktion ist (`fensterZurueck`): Präfixsuche und „Fenster verkleinern“ lassen `bis` stehen und rücken `von` auf die nächste volle Stunde vor — nach vorn, damit das Fenster ein Ausschnitt bleibt ([`bam-suche.md`](bam-suche.md) §23) | A, Rückfrage vom 17.11.2026; die Ausdehnung V |
+> | **E‑1206** | Die offene Liste des Auswahlfelds ist höchstens 18 rem hoch (`max-h-72`, dieselbe Höhe wie die Prozessauswahl) und scrollt; sie klappte bei 25 Stunden bis an den unteren Bildrand auf | A, 17.11.2026 |
+>
+> **Ein Fehler im Vorgänger, mit E‑1205 behoben:** `fensterZurueck` rechnete `tage` × 24 Stunden
+> zurück. Das Backend prüft die Jahresgrenze aber in Wanduhrzeit (`bis.minusYears(1)`); lag nur
+> `bis` in der Sommerzeit — „Auf ein Jahr erweitern“ in den Tagen nach dem 29.03. —, war `von` eine
+> Stunde zu früh und das Fenster ein `400`. Jetzt in Kalendertagen der Anzeigezone
+> (`tageZurueckZurVollenStunde`); belegt im Test mit dem 29.03.2026 (Ergebnis 29.03.2025, 13:00 statt
+> 12:00). Im Browser gesehen ist der Fall nicht.
+>
+> **Ein alter Link mit Minuten** (`bis=…T12:30:00.000Z`) läuft weiter, wie er ist; die Stundenwahl
+> zeigt den Wert, den sie nicht kennt, roh (`14:30`, Regel Q4).
+>
+> **Tests** — zuerst geschrieben, **15 rot gegen `3f598ab`**. `pnpm check`: **1.691** Fälle in 58
+> Dateien (vorher 1.680), gerendert **376 in 30** (vorher 375), aus dem Lauf gezählt. Neu sind sieben
+> reine Fälle in `tests/format.test.ts` (Stundeneinträge je Grenze und Vertrag, ihr Rundlauf über
+> alle 24 Stunden, die fehlende Stunde am 29.03., Ende der Stunde, Kalendertage zur vollen Stunde,
+> über eine Umstellung), drei in `tests/suche.test.ts` (Jahresfenster auf vollen Stunden, über eine
+> Umstellung, Präfixfenster) und einer in `tests/rollen-auswahl.test.tsx` (Höchsthöhe). In
+> `tests/freies-zeitfenster.test.tsx` sind die Fälle zum Uhrzeitfeld ersetzt: kein Uhrzeitfeld und
+> kein `<select>` an allen drei Stellen, halbes Datum statt halber Uhrzeit, „Bis 14:59“ in der Liste,
+> „Auf ein Jahr erweitern“ auf vollen Stunden; die Zahl bleibt 16. Der Fall „getippte
+> Vorgabe-Uhrzeit bleibt bis zum Verlassen“ ist mit dem Uhrzeitfeld entfallen, ebenso die
+> Verletzungsproben V3 und V10 für die Felder.
+>
+> | Probe | Eingriff | rot |
+> |---|---|---|
+> | W0 | keiner | 0 |
+> | W1 | „Bis“-Stunde ohne Vertrag, immer die volle Stunde | 7 |
+> | W2 | „Auf ein Jahr“ ohne Aufrunden von „Bis“ | 3 |
+> | W3 | „Von“ nicht auf die volle Stunde gerundet | 7 |
+> | W4 | Liste ohne Höchsthöhe | 1 |
+> | W5 | Wahl nicht geglättet (letzte Stunde nicht als „Ganzer Tag“) | 2 |
+> | W6 | Stundenwahl in Feldhöhe | 3 |
+>
+> **Sichtprüfung** *(17.11.2026, Chrome der Erweiterung, `next dev` auf `:3000` und Backend auf
+> `:8080` aus diesem Zweig, angemeldet, `NEXANS`, dunkel)*: Liste ohne Uhrzeitfeld, Datum und
+> Stundenwahl je 30 px; die offene Stundenliste **257 px** hoch bei 844 px Inhalt, eigener Rollbalken,
+> endet bei 445 von 945 px Fensterhöhe; „1“, „4“ springt auf 14:59 und holt die Zeile ins Bild;
+> `Enter` ergibt `bis=2025-12-29T13:59:59.000Z`, neueste Zeile 14:41:14. Belegsuche: „Auf ein Jahr
+> erweitern“ bei Anker 04:33 ergibt „Von“ 30.12.2024, 05:00 und „Bis“ 30.12.2025, 04:59, vom Backend
+> angenommen. **Nicht gesehen:** hell, die Prozessansicht nach diesem Stand (unverändert bis auf
+> die Höhe der Liste), die Präfixsuche und „Fenster verkleinern“ nach E‑1205, der Fall um den 29.03.
+> im Browser.
+
 
 **Statusfilter über die Einordnungen** aus `MessageStatusKind`, nicht über Rohwerte; die
 Beschriftungen kommen aus den Sprachdateien. **Prozessfilter** als Mehrfachauswahl aus
