@@ -9,6 +9,16 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Neu
 
+- **Jeder Wert der technischen Eigenschaften lässt sich kopieren** (Entscheidung des Auftraggebers
+  vom 17.11.2026, E‑1207, [`docs/nachrichtendetail.md`](docs/nachrichtendetail.md) §10.21). Grund:
+  Nutzer meldeten, dass viele Werte im Detail mit „…“ enden und der Vollwert nur im Tooltip steht.
+  Am Ende jeder Eigenschaftszeile steht ein Kopierknopf, sichtbar beim Überfahren der Zeile und beim
+  Fokus; am Touchgerät bleibt er verborgen, und ein Tippen auf den Wert kopiert ihn. Kopiert wird der
+  volle Wert, nach dem Kopieren steht 1,5 s ein Häkchen. Ein Mausklick auf den Wert markiert weiter
+  Text. Gilt im Block *Technische Eigenschaften* und an allen Zeilen der Zeitleiste. Der Kopierknopf der
+  Nachrichten-Kennung ist derselbe Baustein und zeigt sein Häkchen jetzt ebenfalls nur 1,5 s. Keine
+  Änderung am Backend. In `docs/PROJEKTBESCHREIBUNG.md` §9 und `docs/README.md` (Dateiliste, offene
+  Sichtprüfung 1060) nachgeführt, weil beide den aktuellen Stand beschreiben.
 - **Strg-, Cmd- und Mittelklick auf eine Zeile öffnen die Nachricht in einem neuen Tab**
   (Entscheidung des Auftraggebers vom 17.11.2026, E‑1195,
   [`docs/nachrichtendetail.md`](docs/nachrichtendetail.md) §10.2 und §10.20). Gilt für die

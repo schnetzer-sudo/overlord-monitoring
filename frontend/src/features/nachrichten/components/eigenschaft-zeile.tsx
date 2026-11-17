@@ -1,11 +1,15 @@
 "use client";
 
+import { useRef } from "react";
+
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
 import { formatiereZahl } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import type { Eigenschaft } from "../api";
+import { tippenKopiert } from "../kopieren";
+import { KopierKnopf, useKopieren } from "./kopier-knopf";
 
 /**
  * **Die eine Zeilendarstellung einer technischen Eigenschaft** — herausgelöst
@@ -50,23 +54,44 @@ export function EigenschaftenListe({
 function EigenschaftZeile({ eigenschaft }: { eigenschaft: Eigenschaft }) {
   const texte = useTexte();
   const sprache = useSprache();
+  const bausteine = texte.nachrichten.detail.eigenschaften;
+  const { kopiert, kopiere } = useKopieren(eigenschaft.wert);
+  // Die Zeigerart des `pointerup` derselben Geste — die zweite Quelle für
+  // Safari, wo der Klick sie nicht oder falsch trägt (`kopieren.ts`).
+  const zeigerart = useRef<string | null>(null);
 
   const gekapptHinweis =
     eigenschaft.gekappt && eigenschaft.originalLaengeBytes !== null
-      ? einsetzen(texte.nachrichten.detail.eigenschaften.gekapptHinweis, {
+      ? einsetzen(bausteine.gekapptHinweis, {
           bytes: formatiereZahl(eigenschaft.originalLaengeBytes, sprache),
         })
       : undefined;
 
   return (
-    <li className="h-zeile text-beiwerk flex min-w-0 items-center gap-2">
+    <li className="group/eigenschaft h-zeile text-beiwerk flex min-w-0 items-center gap-2">
       <span
         className="text-muted-foreground w-2/5 shrink-0 truncate font-mono"
         title={eigenschaft.name}
       >
         {eigenschaft.name}
       </span>
-      <span className="min-w-0 flex-1 truncate font-mono" title={eigenschaft.wert}>
+      {/* **Ein Tippen auf den Wert kopiert ihn, ein Mausklick nicht** (E‑1207):
+          Am Touchgerät gibt es kein Überfahren und damit keinen sichtbaren
+          Knopf; mit der Maus bleibt der Wert markierbar wie bisher. Entschieden
+          je Geste in `tippenKopiert`, nicht über `matchMedia`. */}
+      <span
+        className="min-w-0 flex-1 truncate font-mono"
+        title={eigenschaft.wert}
+        onPointerUp={(ereignis) => {
+          zeigerart.current = ereignis.pointerType;
+        }}
+        onClick={(ereignis) => {
+          const amKlick = (ereignis.nativeEvent as Partial<PointerEvent>).pointerType;
+          const amLoslassen = zeigerart.current;
+          zeigerart.current = null;
+          if (tippenKopiert(amKlick, amLoslassen)) kopiere();
+        }}
+      >
         {eigenschaft.wert}
       </span>
       {eigenschaft.gekappt ? (
@@ -74,12 +99,45 @@ function EigenschaftZeile({ eigenschaft }: { eigenschaft: Eigenschaft }) {
           className="border-border text-muted-foreground shrink-0 rounded-sm border px-1"
           title={gekapptHinweis}
         >
-          {texte.nachrichten.detail.eigenschaften.gekappt}
+          {bausteine.gekappt}
           {gekapptHinweis === undefined ? null : (
             <span className="sr-only"> — {gekapptHinweis}</span>
           )}
         </span>
       ) : null}
+      {/* **Die dritte Spalte, immer reserviert** (E‑1207): Der Knopf nimmt
+          seinen Platz auch verborgen ein, damit der Wert nicht springt, wenn er
+          erscheint. Verborgen über die Deckkraft und nicht über `visibility`
+          oder `display` — so bleibt er in der Tab-Reihenfolge und für
+          Vorleseprogramme erreichbar, auch am Touchgerät.
+
+          Sichtbar beim Fokus in der Zeile und beim Überfahren der Zeile. Das
+          Überfahren gilt nur unter `@media (hover: hover)` — das legt Tailwind 4
+          um jede `hover:`-Variante, auch um `group-hover:`; ohne die Grenze
+          bliebe der Knopf auf iOS nach einem Tippen hängend stehen. Solange das
+          Häkchen steht, ist er sichtbar, auch nach einem Tippen auf den Wert.
+
+          `transition-none`: kein Übergang beim Überfahren
+          (`visuelles-konzept.md` §7); der `Button` brächte `transition-all` mit.
+          `size-7` statt der Höhe eines Bedienelements, damit er in die feste
+          Zeilenhöhe passt; `mr-1`, damit sein Fokusring nicht an der
+          Schnittkante des aufklappbaren Inhalts (`overflow-hidden`) endet. */}
+      <KopierKnopf
+        kopiert={kopiert}
+        aufKopieren={kopiere}
+        beschriftung={einsetzen(bausteine.wertKopieren, { name: eigenschaft.name })}
+        beschriftungKopiert={einsetzen(bausteine.wertKopiert, { name: eigenschaft.name })}
+        className={EIGENSCHAFT_KOPIERKNOPF}
+      />
     </li>
   );
 }
+
+/**
+ * Die Klassen des Kopierknopfs einer Eigenschaftszeile — ausgeführt, damit der
+ * Test die Sichtbarkeitsregel an genau diesen Klassen gegen Tailwind prüft.
+ */
+export const EIGENSCHAFT_KOPIERKNOPF =
+  "text-muted-foreground mr-1 size-7 transition-none [&_svg:not([class*='size-'])]:size-3.5 " +
+  "opacity-0 group-focus-within/eigenschaft:opacity-100 group-hover/eigenschaft:opacity-100 " +
+  "data-kopiert:opacity-100";
