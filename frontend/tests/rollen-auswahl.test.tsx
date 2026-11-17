@@ -3,6 +3,7 @@
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { AuswahlFeld } from "@/components/auswahl-feld";
 import { RollenAuswahl } from "@/features/benutzer/components/rollen-auswahl";
 import { texteFuer } from "@/i18n";
 
@@ -43,10 +44,12 @@ async function klick(ziel: HTMLElement | null) {
   });
 }
 
-async function taste(ziel: Element | null, key: string) {
+async function taste(ziel: Element | null, key: string, zusatz: KeyboardEventInit = {}) {
   expect(ziel).not.toBeNull();
   await act(async () => {
-    ziel?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+    ziel?.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...zusatz }),
+    );
   });
 }
 
@@ -168,6 +171,101 @@ describe("Die Rollenauswahl", () => {
       expect(document.activeElement).toBe(zeile("MANDANT"));
       await taste(document.activeElement, "Enter");
       expect(aufWahl).toHaveBeenCalledExactlyOnceWith("MANDANT");
+    } finally {
+      await abbauen();
+    }
+  });
+});
+
+/**
+ * **Der Sprung per Zeichen in der offenen Liste** *(17.11.2026, E‑1198,
+ * `docs/benutzerverwaltung-frontend.md` §18)* — für die Stundenwahl der
+ * Prozessansicht, die 25 Zeilen hat: Bis zur 14 waren es fünfzehnmal `↓`.
+ *
+ * Das Muster der Listbox aus WAI-ARIA: Zeichen sammeln sich zu einem Anfang, der
+ * Fokus springt auf die nächste wählbare Zeile, die so beginnt; nach einer Pause
+ * beginnt der Anfang von vorn. **Am geschlossenen Feld ändert sich nichts** —
+ * dort bleibt es bei der Abweichung vom nativen Feld, die §18 begründet.
+ *
+ * Verdrahtung von Ereignis, Fokus und Zustand — nur im Baum belegbar.
+ */
+describe("Der Sprung per Zeichen", () => {
+  const zwei = (zahl: number) => String(zahl).padStart(2, "0");
+  const STUNDEN = [
+    { wert: "", text: "ganzer Tag" },
+    ...Array.from({ length: 24 }, (_, stunde) => ({
+      wert: `${zwei(stunde)}:00`,
+      text: `${zwei(stunde)}:59`,
+    })),
+  ];
+
+  async function stundenwahl(aufWahl: (wert: string) => void) {
+    return rendere(
+      <AuswahlFeld
+        id="stunde"
+        beschriftung="Stunde"
+        wert=""
+        eintraege={STUNDEN}
+        aufWahl={aufWahl}
+      />,
+    );
+  }
+
+  it("springt mit „1“ und „4“ auf die Zeile, die so beginnt, und wählt sie mit Enter", async () => {
+    const aufWahl = vi.fn();
+    const { behaelter, abbauen } = await stundenwahl(aufWahl);
+    try {
+      await taste(behaelter.querySelector("#stunde"), "ArrowDown");
+      expect(document.activeElement, "Eichung: der Fokus steht auf der leeren Zeile").toBe(
+        zeile(""),
+      );
+
+      await taste(liste(), "1");
+      expect(document.activeElement).toBe(zeile("10:00"));
+      await taste(liste(), "4");
+      expect(document.activeElement).toBe(zeile("14:00"));
+      await taste(liste(), "g");
+      expect(document.activeElement, "ein Anfang, den es nicht gibt, lässt den Fokus").toBe(
+        zeile("14:00"),
+      );
+      expect(aufWahl).not.toHaveBeenCalled();
+
+      await taste(document.activeElement, "Enter");
+      expect(aufWahl).toHaveBeenCalledExactlyOnceWith("14:00");
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("beginnt nach einer Pause von vorn und springt auch auf Buchstaben", async () => {
+    const { behaelter, abbauen } = await stundenwahl(vi.fn());
+    try {
+      await taste(behaelter.querySelector("#stunde"), "ArrowDown");
+      vi.useFakeTimers();
+      await taste(liste(), "2");
+      expect(document.activeElement).toBe(zeile("20:00"));
+      await act(async () => {
+        vi.advanceTimersByTime(2_000);
+      });
+      await taste(liste(), "G");
+      expect(document.activeElement, "Groß- und Kleinschreibung gleich").toBe(zeile(""));
+    } finally {
+      vi.useRealTimers();
+      await abbauen();
+    }
+  });
+
+  it("ändert am geschlossenen Feld nichts und lässt Tasten mit Strg durch", async () => {
+    const aufWahl = vi.fn();
+    const { behaelter, abbauen } = await stundenwahl(aufWahl);
+    try {
+      await taste(behaelter.querySelector("#stunde"), "1");
+      expect(liste(), "geschlossen bleibt geschlossen").toBeNull();
+
+      await taste(behaelter.querySelector("#stunde"), "ArrowDown");
+      await taste(liste(), "1", { ctrlKey: true });
+      expect(document.activeElement, "Strg+1 ist kein Zeichen").toBe(zeile(""));
+      expect(aufWahl).not.toHaveBeenCalled();
     } finally {
       await abbauen();
     }

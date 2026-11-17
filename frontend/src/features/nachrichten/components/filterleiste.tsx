@@ -3,7 +3,6 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { ChevronsUpDown, Search, X } from "lucide-react";
 
-import { useAnzeigezone } from "@/components/zeitzone";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -14,7 +13,6 @@ import { einsetzen } from "@/i18n";
 import { useTexte } from "@/i18n/provider";
 import { fehleranzeige } from "@/lib/fehlertext";
 import { angezeigterModus, ZEITRAEUME, type Zeitraum } from "@/lib/filter";
-import { wanduhrzeitFuerEingabe, zeitpunktAusWanduhrzeit } from "@/lib/format";
 import { ProblemFehler } from "@/lib/http";
 
 import {
@@ -25,6 +23,7 @@ import {
   type Statusart,
 } from "../filter";
 import { ProzessFilter } from "./prozess-filter";
+import { Zeitfensterfelder } from "./zeitfensterfelder";
 
 /** Wie lange nach dem letzten Tastendruck gewartet wird, bevor gesucht wird. */
 const SUCHE_ENTPRELLUNG_MS = 400;
@@ -122,38 +121,6 @@ function Zeitfensterwahl({
   fehler?: ProblemFehler;
 }) {
   const texte = useTexte();
-  const zone = useAnzeigezone();
-  const hinweisId = useId();
-  /*
-   * „Angefangen, aber nicht fertig" — der Zustand, den ein `datetime-local`
-   * nicht über seinen Wert mitteilt.
-   *
-   * Das Feld liefert erst dann einen Wert, wenn **alle** Segmente stehen; wer
-   * nur das Datum eintippt, sieht es im Feld und bekommt trotzdem `value === ""`.
-   * Der `onChange` läuft, das Ergebnis ist `null`, der Filter ändert sich nicht —
-   * und die Anwendung tut nichts und sagt nichts. Genau das war der Befund vom
-   * 07.08.2026: `Bis` zeigte `30.12.2025`, `value` war leer, `badInput` war
-   * `true`, und in der URL stand kein `bis`.
-   *
-   * `validity.badInput` ist die einzige Stelle, an der der Browser diesen
-   * Zustand überhaupt herausgibt. Er wird im Komponentenzustand gehalten und
-   * nicht in der URL: Er beschreibt keine Auswahl, sondern eine halbe Eingabe —
-   * und was die URL nicht ausdrücken kann, gehört nicht hinein
-   * (`frontend-grundlagen.md` §8).
-   *
-   * **Gelesen wird an `keyup` und `blur`, nicht an `change`** — und das ist der
-   * Kern der Sache: Solange die Segmente unvollständig sind, bleibt `value` leer,
-   * und Chrome feuert deshalb **überhaupt kein `input`-Ereignis**. React sieht
-   * also kein `onChange`, und genau darum konnte die Oberfläche diesen Zustand
-   * bisher nicht bemerken. `keyup` feuert bei jedem Tastendruck, `blur` fängt den
-   * Weg über Maus und Kalenderfeld ab.
-   */
-  const [angefangen, setAngefangen] = useState({ von: false, bis: false });
-
-  function merkeEingabestand(feld: "von" | "bis", ziel: HTMLInputElement) {
-    const halb = ziel.validity.badInput;
-    setAngefangen((bisher) => (bisher[feld] === halb ? bisher : { ...bisher, [feld]: halb }));
-  }
   /*
    * „Frei gedrückt, aber noch nichts eingetragen" steht bewusst nicht in der URL
    * — es ist derselbe Ausschnitt wie gar keine Auswahl. Ohne diesen
@@ -164,42 +131,12 @@ function Zeitfensterwahl({
    */
   const [freiGewaehlt, setFreiGewaehlt] = useState(false);
   const modus = angezeigterModus(filter, freiGewaehlt);
-  const vonId = useId();
-  const bisId = useId();
 
   const beschriftung: Record<Zeitraum, string> = {
     "24h": texte.nachrichten.zeitfenster.h24,
     "7d": texte.nachrichten.zeitfenster.d7,
     "30d": texte.nachrichten.zeitfenster.d30,
   };
-
-  /*
-   * Was der Nutzer im freien Modus zu lesen bekommt, in dieser Reihenfolge:
-   *
-   * 1. **Halb getippt** schlägt alles andere. Es ist der einzige Zustand, in dem
-   *    die Anwendung sonst gar nichts täte — kein Wert, keine Anfrage, keine
-   *    Antwort. Er geht der Serverantwort auch zeitlich voraus: Solange das Feld
-   *    keinen Wert hat, wird nichts geschickt.
-   * 2. **Die Antwort des Servers**, falls eine da ist. Übersetzt wird über den
-   *    `type`, nicht über `detail`.
-   * 3. **Nur einer der beiden Zeitpunkte steht.** Dann ist zwar eine Anfrage
-   *    unterwegs, aber ihre Antwort ist noch nicht da — und bis dahin soll nicht
-   *    stillschweigend nichts passieren.
-   */
-  function zeitfensterHinweisText(): string | undefined {
-    if (angefangen.von || angefangen.bis) {
-      return texte.nachrichten.zeitfenster.unvollstaendig;
-    }
-    if (fehler !== undefined) {
-      return fehleranzeige(fehler, texte).text;
-    }
-    if ((filter.von === null) !== (filter.bis === null)) {
-      return texte.nachrichten.zeitfenster.beideNoetig;
-    }
-    return undefined;
-  }
-
-  const zeitfensterHinweis = modus === "frei" ? zeitfensterHinweisText() : undefined;
 
   return (
     <div className="flex flex-col gap-1">
@@ -238,64 +175,21 @@ function Zeitfensterwahl({
         </p>
       ) : null}
 
+      {/*
+       * Je Zeitpunkt ein Datum und eine freiwillige Uhrzeit (E‑1198): Ein Datum
+       * allein meint den ganzen Tag, „Bis" endet dann um 23:59:59 — das `bis`
+       * der Liste ist einschließend und sekundengenau. Halbe Eingaben,
+       * Zonenumrechnung und die Reihenfolge der Meldungen stehen im Baustein.
+       */}
       {modus === "frei" ? (
-        <div className="flex flex-col gap-0.5">
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="flex flex-col gap-0.5">
-              <Label htmlFor={vonId} className="text-beiwerk">
-                {texte.nachrichten.zeitfenster.von}
-              </Label>
-              {/* Die Eingabe ist Wanduhrzeit ohne Zone. Umgerechnet wird in der
-                  Anzeigezone — sonst wäre das freie Fenster gegen die Daten
-                  verschoben, sobald jemand nicht in der Zone des Servers sitzt. */}
-              <Input
-                id={vonId}
-                type="datetime-local"
-                className="h-bedienelement w-auto"
-                aria-describedby={zeitfensterHinweis === undefined ? undefined : hinweisId}
-                value={wanduhrzeitFuerEingabe(filter.von, zone)}
-                onKeyUp={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
-                onBlur={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
-                onChange={(ereignis) => {
-                  merkeEingabestand("von", ereignis.currentTarget);
-                  steuerung.setzeFreiesFenster(
-                    zeitpunktAusWanduhrzeit(ereignis.target.value, zone),
-                    filter.bis,
-                  );
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <Label htmlFor={bisId} className="text-beiwerk">
-                {texte.nachrichten.zeitfenster.bis}
-              </Label>
-              <Input
-                id={bisId}
-                type="datetime-local"
-                className="h-bedienelement w-auto"
-                aria-describedby={zeitfensterHinweis === undefined ? undefined : hinweisId}
-                value={wanduhrzeitFuerEingabe(filter.bis, zone)}
-                onKeyUp={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
-                onBlur={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
-                onChange={(ereignis) => {
-                  merkeEingabestand("bis", ereignis.currentTarget);
-                  steuerung.setzeFreiesFenster(
-                    filter.von,
-                    zeitpunktAusWanduhrzeit(ereignis.target.value, zone),
-                  );
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Dieselbe ruhige Farbrolle wie „noch zwei Zeichen" am Suchfeld: Der
-              Nutzer hat nichts falsch gemacht, er ist nur noch nicht fertig. */}
-          {zeitfensterHinweis === undefined ? null : (
-            <p id={hinweisId} className="text-muted-foreground text-beiwerk max-w-prose">
-              {zeitfensterHinweis}
-            </p>
-          )}
-        </div>
+        <Zeitfensterfelder
+          von={filter.von}
+          bis={filter.bis}
+          aufAenderung={steuerung.setzeFreiesFenster}
+          fehler={fehler}
+          vertrag="sekunde"
+          anordnung="untereinander"
+        />
       ) : null}
     </div>
   );

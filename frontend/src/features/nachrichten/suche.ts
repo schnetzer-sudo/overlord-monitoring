@@ -1,9 +1,10 @@
 import { createMultiParser, createParser } from "nuqs";
 
 import { ZEITFENSTER_PARAMETER, zeitfensterAlsParameter } from "@/lib/filter";
+import type { ProblemFehler } from "@/lib/http";
 
 import type { BamAntwortmodus, BamTrefferWert } from "./api";
-import { NACHRICHTEN_PARAMETER } from "./filter";
+import { NACHRICHTEN_PARAMETER, zeitfensterFehler } from "./filter";
 
 /**
  * Der Zustand der Belegsuche — **in der URL, nicht im Komponentenzustand.**
@@ -699,4 +700,45 @@ export function nulltrefferHinweis(
     return null;
   }
   return vorige.begriffe < aktuelleBegriffe ? vorige : null;
+}
+
+/**
+ * **Was an Stelle der Trefferliste steht — und ob eine Antwort an die Zeitfelder
+ * gehört** *(17.11.2026, E‑1198, `docs/bam-suche.md` §11.6)*.
+ *
+ * Bis dahin ersetzte jeder `zeitfenster-*`-Fehler die Trefferliste durch den
+ * Fehlerbaustein — auch der Moment, in dem erst „Von“ dasteht und die Anfrage
+ * mit `zeitfenster-unvollstaendig` zurückkommt. Seither gilt dieselbe Regel wie
+ * in der Nachrichtenliste (`listenanzeige`) und in der Prozessansicht
+ * (`letzterBaum`):
+ *
+ * - **Gehört die Antwort an die Felder** (`AM_ZEITFENSTER`, seit E‑1198 samt
+ *   `zeitfenster-zu-gross`) **oder steht erst einer der beiden Zeitpunkte**, ist
+ *   das eine *ruhige* Lage: Die Meldung steht an den Feldern, und an Stelle der
+ *   Trefferliste steht die **zuletzt gelieferte** Antwort. Gab es noch keine,
+ *   steht dort nichts — kein Fehlerbaustein.
+ * - **Jeder andere Fehler** bleibt, was er war: ein Fehler über der Liste, ohne
+ *   gehaltene Antwort. Das gilt ausdrücklich für `zeitfenster-mehrdeutig` (die
+ *   Oberfläche lässt ihn nicht entstehen — käme er, ist er ein Befund) und für
+ *   `praefixsuche-fenster-zu-gross`, der seinen eigenen Baustein mit Ausweg hat.
+ *
+ * Was als „zuletzt geliefert“ gilt, entscheidet `letzteLieferung` in
+ * `filter.ts` — ein Abbruch verwirft sie (E‑240). Rein, damit es ohne React
+ * prüfbar ist; die Ansicht zeigt nur an.
+ */
+export function trefferanzeige<E>(lage: {
+  ergebnis: E | undefined;
+  letztes: E | undefined;
+  fehler: unknown;
+  von: Date | null;
+  bis: Date | null;
+}): { ergebnis: E | undefined; amFeld: ProblemFehler | undefined; ruhig: boolean } {
+  const amFeld = zeitfensterFehler(lage.fehler);
+  const halb = (lage.von === null) !== (lage.bis === null);
+  const ruhig = amFeld !== undefined || halb;
+  return {
+    ergebnis: lage.ergebnis ?? (ruhig ? lage.letztes : undefined),
+    amFeld,
+    ruhig,
+  };
 }

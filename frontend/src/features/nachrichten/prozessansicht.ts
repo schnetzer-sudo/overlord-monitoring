@@ -5,7 +5,7 @@ import {
   parseAsBaumgliederung,
   type Baumgliederung,
 } from "@/lib/baumgliederung";
-import { wanduhrzeitFuerEingabe, zeitpunktAusWanduhrzeit } from "@/lib/format";
+import { wanduhrzeitFuerEingabe, zeitpunktAusDatumUndUhrzeit } from "@/lib/format";
 import { ProblemFehler } from "@/lib/http";
 import {
   baumfensterAlsParameter,
@@ -542,9 +542,10 @@ function herkunftsfenster(
  *
  * **Dieselben Zonenumrechnungen wie das freie Fenster** (`lib/format.ts`): Der
  * Tag wird mit {@link wanduhrzeitFuerEingabe} aus dem Zeitpunkt abgelesen, und
- * seine beiden Stunden werden mit {@link zeitpunktAusWanduhrzeit} zurück auf die
- * Zeitachse gelegt — zwei Durchgänge, damit der Versatz am richtigen Zeitpunkt
- * gilt. Damit stimmt er an beiden Umstellungstagen: **23 Stunden** am Tag der
+ * seine beiden Grenzen sind seit E‑1198 genau das, was die Datumsfelder der
+ * Prozessansicht aus einem Datum ohne Uhrzeit machen
+ * ({@link zeitpunktAusDatumUndUhrzeit} im Vertrag `stunde`) — zwei Durchgänge,
+ * damit der Versatz am richtigen Zeitpunkt gilt. Damit stimmt er an beiden Umstellungstagen: **23 Stunden** am Tag der
  * Vorstellung, **25** am Tag der Rückstellung. Beide Grenzen liegen auf vollen
  * Stunden der Zone, und nur solche nimmt der Baum an (E‑95).
  *
@@ -560,8 +561,8 @@ export function kalendertagfenster(zeitpunkt: Date, zone: string): { von: Date; 
   }
   try {
     const tag = wanduhrzeitFuerEingabe(zeitpunkt, zone).slice(0, 10);
-    const von = zeitpunktAusWanduhrzeit(`${tag}T00:00`, zone);
-    const bis = zeitpunktAusWanduhrzeit(`${tag}T23:00`, zone);
+    const von = zeitpunktAusDatumUndUhrzeit(tag, "", "von", "stunde", zone);
+    const bis = zeitpunktAusDatumUndUhrzeit(tag, "", "bis", "stunde", zone);
     if (von === null || bis === null || Number.isNaN(von.getTime() + bis.getTime())) {
       return null;
     }

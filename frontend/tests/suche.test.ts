@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { texteFuer } from "@/i18n";
+import { ProblemFehler } from "@/lib/http";
 import type { BamTrefferWert } from "@/features/nachrichten/api";
 import {
   HOECHSTENS_BEGRIFFE,
@@ -28,6 +29,7 @@ import {
   praefixfenster,
   spanneInTagen,
   trefferTypen,
+  trefferanzeige,
   zeigtPraefixAngebot,
   zeigtTrefferspalte,
   type Suchbegriff,
@@ -809,5 +811,94 @@ describe("Die Sätze des Präfixmodus", () => {
     expect(praefix.fensterZuGross).toContain("{grenze}");
     expect(praefix.fensterZuGross).toContain("{angefragt}");
     expect(praefix.fensterVerkleinern).toContain("{grenze}");
+  });
+});
+
+/**
+ * **Was an Stelle der Trefferliste steht, wenn die Antwort den Zeitfensterfeldern
+ * gilt** *(17.11.2026, E‑1198, `docs/bam-suche.md` §11.6)*.
+ *
+ * Bis dahin ersetzte jeder `zeitfenster-*`-Fehler die Trefferliste durch den
+ * Fehlerbaustein — auch der Moment, in dem erst „Von" steht. Seither steht die
+ * Meldung an den Feldern, und die **zuletzt gelieferte** Antwort bleibt stehen,
+ * wie in der Nachrichtenliste (§8.2) und in der Prozessansicht (§41). Gab es
+ * noch keine, steht dort nichts.
+ */
+describe("Die Trefferliste bei einer Rückmeldung an den Zeitfeldern", () => {
+  const ALT = { kennung: "alt" };
+  const NEU = { kennung: "neu" };
+  const fehler = (typ: string) => new ProblemFehler({ status: 400, typ });
+  const tag = new Date("2026-07-06T22:00:00.000Z");
+
+  it("lässt bei einer Antwort an die Felder die zuletzt gelieferte stehen", () => {
+    for (const typ of [
+      "zeitfenster-unvollstaendig",
+      "zeitfenster-ungueltig",
+      "zeitpunkt-ungueltig",
+      "zeitfenster-zu-gross",
+    ]) {
+      const lage = trefferanzeige({
+        ergebnis: undefined,
+        letztes: ALT,
+        fehler: fehler(typ),
+        von: tag,
+        bis: tag,
+      });
+      expect(lage.ergebnis, typ).toBe(ALT);
+      expect(lage.amFeld?.typ, typ).toBe(typ);
+      expect(lage.ruhig, typ).toBe(true);
+    }
+  });
+
+  it("zeigt ohne frühere Antwort nichts — und keinen Fehlerbaustein", () => {
+    const lage = trefferanzeige({
+      ergebnis: undefined,
+      letztes: undefined,
+      fehler: fehler("zeitfenster-zu-gross"),
+      von: tag,
+      bis: tag,
+    });
+    expect(lage.ergebnis).toBeUndefined();
+    expect(lage.ruhig).toBe(true);
+  });
+
+  it("lässt sie auch stehen, solange erst einer der beiden Zeitpunkte dasteht", () => {
+    const lage = trefferanzeige({
+      ergebnis: undefined,
+      letztes: ALT,
+      fehler: null,
+      von: tag,
+      bis: null,
+    });
+    expect(lage.ergebnis).toBe(ALT);
+    expect(lage.amFeld).toBeUndefined();
+    expect(lage.ruhig).toBe(true);
+  });
+
+  it("zeigt eine gelieferte Antwort, wie sie ist", () => {
+    const lage = trefferanzeige({
+      ergebnis: NEU,
+      letztes: ALT,
+      fehler: null,
+      von: null,
+      bis: null,
+    });
+    expect(lage.ergebnis).toBe(NEU);
+    expect(lage.ruhig).toBe(false);
+  });
+
+  it("lässt jeden anderen Fehler über der Liste stehen und hält nichts", () => {
+    for (const typ of ["zeitfenster-mehrdeutig", "praefixsuche-fenster-zu-gross", "intern"]) {
+      const lage = trefferanzeige({
+        ergebnis: undefined,
+        letztes: ALT,
+        fehler: fehler(typ),
+        von: tag,
+        bis: tag,
+      });
+      expect(lage.ergebnis, typ).toBeUndefined();
+      expect(lage.amFeld, typ).toBeUndefined();
+      expect(lage.ruhig, typ).toBe(false);
+    }
   });
 });

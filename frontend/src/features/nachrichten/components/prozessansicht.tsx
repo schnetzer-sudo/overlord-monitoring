@@ -78,12 +78,12 @@ import {
   zuordnungVon,
   type Zuordnungsglied,
 } from "../prozessbaum";
-import { BaumfensterFelder } from "./baumfenster-felder";
 import { Blaettern } from "./blaettern";
 import { GliederungUmschalter } from "./gliederung-umschalter";
 import { NachrichtDetail } from "./nachricht-detail";
 import { NachrichtenTabelle } from "./nachrichten-tabelle";
 import { ProzessBaum } from "./prozess-baum";
+import { Zeitfensterfelder } from "./zeitfensterfelder";
 
 /**
  * Die Prozessansicht — **Baum links, Übertragungen rechts** (`/prozesse`,
@@ -598,13 +598,21 @@ export function ProzessAnsicht() {
           {/* Die Felder stehen **neben** dem Umschalter, nicht darin — nur so
               bleibt das Dashboard zeichengleich. Sie sind Kinder derselben
               Zeile in derselben Höhe: Die Zeile wird breiter, nicht höher, und
-              der Umschalter springt nicht. */}
+              der Umschalter springt nicht.
+
+              Seit E‑1198 je Zeitpunkt ein Datum und eine Stundenwahl, der
+              gemeinsame Baustein der drei freien Fenster. Ein Datum allein
+              meint den ganzen Tag: 00:00 bis 23:00, denn `bis` ist hier die
+              letzte enthaltene Stunde (E‑94) — volle Stunden der Zone, wie der
+              Baum sie verlangt (E‑95). */}
           {fenstermodus === "frei" ? (
-            <BaumfensterFelder
+            <Zeitfensterfelder
               von={zustand.von}
               bis={zustand.bis}
               aufAenderung={setzeFreiesFenster}
               fehler={fehlerAnDenFeldern}
+              vertrag="stunde"
+              anordnung="in-der-zeile"
             />
           ) : null}
           <div className="ml-auto">

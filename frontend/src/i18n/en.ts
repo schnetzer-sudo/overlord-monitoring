@@ -122,7 +122,12 @@ export const en: Texte = {
     FREI: "Custom",
     von: "From",
     bis: "To",
-    unvollstaendig: "Please enter both date and time.",
+    uhrzeit: "{grenze}, time (optional)",
+    stunde: "{grenze}, hour (optional)",
+    ganzerTag: "Whole day",
+    datumUnvollstaendig: "Please enter the complete date.",
+    uhrzeitUnvollstaendig:
+      "Please complete or clear the time. Without a time, the whole day applies.",
     beideNoetig: "A custom time window still needs its second point in time.",
   },
 
@@ -376,12 +381,8 @@ export const en: Texte = {
       d7: "7 days",
       d30: "30 days",
       frei: "Custom",
-      von: "From",
-      bis: "To",
       standardHinweis: "Without a choice the server's default window applies.",
       zuruecksetzen: "Reset time window",
-      unvollstaendig: "Please enter both date and time.",
-      beideNoetig: "A custom time window still needs its second point in time.",
     },
 
     statusfilter: {

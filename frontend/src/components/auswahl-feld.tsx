@@ -6,6 +6,9 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+/** Wie lange getippte Zeichen sich zu einem Anfang sammeln (WAI-ARIA nennt etwa eine halbe Sekunde). */
+const SPRUNG_PAUSE_MS = 700;
+
 /**
  * Ein Eintrag der Liste. `waehlbar` ist voreingestellt wahr; eine nicht wählbare
  * Zeile **steht da** und ist nicht anklickbar — sichtbar bleiben ist die halbe
@@ -70,6 +73,18 @@ export type Auswahleintrag<W extends string> = {
  * **Ein unbekannter Wert steht im Feld, wie er ist** (Regel Q4) — er fällt nicht
  * still auf einen der bekannten. **Eine Wahl, die nichts ändert, meldet nichts**
  * — wie das native `change`, das beim selben Wert nicht feuert.
+ *
+ * ## Der Sprung per Zeichen *(17.11.2026, E‑1198)*
+ *
+ * **In der offenen Liste** sammeln sich getippte Zeichen zu einem Anfang, und der
+ * Fokus springt auf die nächste wählbare Zeile, die so beginnt — das Muster der
+ * Listbox aus WAI-ARIA. Nach {@link SPRUNG_PAUSE_MS} ohne Taste beginnt der
+ * Anfang von vorn; ein einzelnes Zeichen sucht ab der Zeile **nach** der
+ * fokussierten, damit wiederholtes Tippen weiterspringt. Gewählt wird erst mit
+ * `Enter`, wie bei den Pfeilen. Anlass ist die Stundenwahl der Prozessansicht
+ * mit 25 Zeilen: „1“, „4“ statt fünfzehnmal `↓`. **Am geschlossenen Feld tut ein
+ * Zeichen nichts** — dort bleibt es bei der Abweichung oben. Tasten mit Strg,
+ * Alt oder Cmd gehen durch.
  */
 export function AuswahlFeld<W extends string>({
   id,
@@ -78,6 +93,7 @@ export function AuswahlFeld<W extends string>({
   eintraege,
   aufWahl,
   gesperrt = false,
+  className,
 }: {
   /** Für `<Label htmlFor>` — das Feld ist der Auslöser. */
   id: string;
@@ -88,9 +104,19 @@ export function AuswahlFeld<W extends string>({
   eintraege: readonly Auswahleintrag<W>[];
   aufWahl: (wert: W) => void;
   gesperrt?: boolean;
+  /**
+   * Zusätzliche Klassen am geschlossenen Feld — etwa `h-bedienelement`, wo es in
+   * einer Zeile mit Schaltflächen steht (Prozessansicht, E‑1198). Sie gewinnen
+   * gegen die eigenen (`cn`).
+   */
+  className?: string;
 }) {
   const [offen, setOffen] = useState(false);
   const liste = useRef<HTMLUListElement>(null);
+  const sprung = useRef<{ anfang: string; uhr: ReturnType<typeof setTimeout> | undefined }>({
+    anfang: "",
+    uhr: undefined,
+  });
 
   const anzeige = eintraege.find((eintrag) => eintrag.wert === wert)?.text ?? wert;
 
@@ -114,9 +140,38 @@ export function AuswahlFeld<W extends string>({
     }
   }
 
+  /** Der Sprung per Zeichen — siehe oben. */
+  function springe(zeichen: string, alle: HTMLElement[], jetzt: number) {
+    clearTimeout(sprung.current.uhr);
+    sprung.current.uhr = setTimeout(() => {
+      sprung.current.anfang = "";
+    }, SPRUNG_PAUSE_MS);
+    const anfang = (sprung.current.anfang + zeichen).toLocaleLowerCase();
+    sprung.current.anfang = anfang;
+    // Ein einzelnes Zeichen sucht ab der nächsten Zeile, ein längerer Anfang ab
+    // der fokussierten — sonst spränge „14" von der 10 weg.
+    const ab = anfang.length === 1 ? jetzt + 1 : Math.max(jetzt, 0);
+    const reihe = [...alle.slice(ab), ...alle.slice(0, ab)];
+    const ziel = reihe.find((zeile) =>
+      (zeile.textContent ?? "").trim().toLocaleLowerCase().startsWith(anfang),
+    );
+    ziel?.focus();
+  }
+
   function inDerListe(ereignis: KeyboardEvent<HTMLUListElement>) {
     const alle = zeilen();
     const jetzt = alle.indexOf(document.activeElement as HTMLElement);
+    if (
+      ereignis.key.length === 1 &&
+      ereignis.key !== " " &&
+      !ereignis.ctrlKey &&
+      !ereignis.altKey &&
+      !ereignis.metaKey
+    ) {
+      ereignis.preventDefault();
+      springe(ereignis.key, alle, jetzt);
+      return;
+    }
     const ziel =
       ereignis.key === "ArrowDown"
         ? Math.min(alle.length - 1, jetzt + 1)
@@ -142,7 +197,10 @@ export function AuswahlFeld<W extends string>({
           disabled={gesperrt}
           aria-haspopup="listbox"
           onKeyDown={amFeld}
-          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-feld flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-transparent px-2.5 py-1 text-left outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50"
+          className={cn(
+            "border-input focus-visible:border-ring focus-visible:ring-ring/50 h-feld flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-transparent px-2.5 py-1 text-left outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
+            className,
+          )}
         >
           <span className={cn("truncate", wert === "" && "text-muted-foreground")}>{anzeige}</span>
           <ChevronsUpDown aria-hidden="true" className="size-3.5 shrink-0 opacity-60" />

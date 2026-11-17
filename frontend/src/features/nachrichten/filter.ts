@@ -264,11 +264,18 @@ export const AM_SUCHFELD = [
  * `zeitfenster-mehrdeutig` gehört nicht dazu: Diesen Zustand lässt die
  * Oberfläche gar nicht erst entstehen (§8.2). Käme er trotzdem, ist er ein
  * Befund und gehört sichtbar über die Ansicht.
+ *
+ * **`zeitfenster-zu-gross` gehört seit E‑1198 dazu** (17.11.2026): Ein Datum ohne
+ * Uhrzeit meint den ganzen Tag, und ein ganzer Tag am Rand eines Jahresfensters
+ * reicht bis 23:59:59 — über das Kalenderjahr aus Regel L1. Die Antwort gilt
+ * dann der Eingabe in den Feldern, wie in der Prozessansicht (`AM_BAUMFENSTER`)
+ * und in der Belegsuche.
  */
 export const AM_ZEITFENSTER = [
   "zeitfenster-unvollstaendig",
   "zeitfenster-ungueltig",
   "zeitpunkt-ungueltig",
+  "zeitfenster-zu-gross",
 ] as const;
 
 function ausKatalog(katalog: readonly string[], fehler: unknown): ProblemFehler | undefined {

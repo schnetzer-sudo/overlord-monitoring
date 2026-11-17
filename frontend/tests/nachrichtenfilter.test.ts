@@ -660,6 +660,20 @@ describe("Das halb ausgefüllte freie Zeitfenster", () => {
   });
 
   /**
+   * **Seit E‑1198 (17.11.2026) auch das zu große Fenster.** Ein ganzer Tag am
+   * Rand eines Jahresfensters reicht bis 23:59:59 und kann damit über das
+   * Kalenderjahr aus Regel L1 gehen — die Antwort gilt dann der Eingabe in den
+   * Feldern, nicht der Ansicht. Die Prüfung bleibt im Backend.
+   */
+  it("stellt auch das zu große Fenster an die Datumsfelder", () => {
+    const zuGross = new ProblemFehler({ status: 400, typ: "zeitfenster-zu-gross" });
+
+    expect(zeitfensterFehler(zuGross)).toBe(zuGross);
+    expect(feldFehler(zuGross)).toBe(zuGross);
+    expect(suchfeldFehler(zuGross)).toBeUndefined();
+  });
+
+  /**
    * `zeitfenster-mehrdeutig` lässt die Oberfläche gar nicht erst entstehen: Eine
    * Vorwahl löscht `von`/`bis`, ein freies Fenster löscht `zeitraum`. Käme der
    * Typ trotzdem, ist er ein Befund und gehört sichtbar über die Ansicht.
