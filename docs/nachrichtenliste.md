@@ -2652,7 +2652,7 @@ Umstellungstage im Jahr treffen.
 > | Belegsuche (`9000:1`, Präfix) | erst nur Von | `zeitfenster-unvollstaendig` vom Server **am Feld**, die 50 Treffer davor bleiben stehen, kein Fehlerbaustein (E‑1200) |
 > | Belegsuche | Bis dazu | ganzer Tag in der Adresse; die Antwort nennt „29.12.2025, 00:00 bis 29.12.2025, 23:59“; 1 Treffer |
 > | Belegsuche | halbe Uhrzeit bei Von | Meldung am Feld, der Treffer bleibt — Bild hell; dunkel nur über das DOM (`color-scheme: dark` an Datum und Uhrzeit) |
-> | Belegsuche (`:4711`, genau) | „Auf ein Jahr erweitern“ | beide Zeitpunkte gesetzt, die Felder zeigen sie: `30.12.2024` / `04:35:49,253` und `30.12.2025` / `04:35:49,253` — Punkt **1057** |
+> | Belegsuche (`:4711`, genau) | „Auf ein Jahr erweitern“ | beide Zeitpunkte gesetzt, die Felder zeigen sie: `30.12.2024` / `04:35:49,253` und `30.12.2025` / `04:35:49,253` — Bild dunkel; Punkt **1057** |
 > | Prozessansicht | „Frei“ | Umschalter, Datumsfelder, Stundenwahl und „Neu laden“ je **30 px** auf derselben Oberkante, der Umschalter springt nicht; kein Uhrzeitfeld, kein `<select>` |
 > | Prozessansicht | nur Datum, 29.12.2025 | `von=2025-12-28T23:00:00.000Z`, `bis=2025-12-29T22:00:00.000Z`; die Antwort: `fenster` 23:00Z bis 23:00Z (ausschließend), 5.043 Nachrichten; kein `zeitfenster-zu-genau` |
 > | Prozessansicht | Stundenwahl Von: `↓`, „1“, „4“, `Enter` | Fokus auf `14:00`, dann `von=2025-12-29T13:00:00.000Z`, das Feld zeigt `14:00` — Bild der offenen Liste dunkel |
@@ -2677,8 +2677,9 @@ Umstellungstage im Jahr treffen.
 > **Nicht gesehen:** Firefox und Safari (eigene Datums- und Uhrfelder); die aufgeklappten Kalender-
 > und Uhrflächen der nativen Felder — sie zeichnet der Browser (Punkt 180); ein Tag an einem
 > Umstellungstag im Browser (die Rechnung ist rein geprüft); Mobilgeräte und das schmale Fenster; die
-> englische Oberfläche. Mehrere Bildaufnahmen liefen im Werkzeug in eine Zeitgrenze, die Belegsuche
-> dunkel ist deshalb nur über das DOM belegt.
+> englische Oberfläche. Mehrere Bildaufnahmen liefen im Werkzeug in eine Zeitgrenze; von der
+> Belegsuche gibt es dunkel nur das Bild nach „Auf ein Jahr erweitern“, die Meldung am Feld ist dunkel
+> nur über das DOM belegt.
 >
 > **Punkt 1057** — „Auf ein Jahr erweitern“ schreibt das `bis` der Antwort mit Sekunden und
 > Millisekunden in die Adresse, und die Uhrzeitfelder zeigen sie seit E‑1198 mit (`04:35:49,253`):
