@@ -2523,6 +2523,113 @@ Umstellungstage im Jahr treffen.
 > gehört ausdrücklich **nicht** dazu: Diesen Zustand lässt die Oberfläche gar nicht erst entstehen —
 > käme er doch, ist er ein Befund und gehört sichtbar.
 
+> ### ⚠️ Korrektur vom 17.11.2026 — ein Datum ohne Uhrzeit sucht den ganzen Tag (E‑1198 bis E‑1202, Zweig `fix/freies-zeitfenster-tag`)
+>
+> **Die Absätze über das `datetime-local` darüber sind überholt**, soweit sie das Feld beschreiben;
+> ihre Begründungen — Anzeigezone, zwei Durchgänge, `validity.badInput`, Meldungen am Feld — gelten
+> weiter. Gemeldet hat der Auftraggeber am 17.11.2026, dass „Frei“ schwer zu bedienen ist: Wer nur
+> ein Datum einträgt, bekommt eine Meldung statt eines Ergebnisses. **Seither genügt das Datum, die
+> Uhrzeit ist freiwillig** — an allen drei Stellen mit freiem Fenster, über einen gemeinsamen
+> Baustein (`features/nachrichten/components/zeitfensterfelder.tsx`): hier, im Zeitfenster der
+> Belegsuche ([`bam-suche.md`](bam-suche.md) §11.6) und im freien Fenster der Prozessansicht
+> ([`process-view.md`](process-view.md) §41).
+>
+> | | Liste und Belegsuche | Prozessansicht |
+> |---|---|---|
+> | Datum | `input type="date"` | `input type="date"` |
+> | Uhrzeit | `input type="time"`, Minuten, freiwillig | Stundenwahl über `components/auswahl-feld.tsx`, freiwillig (E‑1199) |
+> | „Von“ ohne Uhrzeit | 00:00 | 00:00 |
+> | „Bis“ ohne Uhrzeit | **23:59:59** | **23:00** |
+> | Vertrag von `bis` | einschließend, auf die Sekunde | letzte enthaltene volle Stunde (E‑94, E‑95) |
+>
+> **Der Vertrag von `bis` in Liste und Suche ist am Code geprüft, nicht angenommen** (vor dem Bau,
+> 17.11.2026): `NachrichtenRepository` filtert `MESSAGE.MESSAGELASTUPDATE.le(...fenster().bis())`,
+> `BamSucheRepository` ebenso (`MESSAGELASTUPDATE.le(fenster.bis())`); `Zeitfenster` ist beidseitig
+> geschlossen (§2). `MessageLastUpdate` ist `timestamp` ohne Bruchteil
+> ([`datenmodell.md`](datenmodell.md) §3), im jOOQ-Modell `SQLDataType.LOCALDATETIME(0)` — die
+> Auflösung ist die Sekunde. **23:59:59 einschließend deckt den Tag damit vollständig.**
+> `Zeitpunkte.ausIso` liest über `OffsetDateTime` und verliert nichts. Das Backend ist nicht geändert.
+>
+> **Entscheidungen**
+>
+> | Nr. | Entscheidung | Herkunft |
+> |---|---|---|
+> | **E‑1198** | Je Zeitpunkt ein Datum und eine freiwillige Uhrzeit, ein Baustein für die drei Stellen. Ohne Uhrzeit beginnt „Von“ um 00:00, „Bis“ endet am Ende des Tages im Vertrag des Einhängepunkts (Tabelle oben). Umgerechnet über reine Funktionen in `lib/format.ts` (`zeitpunktAusDatumUndUhrzeit`, `datumUndUhrzeitFuerEingabe`), in der Anzeigezone, mit zwei Durchgängen. `zeitfenster-zu-gross` gehört seither zu `AM_ZEITFENSTER` und steht am Feld | A, Auftrag vom 17.11.2026 |
+> | **E‑1199** | Die Prozessansicht bekommt **keinen** Hinweissatz. Den Satz „Volle Stunden; „Bis“ ist die letzte enthaltene Stunde.“, den der Auftrag erhalten wollte, gibt es seit dem 07.09.2026 nicht mehr ([`process-view.md`](process-view.md) §45). Die Stundenwahl sagt es selbst: leer heißt „Ganzer Tag“, „Bis“ nennt das Ende der Stunde | A, Rückfrage vom 17.11.2026 |
+> | **E‑1200** | In der Belegsuche steht eine Antwort zum Zeitfenster am Feld statt als Fehlerbaustein, und die zuletzt gelieferte Antwort bleibt stehen | A, Rückfrage vom 17.11.2026 |
+> | **E‑1201** | `components/auswahl-feld.tsx` bekommt einen Sprung per Zeichen in der offenen Liste („1“, „4“ → 14) | A, Rückfrage vom 17.11.2026 |
+> | **E‑1202** | **Eine halbe Eingabe ändert die Adresse nicht.** Bis dahin schrieb ein `datetime-local`, das von vollständig auf halb ging, seinen Zeitpunkt als `null` — die Anfrage lief dann mit nur einem Zeitpunkt in `zeitfenster-unvollstaendig`. Jetzt bleibt der letzte vollständige Wert stehen, die Meldung steht am Feld. Dazu: Eine getippte Uhrzeit, die der Vorgabe entspricht, wird erst **beim Verlassen** des Felds leer, nicht während des Tippens | V, zur Bestätigung |
+>
+> **Der Rundlauf Eingabe → Adresse → Felder ist stabil.** Die Uhrzeit bleibt leer genau dann, wenn
+> der Wert der Vorgabe für „ohne Uhrzeit“ entspricht — sonst steht sie da, so genau, wie die Adresse
+> es verlangt (`14:30`, `14:30:15`, `14:30:15.250`; „Auf ein Jahr erweitern“ in der Suche bringt
+> Sekunden mit). Eine Adresse kommt über die Felder Zeichen für Zeichen zurück, an beiden
+> Umstellungstagen 2026 (29.03. und 25.10.). **Die eine Lücke** ist die Stunde, die es am 25.10.
+> zweimal gibt: Die Felder kennen keine Zone, „02:30“ steht für beide, gelesen wird die **spätere**.
+> Ein Zeitpunkt aus der früheren kommt eine Stunde später zurück; festgehalten im Test, nicht
+> ausgelassen.
+>
+> **Nebenbefund, behoben:** `zonenversatz` in `lib/format.ts` zog die Millisekunden des Zeitpunkts als
+> Teil des Versatzes ab, in zwei Durchgängen doppelt — `.250` kam als `.750` zurück. Folgenlos,
+> solange die Felder keine Millisekunden zurückgaben; gefunden vom ersten Rundlauftest.
+>
+> **Die Meldungen**, in dieser Reihenfolge (Texte unter `zeitraum`; der alte Satz „Bitte Datum und
+> Uhrzeit vollständig eintragen.“ ist ersetzt):
+>
+> 1. halbes oder fehlendes Datum, auch eine Uhrzeit ohne Datum — „Bitte das Datum vollständig eintragen.“
+> 2. halbe Uhrzeit — „Bitte die Uhrzeit vollständig eintragen oder leeren. Ohne Uhrzeit gilt der ganze Tag.“
+> 3. die Antwort des Servers, wenn sie an die Felder gehört (`AM_ZEITFENSTER`)
+> 4. „Für ein freies Zeitfenster fehlt noch der zweite Zeitpunkt.“
+>
+> **Eine leere Uhrzeit ist keine halbe Eingabe**, sondern der ganze Tag. **Die Prüfung bleibt im
+> Backend:** Das Frontend rechnet keine Jahresgrenze nach. Ein ganzer Tag am Rand eines
+> Jahresfensters reicht bis 23:59:59 und kann damit `zeitfenster-zu-gross` auslösen — „Von“
+> 08.07.2025 bis „Bis“ 07.07.2026 geht durch, „Von“ 07.07.2025 nicht, weil `bis.minusYears(1)` auf
+> 07.07.2025, 23:59:59 liegt. Die Meldung steht am Feld, und die Liste bleibt stehen
+> (`listenanzeige` über `feldFehler`).
+>
+> **Unverändert:** Regel Z1 — keine Browseruhr, der freie Modus beginnt leer, kein Standardwert für
+> „Bis“, keine Schnellwahl; „frei gewählt, aber noch nichts eingetragen“ bleibt Komponentenzustand;
+> die Vorwahlen; das Backend. Keine neue Abhängigkeit, kein Kalender, `components/ui` unberührt.
+> Die aufgeklappten Datums- und Uhrflächen zeichnet weiterhin der Browser (Punkt 180,
+> [`benutzerverwaltung-frontend.md`](benutzerverwaltung-frontend.md) §18).
+>
+> **Tests** — zuerst geschrieben, **34 rot gegen `main`** (`488c8bc`), danach grün. `pnpm check`
+> vorher **1.646** Fälle in 57 Dateien, nachher **1.680** in 58, gezählt aus dem Lauf
+> (`vitest run --reporter=json`); gerendert 356 in 29 → **375 in 30**.
+>
+> | Datei | neu | was |
+> |---|---|---|
+> | `tests/format.test.ts` | 9 | Von und Bis ohne Uhrzeit je Vertrag, mit Uhrzeit (Minuten, Sekunden, Millisekunden), Zone statt Standort, beide Umstellungstage 2026, Unlesbares, „leer genau dann, wenn Vorgabe“, Rundlauf Adresse → Felder → Adresse zeichengleich über je 36 Stunden um beide Umstellungen, Rundlauf Felder → Adresse → Felder |
+> | `tests/nachrichtenfilter.test.ts` | 1 | `zeitfenster-zu-gross` gehört an die Felder |
+> | `tests/suche.test.ts` | 5 | `trefferanzeige`: welche Antwort an Stelle der Trefferliste steht (E‑1200) |
+> | `tests/rollen-auswahl.test.tsx` | 3 | Sprung per Zeichen (E‑1201) |
+> | `tests/freies-zeitfenster.test.tsx` | 16 | je Einhängepunkt gerendert: nur Datum ergibt das Fenster des ganzen Tages und die Anfrage geht hinaus; dasselbe Datum zweimal ist ein Tag; halbe Eingabe → Meldung am Feld, keine Anfrage, Liste steht; `zeitfenster-zu-gross` am Feld; Rückweg Adresse → Felder; „Auf ein Jahr erweitern“; Prozessansicht 00:00 bis 23:00 ohne `zeitfenster-zu-genau`, Stundenwahl per Tastatur; eine getippte Vorgabe-Uhrzeit wird erst beim Verlassen leer |
+>
+> Angepasst: `tests/blaettern.test.tsx` und `tests/neu-laden.test.tsx` suchten `input[type="datetime-local"]`.
+>
+> **Verletzungsproben** — je ein Eingriff, aus einer Sicherungskopie zurückgespielt und Byte für Byte
+> verglichen, in keinem Commit; Leerprobe ohne Eingriff grün:
+>
+> | Probe | Eingriff | rot |
+> |---|---|---|
+> | V1 | „Bis“ ohne Uhrzeit immer 23:59:59, Vertrag übergangen | 14 — darunter die acht Fälle zu `kalendertagfenster`, das seither über dieselbe Funktion rechnet |
+> | V2 | nur ein Durchgang der Zonenumrechnung | 2 (Umstellungstag, Rundlauf) |
+> | V3 | Uhrzeit nie leer, auch bei der Vorgabe | 5 |
+> | V4 | Millisekunden zählen wieder in den Versatz | 2 |
+> | V5 | `zeitfenster-zu-gross` nicht an den Feldern | 5 |
+> | V6 | ein halbes Fenster hält die Belegsuche nicht | 1 |
+> | V7 | Belegsuche: jeder Fehler als Fehlerbaustein | 2 |
+> | V8 | halbe Eingabe nimmt den Zeitpunkt aus der Adresse (Stand vor E‑1202) | 3 |
+> | V9 | `badInput` übergangen | 3 |
+> | V10 | der eigene Wert überschreibt den Entwurf (Felder springen beim Tippen) | 3 |
+> | V11 | „Bis“ nennt die volle Stunde statt ihres Endes | 1 |
+> | V12 | die Stundenwahl glättet nicht | 1 |
+> | V13 | Belegsuche hält keine Antwort | 1 |
+> | V14 | der Sprung per Zeichen beginnt nie von vorn | 1 |
+>
+> **Sichtprüfung:** am Ende dieses Abschnitts, „Sichtprüfung vom 17.11.2026 (E‑1198)“.
+
 **Statusfilter über die Einordnungen** aus `MessageStatusKind`, nicht über Rohwerte; die
 Beschriftungen kommen aus den Sprachdateien. **Prozessfilter** als Mehrfachauswahl aus
 `/api/prozesse` ([`prozessauswahl.md`](prozessauswahl.md)); eingegrenzt wird örtlich über die

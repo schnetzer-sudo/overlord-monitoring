@@ -968,6 +968,22 @@ Zeilenformular läuft eine Rollenänderung beim Umlegen los, und **jedes `PUT` v
 des Kontos** (E5). Eine Pfeiltaste, die nebenbei abmeldet, ist kein Verhalten, das zu erhalten wäre.
 **Gemeldet, nicht still aufgelöst.**
 
+> **Nachgetragen am 17.11.2026 — der Sprung per Zeichen (E‑1201) und die Höhe (E‑1199).** Für die
+> Stundenwahl der Prozessansicht (25 Zeilen) hat der Baustein in der **offenen** Liste eine weitere
+> Taste bekommen, das Muster der Listbox aus WAI-ARIA:
+>
+> | Taste | am geschlossenen Feld | in der Liste |
+> |---|---|---|
+> | ein Zeichen (Ziffer, Buchstabe) | — | springt auf die nächste wählbare Zeile, die mit den bisher getippten Zeichen beginnt; nach 700 ms ohne Taste beginnt der Anfang von vorn; Groß- und Kleinschreibung gleich; gewählt wird erst mit `Enter` |
+>
+> **Am geschlossenen Feld ändert sich nichts** — die Abweichung oben bleibt, wie sie begründet ist.
+> Tasten mit Strg, Alt oder Cmd gehen durch. Rolle und Baumgliederung bekommen den Sprung mit; dort
+> springt ein Buchstabe auf den ersten passenden Eintrag, ohne etwas zu wählen. Dazu trägt `AuswahlFeld` eine freiwillige
+> `className` für das geschlossene Feld, damit die Stundenwahl in der Zeile der Prozessansicht in
+> Bedienelementhöhe steht (`h-bedienelement` statt `h-feld`). Tests: `tests/rollen-auswahl.test.tsx`
+> von vier auf **sieben** Fälle; Verletzungsprobe „beginnt nie von vorn“ rot
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Korrektur vom 17.11.2026).
+
 ### Nachgesehen in Chromium — gemessen, nicht angesehen
 
 Am Produktionsbau (`next start` auf `:3001`), `/administration/benutzer`, Maske offen, Liste
@@ -1066,6 +1082,27 @@ Gesucht per `grep` über `frontend/src` nach `<select`, `type="date"`, `type="da
 **`type="date"` und `type="file"` kommen nicht vor.** Die aufgeklappten Wählflächen der sechs
 `datetime-local` — Kalender und Uhr — zeichnet der Browser wie die Liste eines `<select>`.
 
+> ### ⚠️ Nachgeführt am 17.11.2026 — die sechs `datetime-local` sind Datum und Uhrzeit geworden (E‑1198)
+>
+> Seit dem freien Zeitfenster mit Datum und freiwilliger Uhrzeit
+> ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Korrektur vom 17.11.2026) stehen an den drei
+> Stellen andere native Felder. Derselbe `grep` wie oben, Stand des Zweigs `fix/freies-zeitfenster-tag`:
+>
+> | Element | Datei · Zeile | Was es ist |
+> |---|---|---|
+> | `<select>` | `features/benutzer/components/konto-anlegen.tsx:186` | unverändert |
+> | `<select>` | `features/katalog/components/massenzuordnung.tsx:171` | unverändert |
+> | ~~`datetime-local` ×6~~ | ~~`filterleiste.tsx`, `suche-ansicht.tsx`, `baumfenster-felder.tsx`~~ | **entfallen** am 17.11.2026; `baumfenster-felder.tsx` gibt es nicht mehr |
+> | `type="date"` | `features/nachrichten/components/zeitfensterfelder.tsx:276` | das Datum je Zeitpunkt — **ein** Element im Quelltext, gerendert **sechsmal** an drei Stellen: freies Fenster der Nachrichtenliste, Zeitfenster der Belegsuche, freies Fenster der Prozessansicht |
+> | `type="time"` | `features/nachrichten/components/zeitfensterfelder.tsx:315` | die freiwillige Uhrzeit je Zeitpunkt in Liste und Belegsuche, gerendert **viermal** |
+>
+> **Die Stunde der Prozessansicht ist kein natives Feld**, sondern die Liste der Anwendung aus
+> `components/auswahl-feld.tsx` (E‑1199) — ihre Fläche trägt `--popover`. **`type="date"` kommt damit
+> jetzt vor**; der Satz darüber gilt nur noch für `type="file"`. Die aufgeklappten Kalender- und
+> Uhrflächen der zehn gerenderten Felder zeichnet weiterhin der Browser — **Punkt 180 bleibt offen**
+> und ist mit diesem Auftrag ausdrücklich nicht gelöst.
+
+
 ### Die Dateien
 
 ```
@@ -1095,4 +1132,4 @@ danach byte-gleich. `tests/konto-anlegen.test.tsx` läuft unverändert mit sechs
 
 | | |
 |---|---|
-| **180** | **Native Formularelemente zeichnen ihre aufgeklappte Fläche selbst, und keine Prüfung des Projekts erreicht sie.** Gemeldet am 15.09.2026 vom Auftraggeber: die Rollenauswahl im Dunkelmodus, drei Bilder aus Chrome und Firefox. `color-scheme` stand in allen drei Zuständen richtig — an `:root`, am Formular und am Feld `light`/`light`/`light` bei `hell`, `dark`/`dark`/`dark` bei `dunkel` und bei `system` —; **warum Chrome die Liste hell zeichnet, ist offen.** **Umgebaut:** die Rollenauswahl an beiden Stellen (§18) und, nach erneuter Meldung am 16.09.2026, die **Baumgliederung** (§18.1); die Bauform steht seitdem als gemeinsamer Baustein in `components/auswahl-feld.tsx`. **Offen:** zwei `<select>` und sechs `datetime-local` (Tabelle oben); der Blick in **Firefox**; und dass `tests/farbkontrast.test.ts` die Paarungen mit `--popover`, `--muted` und `--accent` nicht prüft |
+| **180** | **Native Formularelemente zeichnen ihre aufgeklappte Fläche selbst, und keine Prüfung des Projekts erreicht sie.** Gemeldet am 15.09.2026 vom Auftraggeber: die Rollenauswahl im Dunkelmodus, drei Bilder aus Chrome und Firefox. `color-scheme` stand in allen drei Zuständen richtig — an `:root`, am Formular und am Feld `light`/`light`/`light` bei `hell`, `dark`/`dark`/`dark` bei `dunkel` und bei `system` —; **warum Chrome die Liste hell zeichnet, ist offen.** **Umgebaut:** die Rollenauswahl an beiden Stellen (§18) und, nach erneuter Meldung am 16.09.2026, die **Baumgliederung** (§18.1); die Bauform steht seitdem als gemeinsamer Baustein in `components/auswahl-feld.tsx`. **Offen:** zwei `<select>` und sechs `datetime-local` (Tabelle oben); der Blick in **Firefox**; und dass `tests/farbkontrast.test.ts` die Paarungen mit `--popover`, `--muted` und `--accent` nicht prüft. **Stand 17.11.2026 (E‑1198):** Die sechs `datetime-local` sind ersetzt durch sechs `type="date"` und vier `type="time"` aus einem Baustein (`zeitfensterfelder.tsx`, Nachtrag unter der Tabelle); die Stunde der Prozessansicht ist die Liste der Anwendung (E‑1199). **Die nativen Datums- und Uhrflächen bleiben offen** — dieser Auftrag hat Punkt 180 ausdrücklich nicht gelöst |
