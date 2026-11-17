@@ -2627,8 +2627,64 @@ Umstellungstage im Jahr treffen.
 > | V12 | die Stundenwahl glättet nicht | 1 |
 > | V13 | Belegsuche hält keine Antwort | 1 |
 > | V14 | der Sprung per Zeichen beginnt nie von vorn | 1 |
+> | V15 | Meldung ohne `text-muted-foreground` (Stand des ersten Baus) | 2 — nachgetragen nach der Sichtprüfung, wie V15b und V16 |
+> | V15b | dasselbe in der Zeile der Prozessansicht | 1 |
+> | V16 | Stundenwahl in Feldhöhe | 1 |
 >
-> **Sichtprüfung:** am Ende dieses Abschnitts, „Sichtprüfung vom 17.11.2026 (E‑1198)“.
+> **Sichtprüfung vom 17.11.2026 (E‑1198)** — Chrome der Erweiterung, angemeldet durch den
+> Auftraggeber (`ADMIN`, Mandant `NEXANS`), `next dev` dieses Zweigs auf `:3002` und ein Backend auf
+> `:8081` im Profil `dev`, beide eigens gestartet (die Dienste auf `:3000`/`:8080` liefen nicht);
+> 1.920 px. Eingegeben **über die Tastatur** (Klick ins Tagessegment, dann Ziffern), gelesen über das
+> DOM, dazu Bilder. Hell und dunkel über `data-thema` am Wurzelelement, danach zurückgesetzt, das
+> Cookie unberührt. In die Testkopie ist nichts geschrieben worden.
+>
+> **Die Testkopie reicht nicht bis zum 08.07.2026**, wie der Auftrag annahm: Die neueste Nachricht von
+> `NEXANS` ist vom 30.12.2025, 03:09:47 UTC. Der 07.07.2026 ergab richtig `von=2026-07-06T22:00:00.000Z`
+> und `bis=2026-07-07T21:59:59.000Z`, aber eine leere Liste (am Endpunkt nachgefragt: `200`, null
+> Zeilen). Geprüft ist deshalb am **29.12.2025** — ein Wintertag, also UTC+1.
+>
+> | Stelle | Eingabe | gesehen |
+> |---|---|---|
+> | Liste | nur Datum, Von und Bis 29.12.2025 | `von=2025-12-28T23:00:00.000Z`, `bis=2025-12-29T22:59:59.000Z`; 50 Zeilen, die neueste 23:41:43, alle vom 29.12.; Uhrzeitfelder leer; keine Meldung |
+> | Liste | „Bis“-Uhrzeit nur die Stunde (`14`) | `validity.badInput` wahr, „Bitte die Uhrzeit vollständig eintragen oder leeren. …“ am Feld (`aria-describedby`), Adresse unverändert, 50 Zeilen, kein Fehlerbaustein — Bild dunkel und hell |
+> | Liste | Minuten dazu (`30`) | `bis=2025-12-29T13:30:00.000Z`, neueste Zeile 14:18:14, Meldung weg; nach Neuladen der Adresse: Von `29.12.2025` / leer, Bis `29.12.2025` / `14:30` |
+> | Liste | Von 29.12.2024 bei Bis 29.12.2025 | `zeitfenster-zu-gross` am Feld, 50 Zeilen bleiben, kein Fehlerbaustein; Von 30.12.2024 geht durch (`200`) |
+> | Belegsuche (`9000:1`, Präfix) | erst nur Von | `zeitfenster-unvollstaendig` vom Server **am Feld**, die 50 Treffer davor bleiben stehen, kein Fehlerbaustein (E‑1200) |
+> | Belegsuche | Bis dazu | ganzer Tag in der Adresse; die Antwort nennt „29.12.2025, 00:00 bis 29.12.2025, 23:59“; 1 Treffer |
+> | Belegsuche | halbe Uhrzeit bei Von | Meldung am Feld, der Treffer bleibt — Bild hell; dunkel nur über das DOM (`color-scheme: dark` an Datum und Uhrzeit) |
+> | Belegsuche (`:4711`, genau) | „Auf ein Jahr erweitern“ | beide Zeitpunkte gesetzt, die Felder zeigen sie: `30.12.2024` / `04:35:49,253` und `30.12.2025` / `04:35:49,253` — Punkt **1057** |
+> | Prozessansicht | „Frei“ | Umschalter, Datumsfelder, Stundenwahl und „Neu laden“ je **30 px** auf derselben Oberkante, der Umschalter springt nicht; kein Uhrzeitfeld, kein `<select>` |
+> | Prozessansicht | nur Datum, 29.12.2025 | `von=2025-12-28T23:00:00.000Z`, `bis=2025-12-29T22:00:00.000Z`; die Antwort: `fenster` 23:00Z bis 23:00Z (ausschließend), 5.043 Nachrichten; kein `zeitfenster-zu-genau` |
+> | Prozessansicht | Stundenwahl Von: `↓`, „1“, „4“, `Enter` | Fokus auf `14:00`, dann `von=2025-12-29T13:00:00.000Z`, das Feld zeigt `14:00` — Bild der offenen Liste dunkel |
+> | Prozessansicht | Stundenwahl Bis: `Ende`, `Enter`; dann „1“, „2“, `Enter` | `bis` bleibt 23:00, das Feld zeigt „Ganzer Tag“; dann `bis=2025-12-29T11:00:00.000Z`, das Feld zeigt `12:59` — Bild der offenen Liste hell |
+> | Prozessansicht | Von 14:00 nach Bis 12:00 | `zeitfenster-ungueltig` am Feld, der Baum bleibt (229 Zeilen), kein Fehlerbaustein |
+>
+> **Zwei Befunde, beide behoben** (`7a61325`), beide aus `cn()` im ersten Bau:
+>
+> 1. **Die Meldung an den Feldern stand in der Vordergrundfarbe** statt in `--muted-foreground`.
+>    tailwind-merge hält `text-beiwerk` für eine Textfarbe und warf `text-muted-foreground` weg
+>    (Klassen am Element: nur `text-beiwerk max-w-prose`). Jetzt ohne `cn()`; gemessen danach
+>    `lab(65.2 0 0)` = `--muted-foreground` (dunkel).
+> 2. **Die Stundenwahl war 37,5 statt 30 px hoch**, die Zeile der Prozessansicht wuchs. tailwind-merge
+>    kennt `h-feld` und `h-bedienelement` nicht als Höhen und ließ beide stehen; im Stylesheet gewann
+>    `h-feld`. `AuswahlFeld` wählt die Höhe seither über `hoehe` und nicht über eine `className`.
+>
+> Die gerenderten Tests hatten keinen der beiden gefangen; seither prüfen vier Fälle die Klassen
+> (Verletzungsproben V15, V15b, V16 rot). **Ein Werkzeugbefund dabei:** Eine Verletzungsprobe, die
+> eine Datei für Sekunden ändert, landet im laufenden `next dev`; die byte-gleiche Rückgabe hat er
+> nicht übernommen, die Seite zeigte bis zum Neuladen den Stand der Probe.
+>
+> **Nicht gesehen:** Firefox und Safari (eigene Datums- und Uhrfelder); die aufgeklappten Kalender-
+> und Uhrflächen der nativen Felder — sie zeichnet der Browser (Punkt 180); ein Tag an einem
+> Umstellungstag im Browser (die Rechnung ist rein geprüft); Mobilgeräte und das schmale Fenster; die
+> englische Oberfläche. Mehrere Bildaufnahmen liefen im Werkzeug in eine Zeitgrenze, die Belegsuche
+> dunkel ist deshalb nur über das DOM belegt.
+>
+> **Punkt 1057** — „Auf ein Jahr erweitern“ schreibt das `bis` der Antwort mit Sekunden und
+> Millisekunden in die Adresse, und die Uhrzeitfelder zeigen sie seit E‑1198 mit (`04:35:49,253`):
+> korrekt und zeichengleich, aber unruhig für ein Feld, das Minuten erwartet. Ob der Anker auf die
+> Minute gerundet werden soll — das Fenster verschöbe sich dabei um weniger als eine Minute —, ist eine
+> Entscheidung des Auftraggebers.
 
 **Statusfilter über die Einordnungen** aus `MessageStatusKind`, nicht über Rohwerte; die
 Beschriftungen kommen aus den Sprachdateien. **Prozessfilter** als Mehrfachauswahl aus

@@ -1371,7 +1371,7 @@ Trefferzahl und nicht in den Voreinstellungen.
 >
 > | Bedienelement | seit dem 17.11.2026 |
 > |---|---|
-> | **„Auf ein Jahr erweitern“** | unverändert: setzt **beide** Zeitpunkte, 365 Tage vor dem `bis` der Antwort. **Die Felder zeigen das Ergebnis** — Datum und Uhrzeit, so genau, wie die Adresse es trägt: Das `bis` der Antwort hat Sekunden, die Uhrzeitfelder zeigen sie dann mit (`06:09:47`) |
+> | **„Auf ein Jahr erweitern“** | unverändert: setzt **beide** Zeitpunkte, 365 Tage vor dem `bis` der Antwort. **Die Felder zeigen das Ergebnis** — Datum und Uhrzeit, so genau, wie die Adresse es trägt: Das `bis` der Antwort trägt Sekunden und Millisekunden, die Uhrzeitfelder zeigen sie dann mit — im Browser `04:35:49,253` (Sichtprüfung vom 17.11.2026). Ob der Anker auf die Minute gerundet werden soll, ist **Punkt 1057** |
 > | **„Vorgabe wiederherstellen“** | unverändert; die Felder übernehmen den leeren Wert und hängen sich neu ein — auch ein halb getipptes Datum ist danach weg |
 > | **Die Felder** | Datum und freiwillige Uhrzeit; eine halbe Eingabe meldet sich über `validity.badInput` an `keyup` und `blur` und **ändert die Adresse nicht** (E‑1202) |
 >

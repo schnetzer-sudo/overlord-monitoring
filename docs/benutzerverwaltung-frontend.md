@@ -978,9 +978,10 @@ des Kontos** (E5). Eine Pfeiltaste, die nebenbei abmeldet, ist kein Verhalten, d
 >
 > **Am geschlossenen Feld ändert sich nichts** — die Abweichung oben bleibt, wie sie begründet ist.
 > Tasten mit Strg, Alt oder Cmd gehen durch. Rolle und Baumgliederung bekommen den Sprung mit; dort
-> springt ein Buchstabe auf den ersten passenden Eintrag, ohne etwas zu wählen. Dazu trägt `AuswahlFeld` eine freiwillige
-> `className` für das geschlossene Feld, damit die Stundenwahl in der Zeile der Prozessansicht in
-> Bedienelementhöhe steht (`h-bedienelement` statt `h-feld`). Tests: `tests/rollen-auswahl.test.tsx`
+> springt ein Buchstabe auf den ersten passenden Eintrag, ohne etwas zu wählen. Dazu wählt `AuswahlFeld` die Höhe des geschlossenen
+> Felds über die freiwillige Angabe `hoehe` (`feld` oder `bedienelement`), damit die Stundenwahl in der
+> Zeile der Prozessansicht in Bedienelementhöhe steht — nicht über eine `className`: `cn()` kennt beide
+> Höhen nicht und ließ beide stehen (Sichtprüfung vom 17.11.2026, 37,5 statt 30 px). Tests: `tests/rollen-auswahl.test.tsx`
 > von vier auf **sieben** Fälle; Verletzungsprobe „beginnt nie von vorn“ rot
 > ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Korrektur vom 17.11.2026).
 
