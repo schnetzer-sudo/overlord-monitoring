@@ -1046,6 +1046,11 @@ lib/routen.ts                                + die beiden Zielrouten des Umschal
 > `components/ui/collapsible.tsx` aus dem Generator. `detail.ts` führt zusätzlich die Einteilung der
 > Eigenschaften (`verteileEigenschaften`, E‑219).
 
+> **Fortgeschrieben am 17.11.2026 (§10.20).** Dazugekommen ist `zeilenbedienung.ts` — was ein Klick,
+> ein Mittelklick oder eine Taste auf einer Zeile bedeutet, für beide Tabellen (E‑1195). `lib/routen.ts`
+> führt `VOLL_PARAMETER` und `zeileImNeuenTab`; `ansicht-umschalter.tsx` ist unverändert, schaltet aber
+> seit E‑1194 die Vollansicht der Seite statt auf die eigene Route.
+
 ### 10.1 Zwei Einhängepunkte, eine Komponente
 
 | Weg | Verhalten |
@@ -1118,6 +1123,28 @@ aktiven Navigationseintrag markiert. Sie sagt etwas über die **Anwendung** — 
 > Adresse (etwa `%3A` statt `:`) schreibt `nuqs` beim Öffnen in seiner eigenen Kodierung neu; sie
 > ist danach inhaltlich gleich, aber nicht zeichengleich.
 
+> ### Ergänzt am 17.11.2026 — Strg-, Cmd- und Mittelklick öffnen die Zeile im neuen Tab (E‑1195)
+>
+> **Die Absätze darüber gelten unverändert:** Klick, `Enter` und `Leertaste` öffnen das Panel, und ein
+> Klick auf einen Verweis *in* der Zeile bleibt dessen Sache. **Neu ist der Weg in einen neuen Tab:**
+> Strg-Klick (unter macOS Cmd-Klick), Mittelklick und Strg+Enter auf der fokussierten Zeile öffnen die
+> Nachricht auf ihrer eigenen Route `/nachrichten/<id>` in einem neuen Tab, mit `noopener`. Die
+> Ausgangsseite bleibt, wie sie ist — Adresse, Panel, Seite.
+>
+> - **Das Ziel je Einhängepunkt ist eine reine Funktion**, `zeileImNeuenTab` in `lib/routen.ts`: aus der
+>   Nachrichtenliste **mit** ihrer Abfragezeichenkette ohne `nachricht` (und ohne `voll`, §10.20) — die
+>   Adresse, die bis dahin „Ohne Liste anzeigen" ansteuerte (`ansichtOhneListe`) —, aus Prozessansicht
+>   und Belegsuche **ohne** Abfragezeichenkette. Gelesen wird `window.location.search` im Ereignis.
+> - **Die Zeile bleibt eine Zeile**, kein Anker um sie und keiner je Zelle. Die Bedienung steht für alle
+>   drei Tabellen an einer Stelle (`features/nachrichten/zeilenbedienung.ts`); geöffnet wird über
+>   `window.open(…, "_blank", "noopener")`.
+> - **Der Mittelklick unter Windows:** Auf einer Fläche ohne Verweis startet die mittlere Taste dort das
+>   automatische Scrollen. Die Zeile unterdrückt es beim Drücken (`mousedown`), außer auf einem Verweis
+>   in der Zeile; der Tab öffnet sich beim Loslassen (`auxclick`).
+> - **Kein Doppelklick.**
+>
+> Gesamtbild, Tests und Sichtprüfung in §10.20.
+
 ### 10.3 Der Kopf
 
 Ablaufname (`sosName`) als Überschrift, darunter die Statusplakette — dieselbe Komponente wie in der
@@ -1172,6 +1199,32 @@ auf einen falsch.
 > Antwort, die Liste aus `von`/`bis` der URL. Im relativen Modus der Liste, auf der eigenen Route
 > und in der Prozessansicht gibt es ihn nicht. Im Panel und nicht als Kontextmenü, wegen Tastatur-
 > und Berührungserreichbarkeit.
+
+> ### ⚠️ Korrektur vom 17.11.2026 — der Absprung steht überall außer in der Prozessansicht (E‑1196)
+>
+> **Der Kasten darüber bleibt stehen; sein vorletzter Satz gilt nur noch für die Prozessansicht.**
+> Gemeldet hat der Auftraggeber am 17.11.2026 in der Produktion, dass der Absprung überall außer in
+> Belegsuche und freiem Fenster der Liste fehlt — also gerade im Standardfall.
+>
+> - **Ist ein Herkunftsfenster bekannt und liegt die Nachricht darin**, gilt E‑104/E‑111 unverändert:
+>   die Belegsuche aus ihrer Antwort, die Liste aus `von`/`bis` der URL, nach außen auf volle Stunden
+>   gerundet und am Jahr gedeckelt.
+> - **Sonst ist das Zielfenster der Kalendertag der Nachricht in der Anwendungszone**: `von` 00:00,
+>   `bis` 23:00 als letzte enthaltene Stunde (E‑94). Gebildet mit denselben Zonenumrechnungen wie das
+>   freie Fenster (`wanduhrzeitFuerEingabe`, `zeitpunktAusWanduhrzeit` in `lib/format.ts`), damit an den
+>   Umstellungstagen 23 beziehungsweise 25 Stunden (`prozessansicht.ts` `kalendertagfenster`). Gegen die
+>   Browseruhr wird nicht gerechnet (Regel Z1): Der Tag kommt aus dem Zeitpunkt der Nachricht.
+> - **Damit steht der Absprung** im relativen Modus und in der Vorgabe der Liste, auf der eigenen Route,
+>   in der Vollansicht (§10.20), in der Belegsuche vor ihrer ersten Antwort und bei einem tiefen Link auf
+>   eine Nachricht außerhalb des Suchfensters. **In der Prozessansicht nicht** — dort entscheidet seither
+>   die Angabe `ohneAbsprung` und nicht mehr das fehlende Fenster.
+> - **Die Prüfung „Nachricht liegt im Zielfenster" bleibt als Wächter.** Beim Kalendertag greift sie nur
+>   in einer Zone, deren Stunde ab 23:00 zweimal vorkommt (Rückstellung um Mitternacht); belegt am Fall
+>   `America/Santiago` in `tests/prozessansicht.test.ts`.
+>
+> **Reines Frontend.** Das Fenster in der Antwort der Liste, das [`property-suche.md`](property-suche.md)
+> §15 als lokalen Punkt 14 führte, wird nicht gebraucht; der Punkt ist erledigt (projektweit **1053**).
+> Gesamtbild in §10.20 und [`property-suche.md`](property-suche.md) §12.
 
 **Die `MessageID` kehrt hier zurück**, nachdem sie in Schritt 4 aus der Liste geflogen ist. Klein,
 in fester Laufweite, mit Kopierknopf. Sie ist Beiwerk nach dem Leitsatz — aber sie ist das, was
@@ -1812,6 +1865,39 @@ aber erst beim Klick.
 > ([`frontend-grundlagen.md`](frontend-grundlagen.md) §7, vierte Bedingung;
 > [`process-view.md`](process-view.md) §46).
 
+> ### ⚠️ Korrektur vom 17.11.2026 — Maximieren ist ein Zustand der Seite, in allen drei Ansichten (E‑1194, E‑1197)
+>
+> **Die Ergänzungen darüber und der Abschnitt „Der Umschalter" unten bleiben stehen; überholt ist,
+> wohin der Umschalter im Panel führt.** Bis dahin führte „Ohne Liste anzeigen" auf die eigene Route
+> (`ansichtOhneListe`), und genau deshalb fehlte er in Belegsuche und Prozessansicht: Sein Rückweg
+> endete in der Liste. Gemeldet hat der Auftraggeber am 17.11.2026 in der Produktion, dass sich das
+> Detail nur in der Nachrichtenliste maximieren lässt.
+>
+> **Seit E‑1194 setzt der Umschalter den Parameter `voll`** auf der Seite, auf der man steht —
+> `/nachrichten`, `/suche` und `/prozesse`, ein Mechanismus (`useVollansicht` in `hooks.ts`). Ab `xl`
+> weichen Liste, Trefferliste, Übertragungsliste und Baum per `display: none` und bleiben eingehängt;
+> das Panel nimmt die Breite der eigenen Route ein (`max-w-inhalt`, linksbündig, Beschriftungsspalte
+> 16 rem wie `beschriftung-breit`), eine Spalte, Zeitleiste senkrecht, **kein eigener Scrollbereich** —
+> in diesem Zustand klebt nichts (`lib/klebende-spalte.ts` `VOLLANSICHT_AB_XL`). Zeichen, Beschriftung
+> und Anfassbarkeit wie bisher, unter `xl` unsichtbar. Umschalten ist ein Verlaufseintrag (`push`).
+> **Der Rückweg endet dort, wo er begann**; der Grund, aus dem der Umschalter in Suche und
+> Prozessansicht fehlte, ist entfallen.
+>
+> - **`voll` steht nur in der URL, solange es gilt**, wirkt nur zusammen mit `nachricht` und steht in
+>   keiner Abfrage. Schließen entfernt beide, ein Glied der Kette bleibt in der Vollansicht.
+> - **`Escape` verkleinert in der Vollansicht auf das Panel** — eine Ebene, wie aus der Datei (E‑241,
+>   E‑1197). Das X schließt die Nachricht in beiden Modi ganz; danach liegt der Fokus auf der Zeile.
+> - **Verkleinern zeigt Liste, Seite und Bildlauf unverändert, ohne Abruf.** Der Satz unten „Die
+>   Gegenrichtung ist billiger: Wer maximiert, hängt die Liste aus und fragt sie nicht" trifft damit
+>   beide Richtungen, und „Der Preis des Umschaltens" (eine Listenabfrage auf dem Rückweg) entfällt.
+> - **Die eigene Route bleibt, wie sie ist**, samt „Neben der Liste anzeigen". Ihr bisheriges Ziel aus dem
+>   Panel trägt jetzt der Strg- und Mittelklick auf eine Zeile der Liste (E‑1195, §10.2); damit ist auch
+>   der Preis „kein Mittelklick-Ziel" aus der Liste unten hinfällig.
+> - **In der Prozessansicht bleiben Seitenkopf und Prozesskopf** — dieselbe Gestalt wie dort unter `xl`
+>   mit offenem Panel. Es weichen Baum und Übertragungsliste.
+>
+> Gesamtbild, Tests und Sichtprüfung in §10.20.
+
 Ab `xl` (1280 px) steht das Panel **neben** der Liste (26 rem, ab `2xl` 30 rem), darunter **an ihrer
 Stelle**: Am Handy gibt es kein „neben der Liste", dort füllt die Ansicht den Bildschirm, und das
 Zurück des Browsers schließt sie, weil der Zustand in der URL steht.
@@ -1871,6 +1957,10 @@ Liste. **Am großen Monitor — dort, wo das Werkzeug betrieben wird — ist das
 größten.**
 
 #### Der Umschalter
+
+> ⚠️ **Seit dem 17.11.2026 führt die erste Zeile nicht mehr auf die eigene Route**, sondern setzt
+> `voll` auf der Seite — in Liste, Belegsuche und Prozessansicht (E‑1194, Korrektur am Anfang dieses
+> Abschnitts, §10.20). Die zweite Zeile gilt unverändert.
 
 | Einhängepunkt | Beschriftung | Ziel |
 |---|---|---|
@@ -3029,6 +3119,236 @@ Berliner Zeit (335 weitere Details, ein Treffer).
 > Für die Sprachen und Dichten stützt sich das auf M1014, nicht auf diese Sitzung. *Nicht gemessen:*
 > der Produktionsbau, andere Browser als Chrome, die erwartete Zeile im Browser.
 
+### 10.20 Vollansicht überall, Strg- und Mittelklick, Absprung immer verfügbar *(17.11.2026, E‑1194 bis E‑1197, Zweig `fix/detail-vollansicht`)*
+
+**Der Anlass, gemeldet vom Auftraggeber am 17.11.2026 in der Produktion:** Das Nachrichtendetail ließ
+sich nur in der Nachrichtenliste maximieren, nicht in Prozessansicht und Belegsuche, und der Absprung
+„Im Prozessbaum anzeigen" fehlte überall außer in Belegsuche und freiem Fenster der Liste — also gerade
+im Standardfall. Dazu kam der Wunsch, eine Nachricht per Strg- oder Mittelklick auf ihre Zeile im
+neuen Tab zu öffnen. **Nur Frontend:** kein Feld, kein Statement, kein Endpunkt; keine Abfrage, also
+keine Messung nach L7.
+
+#### Die Entscheidungen (Sparring mit dem Auftraggeber, 17.11.2026)
+
+| Nummer | Entscheidung des Auftraggebers | Umgesetzt in |
+|---|---|---|
+| **E‑1194** | **Maximieren ist ein Zustand der jeweiligen Seite, kein Routenwechsel mehr** — ein Mechanismus für `/nachrichten`, `/prozesse` und `/suche`. Er ersetzt in der Nachrichtenliste den Weg „Ohne Liste anzeigen" über `ansichtOhneListe` (§10.7). Die eigene Route `/nachrichten/<id>` bleibt als tiefer Link unverändert, samt „Neben der Liste anzeigen" | `filter.ts` (`parseAsVoll`, `istVoll`), `suche.ts`, `prozessansicht.ts` (der Parameter), `hooks.ts` (`useVollansicht`, `setzeVoll`, `waehleZeile`), die drei Ansichten, `lib/klebende-spalte.ts` (`VOLLANSICHT_AB_XL`), `globals.css` (`.beschriftung-breit-ab-xl`), `lib/in-sicht-bringen.ts` (`merkeBildlauf`, `stelleBildlaufHer`), `lib/routen.ts` (`VOLL_PARAMETER`) |
+| **E‑1195** | **Strg-Klick (Cmd-Klick auf macOS) und Mittelklick auf eine Zeile öffnen `/nachrichten/<id>` in einem neuen Tab** — aus der Nachrichtenliste mit ihrer Abfragezeichenkette ohne `nachricht`, aus Prozessansicht und Belegsuche ohne Abfragezeichenkette. Kein Doppelklick | `lib/routen.ts` (`zeileImNeuenTab`), `features/nachrichten/zeilenbedienung.ts`, `nachrichten-tabelle.tsx`, `treffer-tabelle.tsx`, die drei Ansichten (`neuerTab`) |
+| **E‑1196** | **Absprung „Im Prozessbaum anzeigen":** Ist ein Herkunftsfenster bekannt und liegt die Nachricht darin, gilt E‑104/E‑111 unverändert. Sonst ist das Zielfenster der Kalendertag der Nachricht in der Anwendungszone: `von` 00:00, `bis` 23:00 als letzte enthaltene Stunde (E‑94). Reines Frontend; der lokale Punkt 14 aus [`property-suche.md`](property-suche.md) §15 entfällt | `prozessansicht.ts` (`absprungfenster`, `kalendertagfenster`), `nachricht-detail.tsx` (`ohneAbsprung`, die Zone) |
+| **E‑1197** | **`Escape` in der Vollansicht verkleinert auf das Panel** — eine Ebene, wie E‑241. Das X schließt die Nachricht in beiden Modi ganz | die drei Ansichten (`useEscapeSchliesst` mit `verkleinere`) |
+
+**Vergabe der Nummern** — jeder Treffer gelesen, nicht gezählt:
+
+| Was | Suche | Ergebnis |
+|---|---|---|
+| Entscheidungen | `git grep -o -E "E.{0,3}1(19[3-9]\|2[0-9][0-9])\b"` über alle lokalen Zweige, `grep -rhoE` über `docs`, `frontend/src` und `frontend/tests` aller Arbeitsbäume aus `git worktree list`; `.{0,3}` fängt den U+2011 bytegenau | Eichung: **E‑1192** auf `main` (14 Treffer). Zu Beginn kein Treffer im Bereich. **Während der Arbeit vergab eine parallele Sitzung E‑1193** (Zweig `fix/nachrichtenliste-spaltenbreite`, Arbeitsbaum `C:\dev\olm-spaltenbreite`, nicht gepusht; 18 Treffer). Die zuerst als E‑1193 bis E‑1196 geschriebenen Nummern sind deshalb vor dem ersten Commit auf **E‑1194 bis E‑1197** gerückt. E‑249 und E‑780 liegen unterhalb des Bereichs |
+| Offene Punkte | `\| 10(5[3-9]\|[6-9][0-9]) \|` über `docs/offene-punkte.md` aller Zweige und Arbeitsbäume | keine Vergabe über 1052. Die Treffer `\| 1071 \|` und `\| 1072 \|` sind Fensterbreiten in [`process-view.md`](process-view.md) §21. Folge: **1053** für den aufgegriffenen lokalen Punkt (nach `DEVELOPMENT_GUIDELINES.md` §12 die nächste freie), **1054 bis 1056** neu |
+| Messungen | `\bM10(1[8-9]\|[2-9][0-9])\b` | **M1018** vergibt dieselbe parallele Sitzung. Hier wird keine M‑Nummer gebraucht: Die Sichtprüfung misst Lage und Adressen, keine Abfrage |
+
+#### Was gebaut ist
+
+**Die Vollansicht (E‑1194).**
+
+- **Der Parameter `voll`** ist `parseAsBoolean.withDefault(false).withOptions({ history: "push" })` —
+  dieselbe Form wie `langeSuche` und `nurMitVerkehr`: nur in der URL, solange er gilt (`clearOnDefault`
+  ist seit nuqs 2 die Vorgabe). **Ein Parser für alle drei Ansichten** (`filter.ts` `parseAsVoll`), der
+  Name steht wie `nachricht` in `lib/routen.ts` (`VOLL_PARAMETER`), und `tests/routen.test.ts` hält fest,
+  dass die drei Parametersätze ihn tragen.
+- **Er wirkt nur mit `nachricht`** (`istVoll`). **Er steht in keiner Abfrage**: `alsAbfrage` der Liste
+  und der Suche, `listenfilter` und `baumabfrage` der Prozessansicht kennen ihn nicht. Die Probe „mit
+  und ohne geöffnetes Panel Zeichen für Zeichen dieselbe Abfrage" gilt in allen drei auch mit `voll`.
+- **Die Setzer:** `setzeVoll` schaltet; `setzeNachricht(null)` — X, `Escape` im Panel — nimmt `voll` mit;
+  ein Glied der Kette (`setzeNachricht(id)`) bleibt in der Vollansicht. **Eine Zeile öffnet über
+  `waehleZeile` immer neben der Liste**, damit ein verwaistes `voll` aus einer von Hand gebauten Adresse
+  folgenlos bleibt. Ein Prozesswechsel nimmt `voll` mit der Nachricht weg.
+- **Was ab `xl` weicht** — per `display: none`, eingehängt wie bisher die Liste unter `xl`:
+
+  | Ansicht | weicht | bleibt |
+  |---|---|---|
+  | `/nachrichten` | die linke Spalte: Überschrift, Filterleiste, Tabelle, Blättern | das Panel |
+  | `/suche` | die linke Spalte: Überschrift, Marken, Zeitfenster, Trefferliste | das Panel |
+  | `/prozesse` | der Baum (wie bei jedem offenen Panel, E‑57) und die Übertragungsliste | Seitenkopf, Prozesskopf, das Panel |
+
+  **Die Regel dahinter:** Die Vollansicht ab `xl` sieht aus wie dieselbe Ansicht unter `xl` mit offenem
+  Panel, nur in der Breite der eigenen Route (Entwurf über den Skill `frontend-design`; das visuelle
+  Konzept legt Farbe, Schrift und Bewegung fest, offen war allein, was weicht). In der Prozessansicht
+  bleibt deshalb ihr Kopf, in den beiden anderen nicht.
+- **Das Panel:** `xl:w-full xl:max-w-inhalt`, linksbündig an der Innenkante von `main`, die
+  Beschriftungsspalte auf 16 rem wie auf der eigenen Route (`.beschriftung-breit-ab-xl` in `globals.css`
+  über `@variant xl`; im gebauten CSS `@media (min-width:80rem){.beschriftung-breit-ab-xl{…16rem}}`).
+  Eine Spalte, Zeitleiste senkrecht, **nicht klebend und ohne eigenen Scrollbereich** — in der
+  Prozessansicht entfällt dafür auch der klebende Rahmen der rechten Spalte. Unter `xl` ändert die
+  Vollansicht nichts: Alle Klassen tragen `xl:`.
+- **Der Umschalter** ist der bestehende `AnsichtUmschalter`, in allen drei Ansichten im Panelkopf vor dem
+  X, `zu={voll ? "nebenListe" : "ohneListe"}`: Zeichen, Beschriftung, `aria-label` und `title`, Fokusring
+  und `hidden xl:inline-flex` wie bisher. **Kein Generatorbaustein** (Skill `shadcn`): Ein `Toggle`
+  trüge `aria-pressed` neben einer Beschriftung, die selbst schon wechselt — zwei Signale für einen
+  Zustand.
+- **Der Bildlauf** (`useVollansicht`): Beim Maximieren wird **im Ereignis** der Stand jedes
+  Scrollbereichs vom Weichenden aufwärts gemerkt — in Liste und Suche der von `main`, in der
+  Prozessansicht dazu der der Übertragungsliste, die selbst scrollt —, beim Verlassen der Vollansicht
+  wiederhergestellt, gleich auf welchem Weg (Umschalter, `Escape`, Zurück des Browsers, X). Danach gilt
+  E‑114: Die Zeile kommt ins Bild, wenn sie nicht darin steht — **nur, wenn sie überhaupt dasteht**.
+  Gemerkt im Ereignis, weil ein Effekt den Stand schon geklemmt vorfände; dieselbe Bauform wie der
+  gemerkte Stand des Baums ([`process-view.md`](process-view.md) §47). Beim Maximieren beginnt das Panel
+  oben (E‑114, `useBeginntOben`). **In der Prozessansicht steht der Haken vor dem Stand des Baums:**
+  Schließt jemand aus der Vollansicht, steht erst die Liste und dann der Baum auf seinem eigenen Stand.
+- **Der Rückweg aus der Datei** (E‑241, E‑243): `zeigtNachricht` nahm eine Adresse mit `voll` schon als
+  Beleg — `voll` ist für ihn ein Parameter wie jeder andere; jetzt hält es ein Test fest. Der Schritt
+  zurück stellt die Adresse samt `voll` her, und die Nachricht steht wieder in der Vollansicht.
+
+**Strg-, Cmd- und Mittelklick (E‑1195)** — beschrieben in §10.2, Ergänzung vom 17.11.2026. Die
+Entscheidung je Ereignis steht in `zeilenbedienung.ts` (Klick, `auxclick`, `mousedown`, Taste); das
+Ziel ist `zeileImNeuenTab`. Beide Tabellen nehmen ein freiwilliges `neuerTab`; ohne es öffnet auch ein
+Strg-Klick das Panel — alle drei Einhängepunkte geben es mit.
+
+**Der Absprung (E‑1196)** — beschrieben in §10.3, Korrektur vom 17.11.2026, und in
+[`property-suche.md`](property-suche.md) §12.
+
+**`Escape` (E‑1197):** In der Vollansicht ruft `useEscapeSchliesst` `verkleinere` statt des
+Schließens; die beiden Ausnahmen der Taste (Eingabefeld, offenes Radix-Auswahlfeld) gelten
+unverändert. Nach dem Schließen liegt der Fokus auf der Zeile (`useFokusZurueck`), beim Verkleinern
+bleibt er, wo er war — auf dem Umschalter oder im Panel.
+
+#### Abweichungen und Ergänzungen, benannt
+
+| | |
+|---|---|
+| **Die Nummern** | Der Auftrag nannte keine; vergeben nach §12 der Richtlinien. Wegen der parallelen Vergabe von E‑1193 (oben) sind es **E‑1194 bis E‑1197** |
+| **`ansichtOhneListe` entfernt auch `voll`** | Entscheidung 2 nennt die Abfragezeichenkette „ohne `nachricht`". Bei einem Klick auf eine sichtbare Zeile steht `voll` nur in einer von Hand gebauten Adresse, und auf der eigenen Route gibt es keine Vollansicht; mitgenommen, landete es beim Rückweg über „Neben der Liste anzeigen" in der Liste |
+| **Eine Zeile öffnet nie gleich in der Vollansicht** (`waehleZeile`) | „Ohne `nachricht` ist er folgenlos" — auch dann, wenn danach eine Zeile geöffnet wird |
+| **In der Prozessansicht bleiben Seitenkopf und Prozesskopf** | Der Auftrag nennt, was weicht, und nennt beide nicht; die Regel ist die Gestalt der Ansicht unter `xl` (oben) |
+| **Der Bildlauf wird in einer Referenz der Ansicht gemerkt** | Nichts in `localStorage`, Cookie oder Kontext. Ohne ihn wäre „Bildlauf unverändert" aus der Abnahme nicht zu halten: Der Browser klemmt den Stand von `main`, sobald die Liste weicht |
+| **Keine README-Tabelle „Offene Sichtprüfungen"** | Es gibt sie seit 1.0.0 nicht mehr; ihre Posten stehen im Register Teil 2, neue seit der Linie `assistent` als Punkte in Teil 1. Die beiden neuen sind **1054** und **1055**; der Absatz „Sichtprüfungen" in [`README.md`](README.md) nennt sie |
+| **Ein bestehender Fall ist angepasst, zwei Gruppen erweitert** | `tests/zeitleiste-ziele.test.tsx` zählte alle Verweise im Panel als Dateiziele; seit E‑1196 steht dort auch der Absprung. Der Fall zählt jetzt Verweise ohne `data-absprung` und sichert genau einen Absprung zu. In `tests/prozessansicht.test.ts` sind die beiden Fälle „kein Link" zu „Kalendertag" geworden; `tests/nachrichtenfilter.test.ts` und `tests/aktualisierung.test.ts` tragen `voll` im leeren Filter |
+| **Der Wächter** | Beim Kalendertag greift die Prüfung „Nachricht liegt im Zielfenster" in `Europe/Berlin` nie. Sie bleibt nach Auftrag stehen und hat einen Fall mit `America/Santiago`, wo die Stunde ab 23:00 am 04.04.2026 zweimal vorkommt |
+
+#### Tests
+
+**Zuerst geschrieben und gegen den Code von `main` (`a9d354e`) gelaufen** — nur im Testlauf, die
+Quellen per `git stash` beiseite: **78 neue Fälle, davon 65 rot.** Zehn der roten stehen in
+`tests/zeilenbedienung.test.ts` und laufen ohne das Modul gar nicht. **13 waren schon grün**, weil sie
+festhalten, was bereits stimmte: der Umschalter im Panel der Liste, gewöhnlicher Klick und `Enter` in
+allen drei Ansichten, der Absprung aus freiem Fenster und Belegsuche, kein Absprung in der
+Prozessansicht, eine Adresse mit `voll` als Beleg (einer in `tests/routen.test.ts`, drei in
+`tests/artefakt-ansicht.test.tsx`), die Abfragen von Liste und Suche mit `voll` — beide Funktionen
+kannten das Feld nicht. **Acht bestehende Fälle sind angepasst** und mit der neuen Fassung gegen `main`
+rot: fünf in `tests/nachrichtenfilter.test.ts` (der leere Filter trägt `voll`), zwei in
+`tests/prozessansicht.test.ts` (aus „kein Link" wird der Kalendertag) und einer in
+`tests/zeitleiste-ziele.test.tsx` (oben). Zwei weitere tragen nur die Zone als neuen Parameter.
+
+**Nach dem Bau ist `pnpm check` grün: 1.632 Fälle in 56 Dateien** (vorher 1.552 in 54), die
+gerenderten zählt `vitest.config.mts` (**354 in 29**, vorher 308 in 28). Die Differenz sind die 78
+neuen und je einer in `farbwerte` und `serverbausteine` für die neue Quelldatei `zeilenbedienung.ts`.
+
+| Datei | Fälle | Was |
+|---|---:|---|
+| `tests/detail-vollansicht.test.tsx` *(neu, gerendert)* | 40 | **je Ansicht:** Umschalter im Panelkopf vor dem X, unter `xl` unsichtbar; Maximieren als `push`, die Liste weicht ab `xl` und bleibt eingehängt, das Panel `xl:max-w-inhalt`, auf dem Weg nach oben klebt und scrollt nichts; Verkleinern per Umschalter und `Escape` ohne Abruf und auf derselben Seite (Seite zwei, gezählt am gestellten `fetch`, Regel T1); der Bildlauf nach Verkleinern und Schließen (gestellter Kasten; in der Prozessansicht steht danach der Baum auf seinem Stand); X schließt ganz, Fokus auf der Zeile; `Escape` eine Ebene; Adresse mit `voll` neu geladen; `voll` ohne Nachricht folgenlos. Prozesswechsel nimmt `voll` weg. **Je Ansicht:** Strg-, Cmd-, Mittelklick und Strg+Enter öffnen das Ziel mit `noopener`, ohne neue Adresse; `mousedown` der mittleren Taste verhindert; Klick und `Enter` wie bisher. **Absprung:** relativer Modus und eigene Route mit dem Kalendertag, freies Fenster und Suche wie bisher, Vollansicht ja, Prozessansicht neben der Liste und voll nein |
+| `tests/zeilenbedienung.test.ts` *(neu, rein)* | 10 | die Entscheidung je Ereignis: Klick, Strg, Cmd, Mittelklick, `mousedown`, Enter, Leertaste, Strg+Enter — samt Verweis in der Zeile, rechter Taste, Taste aus einem Kind und Einhängepunkt ohne Ziel |
+| `tests/prozessansicht.test.ts` | +11 | Kalendertag im Winter und im Sommer, Tag der Zone statt UTC, 23 und 25 Stunden, volle Stunden, der Wächter (`America/Santiago`), unlesbar und unbekannte Zone, das Ziel; ohne Herkunftsfenster; `voll` rund in der URL und in keiner Abfrage von Baum und Liste |
+| `tests/routen.test.ts` | +6 | `zeileImNeuenTab` je Einhängepunkt, ohne `voll`, mit Sonderzeichen; die Vollansicht als Beleg in allen drei Ansichten; derselbe Parametername |
+| `tests/nachrichtenfilter.test.ts` | +4 | `voll` nur in der URL, solange es gilt; `push`; keine Abfrage; nur mit Nachricht |
+| `tests/in-sicht-bringen.test.tsx` | +3 | `merkeBildlauf` und `stelleBildlaufHer` am gestellten Kasten |
+| `tests/artefakt-ansicht.test.tsx` | +3 | der Schritt zurück aus der Datei in die Vollansicht, je Ansicht |
+| `tests/suche.test.ts` | +1 | die Suchabfrage mit `voll` Zeichen für Zeichen dieselbe |
+
+#### Verletzungsproben im Speicher
+
+Wie in §10.18: ein Vite-Plugin (`enforce: "pre"`) in einer eigenen Testkonfiguration im Scratchpad
+ändert genau eine Fundstelle in der Umwandlung des Testlaufs, die Platte bleibt unberührt (`git status`
+danach wie davor); ein Protokoll hält fest, dass jeder Eingriff angewandt wurde. **Geeicht in beide
+Richtungen:** ohne Eingriff und mit einem folgenlosen Eingriff (ein Kommentar) bleibt alles grün.
+Gelaufen über die elf betroffenen Dateien, 352 Fälle:
+
+| Probe | Eingriff | rot |
+|---|---|---:|
+| P0 | keiner (Eichung) | 0 |
+| PK | ein Kommentar in `zeilenbedienung.ts` (Eichung: folgenlos) | 0 |
+| P1 | `voll` steht in der Abfrage der Liste | 2 |
+| P2 | `voll` steht in der Abfrage der Suche | 2 |
+| P3 | `voll` steht in der Abfrage des Baums | 2 |
+| P4 | Liste: `Escape` schließt in der Vollansicht ganz (Stand vor E‑1197) | 2 |
+| P5 | Suche: dasselbe | 2 |
+| P6 | Prozessansicht: dasselbe | 2 |
+| P7 | Liste: die Liste weicht in der Vollansicht nicht | 2 |
+| P8 | Suche: die Trefferliste weicht nicht | 2 |
+| P9 | Prozessansicht: die Übertragungsliste weicht nicht | 2 |
+| P10 | Liste: das Panel bleibt in der Vollansicht die klebende Spalte | 2 |
+| P11 | Prozessansicht: der klebende Rahmen bleibt | 1 |
+| P12 | Liste: Schließen lässt `voll` stehen | 1 |
+| P13 | Prozessansicht: ein Prozesswechsel lässt `voll` stehen | 1 |
+| P14 | Liste: eine Zeile öffnet bei verwaistem `voll` gleich in der Vollansicht | 1 |
+| P15 | Strg und Cmd wirken nicht | 5 |
+| P16 | der Mittelklick öffnet keinen Tab | 4 |
+| P17 | das automatische Scrollen wird nicht unterdrückt | 4 |
+| P18 | der neue Tab ohne `noopener` | 6 |
+| P19 | Liste: der neue Tab ohne ihre Abfragezeichenkette | 1 |
+| P20 | Suche und Prozessansicht: der neue Tab mit ihrer Abfragezeichenkette | 3 |
+| P21 | die Trefferliste gibt kein Ziel weiter | 2 |
+| P22 | die Übertragungsliste gibt kein Ziel weiter | 2 |
+| P23 | `ansichtOhneListe` lässt `voll` stehen | 1 |
+| P24 | Absprung ohne Rückfall auf den Kalendertag (Stand vor E‑1196) | 10 |
+| P25 | der Wächter fehlt | 1 |
+| P26 | der Kalendertag als 00:00 plus 23 Stunden statt über die Zone | 2 |
+| P27 | der Kalendertag in UTC statt in der Anwendungszone | 2 |
+| P28 | Absprung auch in der Prozessansicht | 1 |
+| P29 | der Bildlauf wird beim Maximieren nicht gemerkt | 3 |
+| P30 | der Bildlauf wird beim Verlassen nicht hergestellt | 3 |
+
+**Nicht als Probe gefahren, weil jsdom kein Layout rechnet:** dass das Panel beim Maximieren oben
+beginnt (`useBeginntOben` mit dem Schlüssel der Vollansicht) und dass die Zeile danach ins Bild kommt.
+Beides ist in der Liste im Browser gesehen (unten), in den beiden anderen Ansichten nicht.
+
+#### Sichtprüfung im Browser (17.11.2026)
+
+`next dev` des Zweigs auf `:3002` gegen ein zweites Backend auf `:8081` (Profil `dev`, die Testkopie;
+die Ports des Auftraggebers blieben frei), Debug-Chrome mit Port 9222, **das bereits angemeldet war**
+(`NEXANS`, Dichte und Sprache unverändert; angemeldet hat hier niemand). Ein eigener Tab, Fläche über
+`Emulation.setDeviceMetricsOverride` auf 1600 × 1000 gestellt, Klicks über `Input.dispatchMouseEvent`,
+`Escape` als Tastaturereignis im Dokument. Nur lesend, kein Mandantenwechsel.
+
+**Nachrichtenliste**, `?zeitraum=30d` (relativer Modus):
+
+| Ablauf | gesehen |
+|---|---|
+| Zeile 21 geöffnet, `main` auf 638 px | Panel neben der Liste, 450 px breit bei x = 1.116, die Hülle ist der einzige klebende Bereich, Beschriftungsspalte 10 rem, Umschalter „Ohne Liste anzeigen" sichtbar. **Absprung mit dem Kalendertag** `von=2025-12-29T23:00:00.000Z&bis=2025-12-30T22:00:00.000Z` — der 30.12.2025 in Berlin |
+| Umschalter | Adresse `…&voll=true`; die Liste ist weg und mit 50 Zeilen eingehängt; das Panel steht bei x = 214 (`main` ab 195, dazu der Innenabstand), 1.080 px breit (72 rem bei 15 px Grundschrift), nichts klebt oder scrollt für sich, Beschriftungsspalte 16 rem; `main` auf 0, das Panel oben; keine Bildlaufleiste am Dokument; Absprung da; **kein Listenabruf** |
+| zurück per Umschalter | Adresse ohne `voll`, die Liste da, **`main` wieder auf 638 px**, 50 Zeilen, kein Abruf |
+| erneut maximiert, `Escape` | dasselbe |
+| zweites `Escape` | Panel zu, Adresse `?zeitraum=30d`, Fokus auf der Zeile |
+| die Adresse mit `voll` neu geladen | Vollansicht wie oben |
+| Strg-Klick, Mittelklick, Strg+Enter auf Zeile 5 | je ein neuer Tab `/nachrichten/<id>?zeitraum=30d` — ohne `nachricht` —, die Ausgangsseite unverändert |
+
+**Am Rand beobachtet und nicht untersucht:** Beim Schließen des Panels über das zweite `Escape` rückte
+`main` von 638 auf 600 px. Der Weg ist das Schließen neben der Liste, das dieser Zweig nicht ändert.
+
+**Dann brach die Prüfung ab, und der Grund liegt bei mir.** Das Skript sammelte die neu geöffneten Tabs
+über `Target.targetCreated` und schloss sie danach. `Target.setDiscoverTargets` meldet aber auch die
+schon offenen Tabs; geschlossen wurden damit auch ein vorhandener Tab und der eigene, und Chrome
+beendete sich mit dem letzten. **Die Anmeldung im Debug-Chrome ist damit weg und kann nur der
+Auftraggeber erneuern.** Das Skript ist berichtigt (es merkt die vorhandenen Tabs vorher).
+
+> **Belegvermerk** (Regel L10).
+> *Gesehen:* die Nachrichtenliste bei 1600 × 1000 — Lage, Breite, Bildlauf, Adressen und Abrufe in der
+> Tabelle oben, gelesen aus dem Dokument und nicht aus Bildern.
+> *Behauptet:* dass Belegsuche und Prozessansicht dasselbe tun.
+> **Die Lücke:** Beide sind nur am gerenderten Baum belegt (`tests/detail-vollansicht.test.tsx`,
+> dieselbe Verdrahtung je Ansicht) und mit Verletzungsproben je Ansicht. Ob die Übertragungsliste nach
+> dem Verkleinern auf demselben Pixel steht, zeigt erst der Browser.
+
+**Nicht im Browser gesehen** — offen als Punkte 1054 und 1055: die Vollansicht in Prozessansicht und
+Belegsuche samt dem Bildlauf der Übertragungsliste, der Absprung auf der eigenen Route, ob der
+Mittelklick unter Windows das automatische Scrollen wirklich nicht startet, ob der neue Tab im
+Hintergrund aufgeht, der Cmd-Klick unter macOS. Unter `xl` ist nichts gesehen, dort ist nichts gebaut
+(Punkt 1056).
+
+#### Was nicht gebaut ist
+
+Kein Doppelklick. Kein Backend, kein Fenster in der Antwort der Liste. An der eigenen Route
+`/nachrichten/<id>` nichts außer dem Absprung. Nichts unter `xl` (Punkt 1056). Kein Absprung in der
+Prozessansicht. Keine zweispaltige Vollansicht. Baumzustand und Seitenstapel der Prozessansicht nach dem
+Umweg über eine Datei bleiben offen (Punkt 233).
+
 ---
 
 ## 11. Die bewussten Nicht-Entscheidungen
@@ -3287,3 +3607,24 @@ aufgelöst — das ist Schritt 8.
   4. `lib/routen.ts` (an `artefaktAnsicht`) verortet die Regel „Cursor nicht in der URL" in
      [`frontend-grundlagen.md`](frontend-grundlagen.md) §8. Sie steht in
      [`nachrichtenliste.md`](nachrichtenliste.md) §4.
+
+  > **Nr. 3 ist seit dem 17.11.2026 gegenstandslos** (E‑1194, §10.20): Die Suche trägt den Umschalter,
+  > und sein Rückweg endet in der Suche — einen eigenen braucht sie nicht. Die übrigen drei bleiben
+  > offen.
+- **1054 — Vollansicht in Prozessansicht und Belegsuche, eigene Route und Bildlauf der
+  Übertragungsliste im Browser ungesehen** (17.11.2026, §10.20). Gesehen ist die Nachrichtenliste:
+  Vollansicht, Verkleinern per Umschalter und `Escape`, Schließen, Neuladen, neuer Tab. Die übrigen
+  Ansichten belegen die gerenderten Fälle in `tests/detail-vollansicht.test.tsx` am Baum; ob die
+  Übertragungsliste nach dem Verkleinern auf demselben Pixel steht, zeigt erst der Browser.
+- **1055 — Strg-, Cmd- und Mittelklick: was das DevTools-Protokoll nicht zeigt** (17.11.2026,
+  §10.20). Gesehen ist, dass Strg-Klick, Mittelklick und Strg+Enter die eigene Route in einem neuen Tab
+  öffnen und die Ausgangsseite bleibt. **Nicht gesehen:** ob der Mittelklick unter Windows das
+  automatische Scrollen tatsächlich nicht startet (über das Protokoll nicht zu beobachten), ob
+  der Tab wie bei einem Verweis im Hintergrund aufgeht, und der Cmd-Klick unter macOS. Von Hand an einer
+  echten Maus nachzuholen.
+- **1056 — Eine Adresse mit `voll` unter `xl`** (17.11.2026, §10.20). Die Vollansicht ändert dort
+  nichts, der Umschalter ist unsichtbar (`hidden xl:inline-flex`), und `Escape` verkleinert zuerst —
+  ohne sichtbare Wirkung. Wer am schmalen Fenster einen solchen Link öffnet, drückt `Escape` zweimal,
+  um zur Liste zu kommen. So gebaut, weil nichts unter `xl` gebaut werden sollte und eine Abfrage der
+  Fensterbreite in JavaScript ein zweiter Umbruchpunkt wäre (§10.7). Ob `voll` beim Teilen eines
+  Links mitgehen soll, ist eine Entscheidung des Auftraggebers.

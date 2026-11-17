@@ -87,6 +87,9 @@ Registers: **1018 bis 1022** für Chatbox und Karte, mit eingeschaltetem Assiste
 ([`assistent-frontend.md`](assistent-frontend.md) §11), und **1028 bis 1032** für den Block „Ihre
 Aufträge“ ([`assistent-frontend.md`](assistent-frontend.md) §12.12). Seit 1.1.0 sind sie mit dem
 Mandanten `SYSTEM` zu fahren, dem einzigen freigeschalteten ([`tasks.md`](tasks.md) §3.9).
+Dazu **1054 und 1055** für die Vollansicht des Nachrichtendetails in Prozessansicht und Belegsuche
+und für Strg-, Cmd- und Mittelklick auf eine Zeile ([`nachrichtendetail.md`](nachrichtendetail.md)
+§10.20).
 
 ---
 
@@ -118,7 +121,7 @@ Mandanten `SYSTEM` zu fahren, dem einzigen freigeschalteten ([`tasks.md`](tasks.
 | [`authentifizierung.md`](authentifizierung.md) | Anmeldung, Sperre und Auskunftsdisziplin, Sitzung und Cookie je Profil, Passwortwechsel und Bootstrap des ersten Kontos. |
 | [`nachrichtenliste.md`](nachrichtenliste.md) | `GET /api/nachrichten` und die Liste: Pflicht-Zeitfenster, Cursor, Filter, Freitextsuche, Fensterverengung über den Rollup. Dazu die Oberfläche mit Spalten, Filtern in der URL und Blättern. |
 | [`prozessauswahl.md`](prozessauswahl.md) | `GET /api/prozesse`: die Prozesse des Mandanten als Auswahl für den Prozessfilter. |
-| [`nachrichtendetail.md`](nachrichtendetail.md) | Die Detail-Endpunkte mit Schrittfolge, Eigenschaften und offenem Zustand einer Nachricht. Dazu Panel und eigene Route mit Zeitleiste, Ketten- und BAM-Block und dem Rückweg aus Datei, Suche und Prozessansicht. |
+| [`nachrichtendetail.md`](nachrichtendetail.md) | Die Detail-Endpunkte mit Schrittfolge, Eigenschaften und offenem Zustand einer Nachricht. Dazu Panel und eigene Route mit Zeitleiste, Ketten- und BAM-Block, die Vollansicht in Liste, Suche und Prozessansicht, Strg- und Mittelklick auf eine Zeile und der Rückweg aus Datei, Suche und Prozessansicht. |
 | [`verkettung.md`](verkettung.md) | Die Ketten-Endpunkte: Aufteilung und Zusammenführung als zwei Beziehungen, nach oben vollständig, nach unten mit Cursor. Dazu der Kettenblock im Detail. |
 | [`bam-werte.md`](bam-werte.md) | Die Belegdaten am Nachrichtendetail: `GET /api/nachrichten/{id}/bam` mit wahrer Zahl je Typ und höchstens 20 Werten je Gruppe. |
 | [`bam-sollaengen.md`](bam-sollaengen.md) | Die kuratierte Tabelle `bam_sollaenge`: auf welche Länge die Belegsuche je Mandant und Typ auffüllt und wann sie mit führendem Leerzeichen sucht. |

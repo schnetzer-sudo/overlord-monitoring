@@ -742,6 +742,12 @@ begrenzten Bereich).
 > **Eine vierte Stelle ist ein Signal und keine Kleinigkeit.** Jede weitere klebende Spalte ist ein
 > weiterer Scrollbereich unter `main` — und die Zahl dieser Bereiche ist die Zahl, die dieser
 > Abschnitt seit dem 06.08.2026 führt und in jeder Messung nachzählt.
+>
+> *Ergänzt am 17.11.2026 (E‑1194, [`nachrichtendetail.md`](nachrichtendetail.md) §10.20):* **In der
+> Vollansicht ruhen die erste und die dritte Zeile.** Steht `voll` mit einer Nachricht in der Adresse,
+> weicht ab `xl` die Liste, und das Panel steht in `main` wie auf der eigenen Route — keine klebende
+> Spalte, kein Rahmen, kein eigener Scrollbereich (`lib/klebende-spalte.ts` `VOLLANSICHT_AB_XL`). Es
+> entsteht also keine vierte Stelle, sondern in diesem Zustand keine.
 
 **3. Jeder Scrollbereich ist zugleich Bezugspunkt — `relative`.** Nachgetragen am **06.08.2026**,
 nach einem Fehler, den die ersten beiden Bedingungen nicht abgedeckt haben und auch nicht abdecken
@@ -1043,6 +1049,10 @@ wenn niemand die URL von Hand baut. Genau das ist zweimal passiert.
 einen Modus, der leer beginnt; die Frage stellt sich dort unverändert.
 
 #### Die dritte Regel: nicht jeder URL-Parameter ist ein Anfrageparameter
+
+> *Seit dem 17.11.2026 gibt es einen zweiten solchen Parameter:* `voll`, die Vollansicht des Panels
+> (E‑1194, [`nachrichtendetail.md`](nachrichtendetail.md) §10.20). Er steht in `/nachrichten`, `/suche`
+> und `/prozesse` in der URL und in keiner Abfrage, aus demselben Grund wie `nachricht`.
 
 Nachgetragen am **07.08.2026** (Schritt 5, Teil 2), als der erste Parameter dazukam, der in der URL
 steht und in keiner Abfrage vorkommt.

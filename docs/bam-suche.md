@@ -1193,6 +1193,30 @@ es gebaut hat.
 > `tests/artefakt-ansicht.test.tsx` und `tests/routen.test.ts`. Gesamtbild:
 > [`nachrichtendetail.md`](nachrichtendetail.md) §10.18.
 
+> ### ⚠️ Korrektur vom 17.11.2026 — **mit Ansicht-Umschalter: die Vollansicht** (E‑1194 bis E‑1197)
+>
+> **Der Absatz „Ohne den Ansicht-Umschalter" darüber ist überholt.** Gemeldet hat der Auftraggeber am
+> 17.11.2026 in der Produktion, dass sich das Detail in der Belegsuche nicht maximieren lässt. Der
+> Umschalter setzt seit E‑1194 den Parameter `voll` **auf dieser Seite** und führt nicht mehr auf die
+> eigene Route; sein Rückweg endet in der Suche. Damit ist auch die Frage aus
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.7, ob die Suche einen eigenen Rückweg bekommt,
+> beantwortet — sie braucht keinen.
+>
+> - **URL:** `voll` neben `nachricht`, derselbe Parser wie in der Liste, **in keiner Abfrage**
+>   (`alsAbfrage`): Die Probe „mit und ohne geöffnete Nachricht Zeichen für Zeichen dieselbe" gilt auch
+>   mit `voll` (`tests/suche.test.ts`). Maximieren lässt die teuerste Abfrage dieses Projekts also nicht
+>   noch einmal laufen. Schließen nimmt `voll` mit.
+> - **Ab `xl`** weicht die ganze linke Spalte — Überschrift, Marken, Zeitfenster und Trefferliste —
+>   per `display: none` und bleibt eingehängt; das Panel nimmt die Breite der eigenen Route ein und
+>   klebt nicht. Verkleinern zeigt die Trefferliste mit demselben Bildlauf, ohne Suche.
+> - **`Escape`** verkleinert in der Vollansicht erst auf das Panel (E‑1197).
+> - **Strg-, Cmd- und Mittelklick und Strg+Enter** auf eine Trefferzeile öffnen die Nachricht auf ihrer
+>   eigenen Route **ohne** Abfragezeichenkette im neuen Tab (E‑1195): `begriff` und `feld` kennt die
+>   Liste nicht, in die das Schließen dort führt.
+> - **Der Absprung in den Prozessbaum** nimmt weiter das Fenster der Antwort; vor der ersten Antwort
+>   und beim Abbruch führt er auf den Kalendertag der Nachricht, statt zu fehlen (E‑1196,
+>   [`property-suche.md`](property-suche.md) §12).
+
 ### 11.5 Die Trefferliste
 
 Dieselbe Zeilenform wie die Nachrichtenliste — Zeitpunkt, Status, Ablauf —, und **dieselben

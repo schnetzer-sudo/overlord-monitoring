@@ -1302,6 +1302,39 @@ schlechter als kein Link.
 > [`nachrichtendetail.md`](nachrichtendetail.md) §10), und ein Verweis braucht den Wert beim
 > Rendern.
 
+> ### ⚠️ Korrektur vom 17.11.2026 — ohne Herkunftsfenster der Kalendertag (E‑1196)
+>
+> **Die Tabelle und der Kasten darüber bleiben stehen.** Gemeldet hat der Auftraggeber am 17.11.2026
+> in der Produktion, dass der Absprung überall außer in Belegsuche und freiem Fenster fehlt. Seither
+> gilt (`prozessansicht.ts` `absprungfenster`, `kalendertagfenster`):
+>
+> | Einhängepunkt | Fenster | Link |
+> |---|---|---|
+> | **Trefferliste der Suche** | `von`/`bis` aus der Antwort, gerundet wie oben; **vor der ersten Antwort und beim Abbruch der Kalendertag** | ja |
+> | **Nachrichtenliste, freies Fenster** | `von`/`bis` aus der URL, gerundet wie oben | ja |
+> | **Nachrichtenliste, relativer Modus oder Vorgabe** | **der Kalendertag der Nachricht** | **ja** |
+> | eigene Route `/nachrichten/<id>` | **der Kalendertag** | **ja** |
+> | Vollansicht von Liste und Suche ([`nachrichtendetail.md`](nachrichtendetail.md) §10.20) | wie der Einhängepunkt | ja |
+> | Prozessansicht, auch in der Vollansicht | — | nein, man ist schon dort (`ohneAbsprung`) |
+>
+> **Und an jedem Einhängepunkt mit Herkunftsfenster:** Liegt die Nachricht nicht darin — ein tiefer
+> Link auf einen Beleg außerhalb des Suchfensters, die Stunde, die der Jahresdeckel abschneidet —,
+> gilt der Kalendertag statt keines Links.
+>
+> **Der Kalendertag** ist `von` 00:00 bis `bis` 23:00 als letzte enthaltene Stunde (E‑94) in der
+> Anwendungszone, gebildet mit denselben Umrechnungen wie das freie Fenster (`lib/format.ts`
+> `wanduhrzeitFuerEingabe`, `zeitpunktAusWanduhrzeit`, je zwei Durchgänge): an den Umstellungstagen 23
+> beziehungsweise 25 Stunden, beide Grenzen auf vollen Stunden, also vom Baum angenommen (E‑95).
+> **Gegen die Browseruhr wird nicht gerechnet** (Regel Z1) — der Tag kommt aus dem `zeitpunkt` der
+> Nachricht. **Der Wächter bleibt:** Liegt die Nachricht nicht in dem Fenster, das gebaut wurde, gibt es
+> keinen Link. Beim Kalendertag greift er nur in einer Zone, in der die Stunde ab 23:00 zweimal vorkommt
+> (Rückstellung um Mitternacht, belegt mit `America/Santiago`); in `Europe/Berlin` nicht.
+>
+> **Reines Frontend.** Ein Fenster in der Antwort der Liste (Punkt 14 in §15) wird nicht gebraucht; die
+> „Gemeldete Abweichung" im Kasten darüber ist damit überholt. **Der Preis:** Im relativen Modus führt
+> der Absprung nicht in das Fenster, das die Liste zeigt, sondern in den Tag der Nachricht — das Fenster
+> der Liste kennt die Oberfläche weiterhin nicht.
+
 > **Ergänzt am 09.09.2026 (E‑114, [`process-view.md`](process-view.md) §46): der vierte Weg in
 > dieselbe Menge bekommt dieselbe Regel mit.** Die Feldsuche läuft über die Route `/suche` und
 > dieselbe Trefferliste wie die Belegsuche ([`bam-suche.md`](bam-suche.md) §11.4); wer dort eine
@@ -1505,6 +1538,8 @@ Tastatur braucht keine.
    kleinste stundengenaue Fenster, das es enthält (§12, E‑111). Der Baum nimmt nichts anderes an.
 3. **Aus der Nachrichtenliste gibt es den Absprung nur im freien Modus** (§12). Die Antwort der
    Liste nennt das aufgelöste Fenster nicht; im relativen Modus gäbe es keinen Link, der hält.
+   *Überholt am 17.11.2026 (E‑1196): Im relativen Modus führt er auf den Kalendertag der Nachricht
+   (§12, Korrektur).*
 4. **Commits 2 und 3 des Auftrags sind zusammengefasst**, weil ein Angebot mit Feldern ohne
    Feld-Marken nicht baubar wäre — der Hauptzweig bleibt je Commit baubar (Richtlinie §10).
 5. **Der Leerzustand nennt zusätzlich die Felder des Mandanten** (§11.1). Nicht beauftragt, aber
@@ -1521,6 +1556,8 @@ Tastatur braucht keine.
     Absprung aus der Liste nur im freien Modus (§12). Eine Zeile `von`/`bis` in `Seite<Nachricht>`
     — wie `fenster` in der Antwort des Baums (E‑50) — machte ihn im Standardfall möglich. Ein
     Backend-Bau außerhalb dieses Auftrags.
+    ✔ **Erledigt am 17.11.2026 (E‑1196), projektweit Punkt 1053:** Ohne Fenster in der Antwort führt
+    der Absprung auf den Kalendertag der Nachricht; der Backend-Bau entfällt (§12, Korrektur).
 15. **Der Präfix-Rückfall bei gemischter Suche** (§11.6, aus Punkt 3 in §9): Der Knopf erscheint,
     wirkt auf die Belegnummern und lässt die Feldbegriffe exakt. Ob das die richtige Antwort ist,
     ist weiterhin nicht entschieden; die Oberfläche sagt nicht, worauf der Modus wirkt.
