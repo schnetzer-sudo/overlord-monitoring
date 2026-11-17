@@ -33,6 +33,22 @@ import type { Spalte, Spaltenwahl } from "@/lib/spaltenwahl";
  * für den Schritt gibt es nicht — Projekt und Schritt weichen gemeinsam, der
  * Ablauf nach beiden (Antwort des Auftraggebers vom 16.09.2026).
  *
+ * ## Ab der Schwelle teilen Status und Ablauf den Rest (E‑1193, 17.11.2026)
+ *
+ * **Das Projekt ist nicht mehr die freie Spalte.** Projektnamen sind kurz: Am
+ * breiten Fenster stand rechts eine große Lücke, während die Statusspalte den
+ * Schritt kürzte (Meldung des Auftraggebers aus der Produktion, Hülle rund
+ * 1.670 px). E‑149 gilt jetzt auch hier: Ab der Schwelle tragen Zeitpunkt und
+ * Projekt ihre Mindestbreite, und der Überschuss teilt sich auf Status und
+ * Ablauf im Verhältnis ihrer Breiten an der Schwelle, 286 : 408. An der Schwelle
+ * selbst und darunter ändert sich nichts.
+ *
+ * `table-layout: fixed` teilte den Überschuss auf alle vier bemaßten Spalten.
+ * Die Statusspalte rechnet ihren Anteil deshalb selbst aus der Hülle —
+ * `(100cqw − 29,5625 rem) · 286/694`, wobei 29,5625 rem die 473 px von Zeitpunkt
+ * und Projekt sind —, und der Ablauf bleibt die freie Spalte: Er bekommt den
+ * Rest, und das ist genau sein Anteil.
+ *
  * Die Breiten stehen als wörtliche `rem`-Klassen an den Kopfzellen
  * (`components/nachrichten-tabelle.tsx`), die Sichtbarkeit steht hier — beides
  * wörtlich, weil Tailwind nur findet, was im Quelltext steht.
@@ -64,10 +80,14 @@ export const NACHRICHTENLISTE: Spaltenwahl = {
   umbau: [
     {
       stufe: 0,
-      // Status: „Wartend" samt „Schritt: Send Message to Pool", 17,815 rem bei
-      // `xs` (M180). Ablauf: seine Mindestbreite, jetzt als feste Breite.
+      // An der Schwelle — Status: „Wartend" samt „Schritt: Send Message to
+      // Pool", 17,815 rem bei `xs` (M180). Ablauf: seine Mindestbreite.
       breiten: { status: 286, ablauf: 408 },
-      frei: "projekt",
+      // Darüber teilen beide den Überschuss 286 : 408; Zeitpunkt und Projekt
+      // bleiben auf ihrer Mindestbreite (E‑1193). Bis zum 17.11.2026 war hier
+      // das Projekt die freie Spalte und bekam den ganzen Überschuss.
+      anteilig: ["status", "ablauf"],
+      frei: "ablauf",
     },
   ],
   rinne: 0,

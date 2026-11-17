@@ -15,7 +15,9 @@
  * Mindestbreiten aller Spalten, die ab dort sichtbar sind, plus Rinne — oder,
  * wo ein {@link Umbau} einer Spalte ab dieser Stufe eine feste Breite gibt, die
  * Summe mit dieser Breite (E‑162). Sie ist keine Zahl, die gut aussieht,
- * sondern eine Summe von Messungen.
+ * sondern eine Summe von Messungen. Dazu, seit dem 17.11.2026, die Breite jeder
+ * Spalte bei einer Hüllenbreite ({@link spaltenbreiten}) — auch dort, wo eine
+ * Klasse ihren Anteil aus der Hülle rechnet.
  *
  * **Die Klassen stehen nicht hier**, sondern als wörtliche Zeichenketten an den
  * Zellen: Tailwind findet eine Klasse nur, wenn sie im Quelltext steht, und eine
@@ -76,23 +78,48 @@ export type Spaltenwahl = {
 
 /**
  * **Ein Umbau an einer Stufe** (E‑162): Ab ihrer Schwelle tragen Spalten, die
- * schon dastehen, eine andere feste Breite, und die freie Spalte wechselt.
+ * schon dastehen, eine andere Breite, und die freie Spalte kann wechseln.
  *
  * Der Fall, für den es ihn gibt, ist die Nachrichtenliste: Sobald das Projekt
  * dazukommt, wird die Statusspalte breit genug für den Schritt neben der
- * Plakette, der Ablauf bekommt eine feste Breite an seinem längsten Namen, und
- * **das Projekt** nimmt die Überbreite auf — am Zeilenende statt mitten in der
- * Zeile.
+ * Plakette, und der Ablauf bekommt an der Schwelle die Breite seines längsten
+ * Namens.
+ *
+ * **Korrektur vom 17.11.2026:** Bis dahin nahm ab der Schwelle das Projekt die
+ * Überbreite auf, als freie Spalte am Zeilenende. Projektnamen sind kurz, und
+ * am breiten Fenster stand rechts eine große Lücke, während der Schritt neben
+ * der Plakette kürzte. Seither **teilen Status und Ablauf den Überschuss**
+ * ({@link Umbau.anteilig}), Zeitpunkt und Projekt bleiben auf ihrer
+ * Mindestbreite — E‑149, auf zwei Spalten beschränkt.
  */
 export type Umbau = {
   /** Die Stufe, ab deren Schwelle der Umbau gilt. */
   stufe: number;
   /**
-   * Feste Breiten in ganzen Pixeln, die ab dort gelten — auch für die Spalte,
-   * die bis dahin frei war. Sie gehen in die Schwelle ein wie Mindestbreiten.
+   * Breiten in ganzen Pixeln, die **an der Schwelle** gelten — auch für die
+   * Spalte, die bis dahin frei war. Sie gehen in die Schwelle ein wie
+   * Mindestbreiten. Ohne {@link Umbau.anteilig} gelten sie bei jeder Breite ab dort.
    */
   breiten: Readonly<Record<string, number>>;
-  /** Die freie Spalte ab dort. Sie trägt keine Breite und an der Schwelle genau ihre Mindestbreite. */
+  /**
+   * Die Spalten, die den **Überschuss über der Schwelle** unter sich teilen, im
+   * Verhältnis ihrer Breiten an der Schwelle (17.11.2026). Jede übrige sichtbare
+   * Spalte bleibt auf ihrer Breite. Ohne Eintrag geht der Überschuss an die
+   * freie Spalte.
+   *
+   * **`table-layout: fixed` teilt so nicht:** Es gäbe den Überschuss allen
+   * bemaßten Spalten, auch Zeitpunkt und Projekt. Die Klasse an jeder dieser
+   * Spalten außer der freien rechnet ihren Anteil deshalb selbst, aus der Breite
+   * der Hülle (`100cqw`); die freie bekommt den Rest, und das ist genau ihr
+   * Anteil.
+   */
+  anteilig?: readonly string[];
+  /**
+   * Die freie Spalte ab dort. Sie trägt keine Breitenklasse und bekommt, was die
+   * übrigen lassen — an der Schwelle genau ihre Breite aus {@link Umbau.breiten}
+   * bzw. ihre Mindestbreite. Steht sie in {@link Umbau.anteilig}, ist der Rest
+   * ihr Anteil.
+   */
   frei: string;
 };
 
@@ -175,4 +202,57 @@ export function sichtbareSpalten(wahl: Spaltenwahl, breite: number): Spalte[] {
     }
   });
   return sichtbar;
+}
+
+/**
+ * **Die Breite jeder sichtbaren Spalte** bei einer Containerbreite (Pixel), in
+ * Stufenfolge — das, was die Klassen an den Zellen im Browser ergeben sollen
+ * (17.11.2026). `tests/spaltenwahl.test.tsx` hält die gerenderten Klassen
+ * dagegen.
+ *
+ * - Jede Spalte trägt ihre Mindestbreite oder die Breite, die ihr der letzte
+ *   erreichte {@link Umbau} gibt.
+ * - **Teilen Spalten den Überschuss** ({@link Umbau.anteilig}), bekommt jede
+ *   davon ihren Anteil an dem, was die Hülle über alle übrigen Breiten hinaus
+ *   hat — im Verhältnis ihrer Breiten an der Schwelle.
+ * - **Sonst nimmt die freie Spalte den Rest**, und zwar auch unter der
+ *   Grundmenge — dort nie weniger als 0 px, die Tabelle läuft dann über.
+ * - **Ohne sichtbare freie Spalte** teilt sich der Überschuss auf alle
+ *   sichtbaren Spalten, ein Faktor für alle (E‑149); unter der Summe bleibt
+ *   jede auf ihrer Breite.
+ *
+ * **Eine eigene Bauform unter der Grundmenge kennt sie nicht** — die des
+ * Katalogs (`KATALOG_BAUFORM`) steht in seinem Feature.
+ */
+export function spaltenbreiten(wahl: Spaltenwahl, breite: number): Map<string, number> {
+  const sichtbar = sichtbareSpalten(wahl, breite);
+  let stufe = -1;
+  wahl.stufen.forEach((_, index) => {
+    if (breite >= schwelleInPixeln(wahl, index)) {
+      stufe = index;
+    }
+  });
+  const umbau = (wahl.umbau ?? []).filter((u) => u.stufe <= stufe).at(-1);
+  const anteilig = umbau?.anteilig ?? [];
+  const frei = freieSpalte(wahl, breite);
+
+  const breiten = new Map(sichtbar.map((s) => [s.schluessel, breiteAufStufe(wahl, s, stufe)]));
+  const summe = [...breiten.values()].reduce((g, px) => g + px, 0);
+  const platz = breite - wahl.rinne;
+
+  if (anteilig.length > 0) {
+    const summeAnteilig = anteilig.reduce((g, s) => g + (breiten.get(s) ?? 0), 0);
+    for (const schluessel of anteilig) {
+      const px = breiten.get(schluessel)!;
+      breiten.set(schluessel, px + ((platz - summe) * px) / summeAnteilig);
+    }
+  } else if (frei !== undefined && breiten.has(frei)) {
+    const fest = summe - breiten.get(frei)!;
+    breiten.set(frei, Math.max(0, platz - fest));
+  } else if (platz > summe) {
+    for (const [schluessel, px] of breiten) {
+      breiten.set(schluessel, (px * platz) / summe);
+    }
+  }
+  return breiten;
 }

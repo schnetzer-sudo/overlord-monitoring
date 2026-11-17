@@ -21,6 +21,7 @@ import {
   mindestbreiteVon,
   schwelleInPixeln,
   sichtbareSpalten,
+  spaltenbreiten,
   stufeVon,
   type Spaltenwahl,
 } from "@/lib/spaltenwahl";
@@ -63,6 +64,12 @@ import { rendere } from "./hilfe/rendern";
  * 5. **Der Überschuss gehört allen Spalten** (E‑149): Hat eine Tabelle keine
  *    freie Spalte, wächst jede um denselben Faktor. Die Benutzertabelle hat seit
  *    dem 16.09.2026 keine — vorher hortete die Mandantenspalte den ganzen Rest.
+ * 6. **Klasse und Rechnung sind dieselbe Zahl** (17.11.2026): Ab der Grundmenge
+ *    trägt jede sichtbare Spalte, was `spaltenbreiten` aus der Spaltenwahl
+ *    rechnet, und zusammen füllen sie die Hülle. Für die Nachrichtenliste heißt
+ *    das ab ihrer Schwelle: Zeitpunkt und Projekt fest, Status und Ablauf teilen
+ *    den Überschuss 286 : 408 — der Status über eine Breite in `cqw`, der Ablauf
+ *    als freie Spalte.
  *
  * ⚠️ **`jsdom` rechnet kein Layout.** Die Breiten unter 2. und 5. sind nach dem
  * Verfahren von `table-layout: fixed` **gerechnet** — feste Spalten tragen ihre
@@ -73,13 +80,28 @@ import { rendere } from "./hilfe/rendern";
 
 const TEXTE = texteFuer("de");
 
+/**
+ * Eine anteilige Breite: der Anteil `zaehler/nenner` an dem, was die Hülle
+ * (`100cqw`) über `abzug` hinaus hat — als Breitenklasse mit einer Rechnung aus
+ * `100cqw`, `abzug` in rem, `zaehler` und `nenner`; die genaue Form liest der
+ * Ausdruck in {@link lies}. `cqw` misst die nächste Container-Hülle, und das ist
+ * die eigene der Tabelle.
+ *
+ * Die Form steht hier bewusst **nicht** als Klasse ausgeschrieben: Tailwind liest
+ * auch Kommentare in `tests/` und erzeugte daraus eine Regel mit ungültigem Wert
+ * im ausgelieferten Stylesheet (beim Bau am 17.11.2026 gesehen).
+ */
+type Anteil = { abzug: number; zaehler: number; nenner: number };
+
+type Breitenklasse = { ab: number; px: number } | { ab: number; anteil: Anteil };
+
 type Gelesen = {
   schluessel: string;
   index: number;
   /** Ab welcher Containerbreite (px) die Spalte dasteht — `null` heißt immer. */
   ab: number | null;
-  /** Die Breitenklassen: ab welcher Containerbreite welche Breite (px). */
-  breiten: { ab: number; px: number }[];
+  /** Die Breitenklassen: ab welcher Containerbreite welche Breite (px oder Anteil). */
+  breiten: Breitenklasse[];
   klassen: string[];
 };
 
@@ -90,6 +112,9 @@ function lies(zelle: Element, container: string, schluessel: string, index: numb
   const klassen = [...zelle.classList];
   const sichtbarAb = new RegExp(`^@min-\\[([\\d.]+)rem\\]/${container}:table-cell$`);
   const bedingteBreite = new RegExp(`^@min-\\[([\\d.]+)rem\\]/${container}:w-\\[([\\d.]+)rem\\]$`);
+  const anteiligeBreite = new RegExp(
+    `^@min-\\[([\\d.]+)rem\\]/${container}:w-\\[calc\\(\\(100cqw-([\\d.]+)rem\\)\\*(\\d+)/(\\d+)\\)\\]$`,
+  );
   let ab: number | null = null;
   const breiten: Gelesen["breiten"] = [];
   for (const klasse of klassen) {
@@ -99,6 +124,22 @@ function lies(zelle: Element, container: string, schluessel: string, index: numb
     if (basis) breiten.push({ ab: 0, px: inPixeln(basis[1]!) });
     const bedingt = bedingteBreite.exec(klasse);
     if (bedingt) breiten.push({ ab: inPixeln(bedingt[1]!), px: inPixeln(bedingt[2]!) });
+    const anteilig = anteiligeBreite.exec(klasse);
+    if (anteilig) {
+      breiten.push({
+        ab: inPixeln(anteilig[1]!),
+        anteil: {
+          abzug: inPixeln(anteilig[2]!),
+          zaehler: Number(anteilig[3]),
+          nenner: Number(anteilig[4]),
+        },
+      });
+    }
+    // Eine Breite, die keiner der drei Formen folgt, läse dieser Test nicht —
+    // und rechnete dann still ohne sie. Deshalb fällt er an ihr.
+    if (/(^|:)w-\[/.test(klasse) && !basis && !bedingt && !anteilig) {
+      throw new Error(`${container}/${schluessel}: Breitenklasse „${klasse}" nicht lesbar`);
+    }
   }
   if (ab !== null) {
     expect(
@@ -142,8 +183,17 @@ function spaltenAus(
  */
 function layout(spalten: Gelesen[], frei: string | undefined, breite: number) {
   const sichtbar = spalten.filter((s) => s.ab === null || breite >= s.ab);
+  // Die letzte Klasse, deren Schwelle erreicht ist, gewinnt — wie im Stylesheet,
+  // wo die Container-Abfrage hinter der Grundklasse steht. Eine anteilige Breite
+  // ist dort eine Länge wie jede andere, nur aus der Hülle gerechnet.
   const breiteVon = (s: Gelesen) =>
-    s.breiten.filter((b) => breite >= b.ab).reduce<number | null>((_, b) => b.px, null);
+    s.breiten
+      .filter((b) => breite >= b.ab)
+      .reduce<number | null>(
+        (_, b) =>
+          "px" in b ? b.px : ((breite - b.anteil.abzug) * b.anteil.zaehler) / b.anteil.nenner,
+        null,
+      );
   const freieSpalte = sichtbar.find((s) => s.schluessel === frei);
   const fest = sichtbar
     .filter((s) => s !== freieSpalte)
@@ -229,18 +279,31 @@ function pruefeTabelle(
 
   // 1a. Der Umbau an einer Stufe (E‑162): Die Klasse trägt genau die Breite und
   // genau die Schwelle aus der Rechnung, und die neue freie Spalte trägt keine.
+  // Teilen sich Spalten den Überschuss (17.11.2026), trägt jede außer der freien
+  // ihren Anteil als Klasse: `(Hülle − alles Feste) · eigene Breite / Summe der
+  // Anteiligen`. Die freie bekommt den Rest — und das ist genau ihr Anteil.
   for (const umbau of wahl.umbau ?? []) {
     const schwelle = schwelleInPixeln(wahl, umbau.stufe);
+    const anteilig = umbau.anteilig ?? [];
+    const summeAnteilig = anteilig.reduce((g, s) => g + (umbau.breiten[s] ?? 0), 0);
     for (const [schluessel, px] of Object.entries(umbau.breiten)) {
       const spalte = spalten.find((s) => s.schluessel === schluessel);
-      expect(
-        spalte?.breiten,
-        `${wahl.container}/${schluessel}: Breite ${px} px ab ${schwelle} px als Klasse`,
-      ).toContainEqual({ ab: schwelle, px });
+      if (schluessel !== umbau.frei) {
+        const erwartet: Breitenklasse = anteilig.includes(schluessel)
+          ? {
+              ab: schwelle,
+              anteil: { abzug: schwelle - summeAnteilig, zaehler: px, nenner: summeAnteilig },
+            }
+          : { ab: schwelle, px };
+        expect(
+          spalte?.breiten,
+          `${wahl.container}/${schluessel}: Breite ${px} px ab ${schwelle} px als Klasse`,
+        ).toContainEqual(erwartet);
+      }
       expect(
         layout(spalten, freiBei(schwelle), schwelle).breiten.get(schluessel),
         `${wahl.container}/${schluessel} bei ${schwelle} px`,
-      ).toBe(px);
+      ).toBeCloseTo(px, 9);
     }
     expect(
       spalten.find((s) => s.schluessel === umbau.frei)?.breiten,
@@ -286,8 +349,25 @@ function pruefeTabelle(
         expect(
           px,
           `${wahl.container} bei ${breite} px: ${schluessel} unter ihrer Mindestbreite`,
-        ).toBeGreaterThanOrEqual(mindestbreiteVon(wahl, schluessel));
+        ).toBeGreaterThanOrEqual(mindestbreiteVon(wahl, schluessel) - 1e-9);
       }
+      // 6. Klasse und Rechnung: dieselbe Breite je Spalte, und zusammen die Hülle.
+      const gerechnet = spaltenbreiten(wahl, breite);
+      expect(
+        [...gerechnet.keys()].sort(),
+        `${wahl.container} bei ${breite} px: dieselben Spalten in Klasse und Rechnung`,
+      ).toEqual([...ergebnis.breiten.keys()].sort());
+      for (const [schluessel, px] of ergebnis.breiten) {
+        expect(
+          px,
+          `${wahl.container} bei ${breite} px: ${schluessel}, Klasse gegen Rechnung`,
+        ).toBeCloseTo(gerechnet.get(schluessel)!, 9);
+      }
+      const summe = [...ergebnis.breiten.values()].reduce((gesamt, px) => gesamt + px, 0);
+      expect(summe, `${wahl.container} bei ${breite} px: die Spalten füllen die Hülle`).toBeCloseTo(
+        breite,
+        9,
+      );
     } else {
       unterDerGrundmenge(ergebnis, breite);
     }
@@ -367,6 +447,100 @@ describe("Die Nachrichtenliste an den gemessenen Containerbreiten", () => {
       );
     } finally {
       await abbauen();
+    }
+  });
+});
+
+/**
+ * **Am breiten Fenster** (17.11.2026, Meldung des Auftraggebers aus der
+ * Produktion, Hülle rund 1.670 px). Seit E‑162 nahm ab der Schwelle das Projekt
+ * den ganzen Überschuss: kurze Projektnamen, rechts eine große Lücke, und der
+ * Schritt in der Statusspalte gekürzt. **Jetzt** tragen Zeitpunkt und Projekt
+ * ab der Schwelle ihre Mindestbreite, und Status und Ablauf teilen den
+ * Überschuss im Verhältnis ihrer Breiten an der Schwelle, 286 : 408.
+ *
+ * Gerechnet aus den **wörtlichen Klassen** des gerenderten Baums, nicht aus der
+ * Spaltenwahl — dass beides übereinstimmt, sagt Zusage 6 oben. 1.208 ist die
+ * Prozessansicht neben dem Baum bei 1920 px (M180), 1.670 die Meldung, 1.920 die
+ * volle Breite ohne Navigationsspalte als obere Probe.
+ */
+const LISTE_BREIT: Record<number, [number, number, number, number]> = {
+  1167: [187, 286, 408, 286],
+  1208: [187, 302.896, 432.104, 286],
+  1670: [187, 493.288, 703.712, 286],
+  1920: [187, 596.314, 850.686, 286],
+};
+
+/**
+ * **Die Gegenprobe unter der Schwelle** — dieselben Zahlen wie auf `main`
+ * (`a9d354e`): Zeitpunkt 187, Status 156, der Ablauf bekommt den Rest, kein
+ * Projekt. Unter der Grundmenge (751 px) läuft die Tabelle in ihrer Bauform über.
+ */
+const LISTE_UNTER_DER_SCHWELLE: Record<number, [number, number, number]> = {
+  294: [187, 156, 0],
+  518: [187, 156, 175],
+  568: [187, 156, 225],
+  751: [187, 156, 408],
+  1015: [187, 156, 672],
+  1144: [187, 156, 801],
+  1166: [187, 156, 823],
+};
+
+describe("Die Nachrichtenliste am breiten Fenster", () => {
+  async function gelesen() {
+    const { behaelter, abbauen } = await rendere(
+      <NachrichtenTabelle
+        zeilen={[LISTENZEILE]}
+        sortierung="neueste"
+        aufSortierung={() => {}}
+        gewaehlt={null}
+        aufAuswahl={() => {}}
+      />,
+    );
+    try {
+      return spaltenAus(behaelter, NACHRICHTENLISTE.container, LISTEN_BESCHRIFTUNG);
+    } finally {
+      await abbauen();
+    }
+  }
+
+  it("ab der Schwelle Zeitpunkt und Projekt fest, Status und Ablauf wachsen 286 : 408", async () => {
+    const spalten = await gelesen();
+    for (const [text, [zeitpunkt, status, ablauf, projekt]] of Object.entries(LISTE_BREIT)) {
+      const huelle = Number(text);
+      const ergebnis = layout(spalten, freieSpalte(NACHRICHTENLISTE, huelle), huelle);
+      expect(ergebnis.sichtbar, `${huelle} px: alle vier`).toEqual([
+        "zeitpunkt",
+        "status",
+        "ablauf",
+        "projekt",
+      ]);
+      expect(ergebnis.breiten.get("zeitpunkt"), `${huelle} px: Zeitpunkt`).toBeCloseTo(
+        zeitpunkt,
+        3,
+      );
+      expect(ergebnis.breiten.get("status"), `${huelle} px: Status`).toBeCloseTo(status, 3);
+      expect(ergebnis.breiten.get("ablauf"), `${huelle} px: Ablauf`).toBeCloseTo(ablauf, 3);
+      expect(ergebnis.breiten.get("projekt"), `${huelle} px: Projekt`).toBeCloseTo(projekt, 3);
+      expect(ergebnis.ueberlauf, `${huelle} px: kein Querlauf`).toBe(0);
+      const summe = [...ergebnis.breiten.values()].reduce((gesamt, px) => gesamt + px, 0);
+      expect(summe, `${huelle} px: die Spalten füllen die Hülle`).toBeCloseTo(huelle, 9);
+    }
+  });
+
+  it("unter der Schwelle dieselben Breiten wie auf main", async () => {
+    const spalten = await gelesen();
+    for (const [text, [zeitpunkt, status, ablauf]] of Object.entries(LISTE_UNTER_DER_SCHWELLE)) {
+      const huelle = Number(text);
+      const ergebnis = layout(spalten, freieSpalte(NACHRICHTENLISTE, huelle), huelle);
+      expect(ergebnis.sichtbar, `${huelle} px: ohne Projekt`).toEqual([
+        "zeitpunkt",
+        "status",
+        "ablauf",
+      ]);
+      expect(ergebnis.breiten.get("zeitpunkt"), `${huelle} px: Zeitpunkt`).toBe(zeitpunkt);
+      expect(ergebnis.breiten.get("status"), `${huelle} px: Status`).toBe(status);
+      expect(ergebnis.breiten.get("ablauf"), `${huelle} px: Ablauf`).toBe(ablauf);
     }
   });
 });
