@@ -5,6 +5,8 @@ import { aktiveDichte } from "@/dichte/server";
 import { texteFuer } from "@/i18n";
 import { aktiveSprache, aktiveTexte } from "@/i18n/server";
 import { aktivesThema } from "@/thema/server";
+import { panelbreiteStil } from "@/lib/panelbreite";
+import { aktivePanelbreite } from "@/lib/panelbreite-server";
 import { cn } from "@/lib/utils";
 
 import { Providers } from "./providers";
@@ -53,12 +55,16 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const sprache = await aktiveSprache();
   const dichte = await aktiveDichte();
   const thema = await aktivesThema();
+  const panelbreite = await aktivePanelbreite();
 
   return (
     <html
       lang={sprache}
       data-dichte={dichte}
       data-thema={thema}
+      // Die gewählte Breite des Panels neben der Liste, vor dem ersten Paint
+      // (E‑1209, `lib/panelbreite.ts`). Ohne gültiges Cookie keine Variable.
+      style={panelbreiteStil(panelbreite)}
       className={cn("font-sans", geist.variable, geistMono.variable)}
     >
       <body>

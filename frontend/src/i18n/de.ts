@@ -905,6 +905,13 @@ export const de = {
         gruppeSchritt: "Schritt {nummer}",
       },
 
+      // Der Griff zwischen Liste und Panel (E‑1208, §10.21): Name für das
+      // Vorleseprogramm, Hinweis im `title` für den Zeiger.
+      panelbreite: {
+        griff: "Breite der Detailansicht",
+        hinweis: "Ziehen oder Pfeiltasten ändern die Breite. Doppelklick setzt sie zurück.",
+      },
+
       // Rohdaten und Protokolle (Schritt 8, Teil Frontend) — die Dateien, die an
       // einer Nachricht hängen: die eingegangene Datei, die umgewandelten
       // Fassungen und die Protokolle der Schritte (docs/rohdaten.md).

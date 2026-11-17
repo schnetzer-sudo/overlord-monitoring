@@ -514,6 +514,11 @@ export const en: Texte = {
         gruppeSchritt: "Step {nummer}",
       },
 
+      panelbreite: {
+        griff: "Width of the detail view",
+        hinweis: "Drag or use the arrow keys to change the width. Double-click to reset.",
+      },
+
       // Raw data and logs (step 8). The family (`Converter`, `FTPSender`) is a
       // technical value from the property name and is never translated.
       dateien: {

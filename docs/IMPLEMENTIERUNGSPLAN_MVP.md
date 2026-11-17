@@ -570,6 +570,16 @@ die URL, und die Umbruchpunkte der Liste hängen an der *Fensterbreite*, nicht a
 ziehbare Liste quetschte sich, ohne es zu merken) und eine **größere Grundbreite** (verschiebt nur:
 schmalere Liste bei unveränderten Umbruchpunkten).
 
+> ### ⚠️ Korrektur vom 17.11.2026 — die Verwerfung der ziehbaren Trennlinie ist aufgehoben (E‑1208)
+>
+> **Der Absatz darüber bleibt stehen.** Seine beiden Gründe tragen nicht mehr: **Die Spalten der Liste
+> hängen nicht mehr an der Fensterbreite**, sondern an ihrem Container (E‑147, E‑148,
+> [`spaltenwahl.md`](spaltenwahl.md)) — eine schmalere Liste merkt es selbst. **Der Zustand kann
+> weiterhin nicht in die URL**, aber die Breite ist wie die Anzeigegröße eine persönliche Einstellung
+> und keine Ansicht, die jemand teilt; sie liegt im Cookie `overlord_panelbreite` je Browser (E‑1209).
+> Entschieden vom Auftraggeber am 17.11.2026; gebaut in
+> [`nachrichtendetail.md`](nachrichtendetail.md) §10.21.
+
 **Ein Befund vor dem Bauen, festgehalten statt vorausgesetzt:** Die eigene Route hat den
 Panel-Baustein **nie in 26 rem** gezeigt. Sie trägt seit Schritt 5, Teil 2 die volle Inhaltsbreite
 (`max-w-inhalt` = `--dichte-inhaltsbreite`, 72 rem), linksbündig — gemessen 1152 px bei Fenster 1920.

@@ -351,6 +351,31 @@ describe("Der Kopierknopf je Eigenschaftswert", () => {
   });
 });
 
+describe("Die Namensspalte", () => {
+  /**
+   * **40 % der Zeile, gedeckelt nur, wo die Hülle es sagt** *(E‑1210,
+   * Variante 1)*: Neben der Liste setzt die Hülle `--eigenschaft-name-max` auf
+   * 16 rem; auf der eigenen Route und in der Vollansicht gibt es die Variable
+   * nicht, und `max-width: var(…)` ohne Rückfall ist dort `none`. Geprüft an der
+   * Klasse und an dem, was Tailwind daraus macht.
+   */
+  it("wächst mit der Zeile und hat ihren Deckel allein aus der Variable", async () => {
+    const { behaelter, abbauen } = await rendereListe();
+
+    try {
+      const name = zeilen(behaelter)[0]!.querySelector("span")!;
+      const klassen = name.className.split(/\s+/);
+      expect(klassen).toContain("w-2/5");
+      expect(klassen).toContain("max-w-(--eigenschaft-name-max)");
+      const css = await uebersetze(["max-w-(--eigenschaft-name-max)"]);
+      const regel = stilblatt(css).regeln.find((r) => r.selektor.includes("eigenschaft-name-max"));
+      expect(regel?.eigene).toMatch(/max-width:\s*var\(--eigenschaft-name-max\)\s*;?\s*$/);
+    } finally {
+      await abbauen();
+    }
+  });
+});
+
 describe("Der Kopierknopf in der aufklappbaren Zeile und an der Kennung", () => {
   const KEINE_DATEIEN: Artefaktliste = { messageId: MESSAGE_ID, nutzdaten: [], protokolle: [] };
 

@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1061.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1063.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -44,17 +44,17 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
-| offen — Verbesserung | 52 | 0 | — |
+| offen — Verbesserung | 53 | 0 | — |
 | offen — Entscheidung offen | 54 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 68 | 13 | — |
-| **offen gesamt** | **206** | **13** | — |
+| offen — Sichtprüfung oder Messung offen | 69 | 13 | — |
+| **offen gesamt** | **208** | **13** | — |
 | ungeprüft | — | — | 356 |
 | erledigt | 70 | 0 | 65 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 279 | 13 | 426 |
+| **Zeilen** | 281 | 13 | 426 |
 
-Offen sind damit **219** nummerierte Punkte; dazu kommen 356 ungeprüfte lokale (Teil 1 gezählt am
-17.11.2026 nach dem Kopierknopf je Eigenschaftswert per Skript über die Tabelle, dabei die bis dahin
+Offen sind damit **221** nummerierte Punkte; dazu kommen 356 ungeprüfte lokale (Teil 1 gezählt am
+17.11.2026 nach der ziehbaren Panelbreite per Skript über die Tabelle, dabei die bis dahin
 nicht nachgezählte, erledigte Zeile 1057 mitgezählt; Teil 3 am 17.11.2026 nach „Vollansicht überall“, davor
 vom 06.11.2026, seither nur `property-suche.md` §15 Nr. 14 aufgegriffen). Davon
 stammen 37 aus der Linie `assistent` und ihrer Zusammenführung (1000 bis 1006 aus A1; 1010 und 1012
@@ -68,7 +68,7 @@ aus den Fixes an „Ihre Aufträge“ vom 09. und 10.11.2026, 1051 und 1052 aus 
 gegliedert“ vom 10.11.2026, 1053 bis 1056 aus „Vollansicht überall“ vom 17.11.2026 (1053 ist der
 aufgegriffene lokale Punkt `property-suche.md` §15 Nr. 14 und am selben Tag erledigt, 1054 ebenso
 am selben Tag), 1057 aus „Freies Zeitfenster“ vom selben Tag (dort erledigt), 1058 bis 1060 aus dem
-Kopierknopf je Eigenschaftswert vom selben Tag. 1009 ist
+Kopierknopf je Eigenschaftswert vom selben Tag, 1061 und 1062 aus der ziehbaren Panelbreite vom selben Tag. 1009 ist
 seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
 M1003 erledigt. Am selben Tag erledigt: 255, 260 und 261 (`betrieb.md` §9).
 
@@ -366,6 +366,8 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1058 | Tippen zum Kopieren am Touchgerät ohne sichtbaren Hinweis: Ohne Überfahren ist der Kopierknopf einer Eigenschaftszeile unsichtbar, dass ein Tippen auf den Wert kopiert, zeigt erst das Häkchen. Bewusst getragen (E‑1207) | [`nachrichtendetail.md`](nachrichtendetail.md) §10.21, §13 · 17.11.2026 | Verbesserung | offen — bewusst getragen |
 | 1059 | Kein Kopierknopf an den Belegdaten; bewusst nicht gebaut (Auftrag zu E‑1207) | [`nachrichtendetail.md`](nachrichtendetail.md) §10.21, §13 · 17.11.2026 | Verbesserung | offen — bewusst nicht gebaut |
 | 1060 | Tippen zum Kopieren am echten Touchgerät nicht gesehen: Safari meldet den Klick beim Tippen als `mouse` (WebKit-Bug 282988), der Rückfall auf `pointerup` ist nur im Test belegt; nachzuholen an iPhone oder iPad mit Safari und an einem Android-Gerät | [`nachrichtendetail.md`](nachrichtendetail.md) §10.21, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | offen |
+| 1061 | Panelbreite nur je Browser: Die Breite des Panels neben der Liste liegt im Cookie `overlord_panelbreite`, wer an zwei Rechnern arbeitet, zieht zweimal. Nachrüstweg wie Punkt 94: eine Spalte an `app_user`, das Cookie wird zum Zwischenspeicher | [`nachrichtendetail.md`](nachrichtendetail.md) §10.21, §13 · [`frontend-grundlagen.md`](frontend-grundlagen.md) §4 · 17.11.2026 | Verbesserung | offen |
+| 1062 | Ziehbare Panelbreite, was die Browsersteuerung nicht zeigt: ein echtes Fenster um und unter 1.280 px (gesehen nur über `Emulation.setDeviceMetricsOverride`), Ziehen per Finger an einem Touchgerät ab 1.280 px, Firefox und Safari | [`nachrichtendetail.md`](nachrichtendetail.md) §10.21, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | offen |
 
 ---
 

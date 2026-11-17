@@ -9,6 +9,18 @@ Tags und die Definition of Done für ein Release stehen in
 
 ### Neu
 
+- **Das Detail neben der Liste lässt sich breiter ziehen** (Entscheidungen des Auftraggebers vom
+  17.11.2026, E‑1208 bis E‑1210, [`docs/nachrichtendetail.md`](docs/nachrichtendetail.md) §10.21).
+  Grund: Im Panel enden viele Werte mit „…“, und am großen Monitor ist es relativ schmal. Ein Griff
+  zwischen Liste und Panel zieht es breiter, Pfeiltasten verschieben je 1 rem, ein Doppelklick setzt
+  zurück. Die bisherige Breite (26 rem, ab 1.536 px 30 rem) ist das Minimum; höchstens so breit, dass
+  der Liste ihre Grundmenge an Spalten bleibt. Gilt in Nachrichtenliste, Belegsuche und
+  Prozessansicht ab 1.280 px, nicht in der Vollansicht und nicht auf der eigenen Route. Die Wahl liegt
+  je Browser im Cookie `overlord_panelbreite` und gilt beim nächsten Aufruf ohne Sprung. Die
+  Namensspalte der technischen Eigenschaften wächst mit, bis 16 rem. Die Verwerfung der ziehbaren
+  Trennlinie vom 11.08.2026 ist damit aufgehoben. Keine Änderung am Backend. In
+  `docs/PROJEKTBESCHREIBUNG.md` §9 und `docs/README.md` (Dateiliste, offene Sichtprüfung 1062)
+  nachgeführt, weil beide den aktuellen Stand beschreiben.
 - **Jeder Wert der technischen Eigenschaften lässt sich kopieren** (Entscheidung des Auftraggebers
   vom 17.11.2026, E‑1207, [`docs/nachrichtendetail.md`](docs/nachrichtendetail.md) §10.21). Grund:
   Nutzer meldeten, dass viele Werte im Detail mit „…“ enden und der Vollwert nur im Tooltip steht.
