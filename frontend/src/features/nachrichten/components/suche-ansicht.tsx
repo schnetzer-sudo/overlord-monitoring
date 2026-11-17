@@ -12,6 +12,7 @@ import { formatiereZahl, formatiereZeitpunkt } from "@/lib/format";
 import { ProblemFehler, istPraefixfensterZuGross } from "@/lib/http";
 import { useBeginntOben, useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
 import { KLEBENDE_SPALTE_AB_XL, VOLLANSICHT_AB_XL } from "@/lib/klebende-spalte";
+import { PANEL_NEBEN_LISTE_AB_XL, panelNebenListe } from "@/lib/panelbreite";
 import { ROUTEN, zeileImNeuenTab } from "@/lib/routen";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,9 @@ import {
   type VorigeRunde,
 } from "../suche";
 import { MarkenLeiste } from "./marken-leiste";
+import { TREFFERLISTE, TREFFERLISTE_OHNE_TREFFER } from "../treffer-spalten";
 import { NachrichtDetail } from "./nachricht-detail";
+import { PanelGriff } from "./panel-griff";
 import { TrefferTabelle } from "./treffer-tabelle";
 import { Zeitfensterfelder } from "./zeitfensterfelder";
 
@@ -378,14 +381,27 @@ export function SucheAnsicht() {
         )}
       </div>
 
+      {gewaehlt === null ? null : voll ? null : <PanelGriff huelle={panel} />}
+
       {gewaehlt === null ? null : (
         <div
           ref={panel}
+          // Das Maximum der ziehbaren Breite lässt der Trefferliste ihre
+          // Grundmenge (E‑1208): mit Spalte „Treffer“, wenn sie dasteht oder noch
+          // keine Antwort da ist, sonst ohne — aus `treffer-spalten.ts`.
+          style={
+            voll
+              ? undefined
+              : panelNebenListe(
+                  angezeigt === undefined ||
+                    zeigtTrefferspalte({ bamBegriffe: angezeigt.begriffe.length })
+                    ? TREFFERLISTE
+                    : TREFFERLISTE_OHNE_TREFFER,
+                )
+          }
           className={cn(
             "min-w-0",
-            voll
-              ? VOLLANSICHT_AB_XL
-              : cn("xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", KLEBENDE_SPALTE_AB_XL),
+            voll ? VOLLANSICHT_AB_XL : cn(PANEL_NEBEN_LISTE_AB_XL, KLEBENDE_SPALTE_AB_XL),
           )}
         >
           <NachrichtDetail

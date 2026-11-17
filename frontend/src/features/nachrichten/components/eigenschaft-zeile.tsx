@@ -69,8 +69,13 @@ function EigenschaftZeile({ eigenschaft }: { eigenschaft: Eigenschaft }) {
 
   return (
     <li className="group/eigenschaft h-zeile text-beiwerk flex min-w-0 items-center gap-2">
+      {/* Die Namensspalte ist 40 % der Zeile. Neben der Liste wächst sie damit
+          mit der gezogenen Panelbreite, bis 16 rem (E‑1210): Den Deckel setzt
+          allein die Hülle dort (`--eigenschaft-name-max`, `lib/panelbreite.ts`).
+          Ohne die Variable gilt kein Deckel — eigene Route und Vollansicht
+          bleiben bei ihren 40 %. */}
       <span
-        className="text-muted-foreground w-2/5 shrink-0 truncate font-mono"
+        className="text-muted-foreground w-2/5 max-w-(--eigenschaft-name-max) shrink-0 truncate font-mono"
         title={eigenschaft.name}
       >
         {eigenschaft.name}

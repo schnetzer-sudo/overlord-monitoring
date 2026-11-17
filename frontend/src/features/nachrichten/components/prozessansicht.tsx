@@ -40,6 +40,7 @@ import {
   KLEBENDER_RAHMEN_AB_XL,
   VOLLANSICHT_AB_XL,
 } from "@/lib/klebende-spalte";
+import { PANEL_NEBEN_LISTE_AB_XL, panelNebenListe } from "@/lib/panelbreite";
 import { angezeigterBaumfenstermodus, hervorgehobenerBaumzeitraum } from "@/lib/rollupzeitraum";
 import { ROUTEN, zeileImNeuenTab } from "@/lib/routen";
 import { cn } from "@/lib/utils";
@@ -80,7 +81,9 @@ import {
 } from "../prozessbaum";
 import { Blaettern } from "./blaettern";
 import { GliederungUmschalter } from "./gliederung-umschalter";
+import { NACHRICHTENLISTE } from "../spalten";
 import { NachrichtDetail } from "./nachricht-detail";
+import { PanelGriff } from "./panel-griff";
 import { NachrichtenTabelle } from "./nachrichten-tabelle";
 import { ProzessBaum } from "./prozess-baum";
 import { Zeitfensterfelder } from "./zeitfensterfelder";
@@ -753,6 +756,8 @@ export function ProzessAnsicht() {
                     />
                   </div>
 
+                  {zustand.nachricht === null || voll ? null : <PanelGriff huelle={panelBereich} />}
+
                   {/* `zustand.nachricht` und nicht `panelOffen`: Nur die
                       Abfrage am Feld selbst engt den Typ auf `string` ein. */}
                   {zustand.nachricht === null ? null : (
@@ -774,13 +779,22 @@ export function ProzessAnsicht() {
                     <div
                       ref={panelBereich}
                       tabIndex={-1}
+                      // Das Maximum der ziehbaren Breite lässt der Übertragungsliste
+                      // ihre Grundmenge — dieselbe Tabelle wie die Nachrichtenliste,
+                      // dazu die Reserve für ihre eigene Bildlaufleiste: Sie scrollt
+                      // hier für sich (E‑1208, `lib/panelbreite.ts`).
+                      style={
+                        voll
+                          ? undefined
+                          : panelNebenListe(NACHRICHTENLISTE, { listeScrolltSelbst: true })
+                      }
                       className={cn(
                         "min-w-0 focus-visible:outline-none",
                         // In der Vollansicht die Breite der eigenen Route, ohne
                         // eigenen Scrollbereich (E‑1194, `lib/klebende-spalte.ts`).
                         voll
                           ? VOLLANSICHT_AB_XL
-                          : cn("xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", IM_RAHMEN_SCROLLT_AB_XL),
+                          : cn(PANEL_NEBEN_LISTE_AB_XL, IM_RAHMEN_SCROLLT_AB_XL),
                       )}
                     >
                       <NachrichtDetail

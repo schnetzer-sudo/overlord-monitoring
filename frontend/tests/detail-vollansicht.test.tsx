@@ -18,6 +18,9 @@ import { NachrichtenAnsicht } from "@/features/nachrichten/components/nachrichte
 import { ProzessAnsicht } from "@/features/nachrichten/components/prozessansicht";
 import { SucheAnsicht } from "@/features/nachrichten/components/suche-ansicht";
 import { texteFuer } from "@/i18n";
+import { NACHRICHTENLISTE } from "@/features/nachrichten/spalten";
+import { TREFFERLISTE_OHNE_TREFFER } from "@/features/nachrichten/treffer-spalten";
+import { PANEL_NEBEN_LISTE_AB_XL, panelNebenListe } from "@/lib/panelbreite";
 
 import { neuerZwischenspeicher, rendere } from "./hilfe/rendern";
 
@@ -791,6 +794,65 @@ describe("Der Absprung in den Prozessbaum", () => {
       } finally {
         await abbauen();
       }
+    }
+  });
+});
+
+/* ─── Die ziehbare Breite (E‑1208 bis E‑1210) ────────────────────────────── */
+
+/**
+ * **Die Verdrahtung an den drei Einhängepunkten** *(17.11.2026,
+ * `docs/nachrichtendetail.md` §10.21)*: Neben der Liste steht der Griff vor der
+ * Hülle, und die Hülle trägt Breite und Maximum — das Maximum aus der
+ * Spaltendefinition der Liste, die daneben steht. In der Vollansicht gibt es
+ * beides nicht. Was Griff und Regeln selbst tun, steht in
+ * `tests/panel-griff.test.tsx` und `tests/panelbreite.test.ts`.
+ */
+const ABZUG = {
+  nachrichten: panelNebenListe(NACHRICHTENLISTE),
+  // Die gestellte Antwort zitiert keinen BAM-Begriff (`begriffe: []`): Die
+  // Trefferliste hat keine Spalte „Treffer“, und ihre Grundmenge ist die ohne.
+  // Den Zweig mit „Treffer“ belegt der Browser (§10.21).
+  suche: panelNebenListe(TREFFERLISTE_OHNE_TREFFER),
+  prozesse: panelNebenListe(NACHRICHTENLISTE, { listeScrolltSelbst: true }),
+} as unknown as Record<string, Record<string, string>>;
+
+describe.each(ANSICHTEN)("Die ziehbare Breite $name", ({ ansicht, adresse }) => {
+  it("hat neben der Liste den Griff vor der Hülle, die Breite ab xl und das Maximum der Liste", async () => {
+    const { behaelter, abbauen } = await rendereAnsicht(ansicht, `${adresse}&nachricht=a-2`);
+
+    try {
+      const huelle = panelHuelle(behaelter);
+      const griff = huelle.previousElementSibling;
+      expect(griff?.getAttribute("role")).toBe("separator");
+      expect(behaelter.querySelectorAll('[role="separator"]')).toHaveLength(1);
+      const klassen = huelle.className.split(/\s+/);
+      for (const klasse of PANEL_NEBEN_LISTE_AB_XL.split(/\s+/)) {
+        expect(klassen, klasse).toContain(klasse);
+      }
+      // Die alte feste Breite ist weg.
+      expect(klassen).not.toContain("xl:w-[26rem]");
+      expect(huelle.style.getPropertyValue("--panel-abzug")).toBe(ABZUG[ansicht]!["--panel-abzug"]);
+    } finally {
+      await abbauen();
+    }
+  });
+
+  it("hat in der Vollansicht weder Griff noch Breite", async () => {
+    const { behaelter, abbauen } = await rendereAnsicht(
+      ansicht,
+      `${adresse}&nachricht=a-2&voll=true`,
+    );
+
+    try {
+      const huelle = panelHuelle(behaelter);
+      expect(behaelter.querySelector('[role="separator"]')).toBeNull();
+      expect(huelle.className).not.toContain("--panelbreite");
+      expect(huelle.className).not.toContain("--eigenschaft-name-max");
+      expect(huelle.style.getPropertyValue("--panel-abzug")).toBe("");
+      expect(huelle.className).toContain("xl:max-w-inhalt");
+    } finally {
+      await abbauen();
     }
   });
 });

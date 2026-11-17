@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useTexte } from "@/i18n/provider";
 import { useBeginntOben, useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
 import { KLEBENDE_SPALTE_AB_XL, VOLLANSICHT_AB_XL } from "@/lib/klebende-spalte";
+import { PANEL_NEBEN_LISTE_AB_XL, panelNebenListe } from "@/lib/panelbreite";
 import { ROUTEN, zeileImNeuenTab } from "@/lib/routen";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +31,9 @@ import {
 } from "../hooks";
 import { Blaettern } from "./blaettern";
 import { Filterleiste } from "./filterleiste";
+import { NACHRICHTENLISTE } from "../spalten";
 import { NachrichtDetail } from "./nachricht-detail";
+import { PanelGriff } from "./panel-griff";
 import { NachrichtenTabelle } from "./nachrichten-tabelle";
 
 /**
@@ -272,19 +275,22 @@ export function NachrichtenAnsicht() {
         />
       </div>
 
+      {gewaehlt === null ? null : voll ? null : <PanelGriff huelle={panel} />}
+
       {gewaehlt === null ? null : (
         <div
           ref={panel}
+          // Das Maximum der ziehbaren Breite lässt der Liste ihre Grundmenge —
+          // aus `spalten.ts`, nicht abgeschrieben (E‑1208, `lib/panelbreite.ts`).
+          style={voll ? undefined : panelNebenListe(NACHRICHTENLISTE)}
           className={cn(
             "min-w-0",
             /*
-             * Neben der Liste die klebende Spalte (E‑115); in der Vollansicht
-             * die Breite der eigenen Route, und nichts klebt (E‑1194,
-             * `lib/klebende-spalte.ts`).
+             * Neben der Liste die klebende Spalte (E‑115) in der gezogenen
+             * Breite (E‑1208); in der Vollansicht die Breite der eigenen Route,
+             * und nichts klebt (E‑1194, `lib/klebende-spalte.ts`).
              */
-            voll
-              ? VOLLANSICHT_AB_XL
-              : cn("xl:w-[26rem] xl:shrink-0 2xl:w-[30rem]", KLEBENDE_SPALTE_AB_XL),
+            voll ? VOLLANSICHT_AB_XL : cn(PANEL_NEBEN_LISTE_AB_XL, KLEBENDE_SPALTE_AB_XL),
           )}
         >
           <NachrichtDetail
