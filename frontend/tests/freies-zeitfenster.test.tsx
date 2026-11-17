@@ -272,6 +272,19 @@ function meldungAm(feld: HTMLElement): string | null {
   return kennung === null ? null : (document.getElementById(kennung)?.textContent ?? null);
 }
 
+/**
+ * **Die Meldung trägt die ruhige Farbrolle** — eine Regel, die selbst eine Klasse
+ * ist. Gefunden in der Sichtprüfung vom 17.11.2026: `cn()` (tailwind-merge) hielt
+ * `text-beiwerk` für eine Textfarbe und warf `text-muted-foreground` weg.
+ */
+function meldungIstRuhig(feld: HTMLElement): void {
+  const absatz = document.getElementById(feld.getAttribute("aria-describedby") ?? "");
+  expect(absatz, "Meldung am Feld").not.toBeNull();
+  expect([...(absatz as HTMLElement).classList], "ruhige Farbrolle").toEqual(
+    expect.arrayContaining(["text-muted-foreground", "text-beiwerk"]),
+  );
+}
+
 /** Kein Fehlerbaustein über der Ansicht. */
 function ohneFehlerbaustein(behaelter: HTMLElement): void {
   expect(behaelter.querySelector('[role="alert"]'), "kein Fehlerbaustein").toBeNull();
@@ -375,6 +388,7 @@ describe("Die Nachrichtenliste: freies Fenster mit Datum und freiwilliger Uhrzei
       await tippeHalb(bisZeit);
 
       expect(meldungAm(bisZeit)).toBe(Z.uhrzeitUnvollstaendig);
+      meldungIstRuhig(bisZeit);
       expect(zeilen(gerendert.behaelter)).toHaveLength(3);
       expect(abrufe("/api/nachrichten"), "keine neue Anfrage").toHaveLength(vorher);
       expect(gerendert.adresse().get("bis"), "die Adresse bleibt").toBe("2026-07-07T21:59:59.000Z");
@@ -489,6 +503,7 @@ describe("Die Belegsuche: Zeitfenster mit Datum und freiwilliger Uhrzeit", () =>
       await tippeHalb(vonZeit);
 
       expect(meldungAm(vonZeit)).toBe(Z.uhrzeitUnvollstaendig);
+      meldungIstRuhig(vonZeit);
       expect(zeilen(gerendert.behaelter)).toHaveLength(3);
       expect(abrufe("/api/bam/suche"), "keine neue Anfrage").toHaveLength(vorher);
       ohneFehlerbaustein(gerendert.behaelter);
@@ -610,6 +625,14 @@ describe("Die Prozessansicht: freies Fenster mit Datum und Stundenwahl", () => {
       expect(gerendert.behaelter.textContent, "der Baum steht").toContain("BMW");
       expect(stundenwahl("von").textContent).toBe(Z.ganzerTag);
       expect(stundenwahl("bis").textContent).toBe(Z.ganzerTag);
+      // In der Zeile des Umschalters in Bedienelementhöhe, nicht in Feldhöhe — und
+      // nur eine der beiden, denn welche gewönne, entschiede die Reihenfolge im
+      // Stylesheet (gefunden in der Sichtprüfung vom 17.11.2026: 37,5 statt 30 px).
+      for (const grenze of ["von", "bis"] as const) {
+        const klassen = [...stundenwahl(grenze).classList];
+        expect(klassen, `Stundenwahl ${grenze}`).toContain("h-bedienelement");
+        expect(klassen, `Stundenwahl ${grenze}`).not.toContain("h-feld");
+      }
     } finally {
       await gerendert.abbauen();
     }
@@ -668,6 +691,7 @@ describe("Die Prozessansicht: freies Fenster mit Datum und Stundenwahl", () => {
       await tippeHalb(von);
 
       expect(meldungAm(von)).toBe(Z.datumUnvollstaendig);
+      meldungIstRuhig(von);
       expect(gerendert.behaelter.textContent).toContain("BMW");
       expect(abrufe("/api/prozesse/baum"), "keine neue Anfrage").toHaveLength(vorher);
       ohneFehlerbaustein(gerendert.behaelter);

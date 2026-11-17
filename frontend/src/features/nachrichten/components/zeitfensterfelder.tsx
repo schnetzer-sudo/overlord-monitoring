@@ -17,7 +17,6 @@ import {
   type Fenstervertrag,
 } from "@/lib/format";
 import type { ProblemFehler } from "@/lib/http";
-import { cn } from "@/lib/utils";
 
 const GRENZEN = ["von", "bis"] as const satisfies readonly Fenstergrenze[];
 
@@ -362,7 +361,7 @@ export function Zeitfensterfelder({
             beschriftung={name}
             wert={feld.entwurf.uhrzeit}
             eintraege={stundeneintraege(grenze)}
-            className="h-bedienelement"
+            hoehe="bedienelement"
             aufWahl={(wert) => {
               uebernimm(grenze, "uhrzeit", wert, false);
               glaette(grenze);
@@ -379,10 +378,14 @@ export function Zeitfensterfelder({
     hinweis === undefined ? null : (
       <p
         id={hinweisId}
-        className={cn(
-          "text-muted-foreground text-beiwerk",
-          anordnung === "untereinander" && "max-w-prose",
-        )}
+        // Bewusst ohne `cn()`: tailwind-merge hält `text-beiwerk` für eine
+        // Textfarbe und würfe `text-muted-foreground` weg (Sichtprüfung vom
+        // 17.11.2026).
+        className={
+          anordnung === "untereinander"
+            ? "text-muted-foreground text-beiwerk max-w-prose"
+            : "text-muted-foreground text-beiwerk"
+        }
       >
         {hinweis}
       </p>

@@ -93,7 +93,7 @@ export function AuswahlFeld<W extends string>({
   eintraege,
   aufWahl,
   gesperrt = false,
-  className,
+  hoehe = "feld",
 }: {
   /** Für `<Label htmlFor>` — das Feld ist der Auslöser. */
   id: string;
@@ -105,11 +105,15 @@ export function AuswahlFeld<W extends string>({
   aufWahl: (wert: W) => void;
   gesperrt?: boolean;
   /**
-   * Zusätzliche Klassen am geschlossenen Feld — etwa `h-bedienelement`, wo es in
-   * einer Zeile mit Schaltflächen steht (Prozessansicht, E‑1199). Sie gewinnen
-   * gegen die eigenen (`cn`).
+   * Die Höhe des geschlossenen Felds: `feld` im Formular, `bedienelement` in einer
+   * Zeile mit Schaltflächen (Stundenwahl der Prozessansicht, E‑1199).
+   *
+   * **Eine Wahl und keine `className`:** `cn()` kennt `h-feld` und
+   * `h-bedienelement` nicht als Höhen und ließe beide stehen — welche gewönne,
+   * entschiede die Reihenfolge im Stylesheet (gesehen am 17.11.2026: 37,5 statt
+   * 30 px).
    */
-  className?: string;
+  hoehe?: "feld" | "bedienelement";
 }) {
   const [offen, setOffen] = useState(false);
   const liste = useRef<HTMLUListElement>(null);
@@ -198,8 +202,8 @@ export function AuswahlFeld<W extends string>({
           aria-haspopup="listbox"
           onKeyDown={amFeld}
           className={cn(
-            "border-input focus-visible:border-ring focus-visible:ring-ring/50 h-feld flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-transparent px-2.5 py-1 text-left outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
-            className,
+            "border-input focus-visible:border-ring focus-visible:ring-ring/50 flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-transparent px-2.5 py-1 text-left outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
+            hoehe === "bedienelement" ? "h-bedienelement" : "h-feld",
           )}
         >
           <span className={cn("truncate", wert === "" && "text-muted-foreground")}>{anzeige}</span>
