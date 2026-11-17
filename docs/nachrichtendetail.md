@@ -1051,6 +1051,11 @@ lib/routen.ts                                + die beiden Zielrouten des Umschal
 > führt `VOLL_PARAMETER` und `zeileImNeuenTab`; `ansicht-umschalter.tsx` ist unverändert, schaltet aber
 > seit E‑1194 die Vollansicht der Seite statt auf die eigene Route.
 
+> **Fortgeschrieben am 17.11.2026 (§10.21).** Dazugekommen sind `components/kopier-knopf.tsx` — der
+> Kopierknopf samt Zustand (`KopierKnopf`, `useKopieren`), herausgelöst aus der `MessageID` in
+> `nachricht-detail.tsx` — und `kopieren.ts` mit der Entscheidung, wann ein Tippen auf einen Wert
+> kopiert (E‑1207).
+
 ### 10.1 Zwei Einhängepunkte, eine Komponente
 
 | Weg | Verhalten |
@@ -1232,6 +1237,15 @@ jemand in eine E-Mail an die EDI-Betreuung schreibt, und ohne Kopierfunktion tr�
 `varchar(36)`-UUID nichts. Scheitert das Kopieren (kein sicherer Kontext), bleibt der Wert sichtbar
 und markierbar stehen; eine Fehlermeldung für einen Knopf, der Beiwerk kopiert, wäre lauter als die
 Sache.
+
+> ### ⚠️ Korrektur vom 17.11.2026 — der Kopierknopf ist ein gemeinsamer Baustein, das Häkchen kehrt zurück (E‑1207)
+>
+> **Der Absatz darüber gilt weiter**, samt dem Verhalten ohne sicheren Kontext. Der Knopf stand inline
+> in `nachricht-detail.tsx` und ist nach `components/kopier-knopf.tsx` herausgelöst (`KopierKnopf`,
+> `useKopieren`); sein zweiter Verbraucher ist die Eigenschaftszeile (§10.5, §10.21). Zwei Dinge haben
+> sich dabei geändert: **Das Häkchen steht 1,5 s** und kehrt dann zum Kopierzeichen zurück — bis dahin
+> blieb es bis zum Nachrichtenwechsel stehen. Und der zugängliche Name steht in `aria-label` statt in
+> einer `sr-only`-Spanne; Name und Ansage sind dieselben.
 
 ### 10.4 Die Zeitleiste
 
@@ -1567,6 +1581,17 @@ aufklappt, will die Zeitleiste nicht verlieren.
 Name und Wert als Rohwerte in fester Laufweite, feste Zeilenhöhe, gekürzt mit Vollwert im `title`.
 **Ein gekappter Wert trägt ein sichtbares Kennzeichen** samt seiner ursprünglichen Länge in Bytes
 (§6) — ein stillschweigend abgeschnittener Wert ist schlimmer als ein sichtbar abgeschnittener.
+
+> ### ⚠️ Korrektur vom 17.11.2026 — die Zeile trägt einen Kopierknopf, Tippen kopiert am Touchgerät (E‑1207)
+>
+> **Der Absatz darüber gilt weiter:** Kürzung, `title` und Kappungskennzeichen sind unverändert. Neu ist
+> eine **dritte Spalte am Zeilenende** mit einem Kopierknopf, immer reserviert, verborgen über die
+> Deckkraft und sichtbar beim Überfahren der Zeile (nur unter `@media (hover: hover)`) und beim Fokus in
+> ihr. **Auf Geräten ohne Überfahren bleibt er unsichtbar, und ein Tippen auf den Wert kopiert ihn**; ein
+> Mausklick auf den Wert kopiert nicht. Die Rückmeldung ist in beiden Fällen dieselbe: das Häkchen für
+> 1,5 s in der dritten Spalte. Kopiert wird der Wert aus den Daten, bei einem gekappten der gelieferte
+> Teil. Weil die Zeile die eine Darstellung einer Eigenschaft ist (§10.16), gilt das im Block, unter dem
+> Eingang, unter jeder Schrittzeile und unter *Ohne Schritt in der Zeitleiste*. Vollständig in §10.21.
 
 **Bei `eigenschaftenAnzahl === 0` gibt es keinen Schalter**, sondern eine Zeile Text. Ein
 Bedienelement, das einen leeren Bereich öffnet, ist schlimmer als keins — dieselbe Regel wie beim
@@ -3379,6 +3404,194 @@ Kein Doppelklick. Kein Backend, kein Fenster in der Antwort der Liste. An der ei
 Prozessansicht. Keine zweispaltige Vollansicht. Baumzustand und Seitenstapel der Prozessansicht nach dem
 Umweg über eine Datei bleiben offen (Punkt 233).
 
+### 10.21 Kopierknopf je Eigenschaftswert und ziehbare Panelbreite *(17.11.2026, E‑1207, Zweig `feat/eigenschaft-kopieren`)*
+
+**Der Anlass, gemeldet von mehreren Nutzern:** Im Detailpanel enden viele Werte der technischen
+Eigenschaften mit „…“. Der Vollwert steht nur im `title`, und herauskopieren lässt er sich nicht.
+Entschieden vom Auftraggeber am 17.11.2026, in zwei Teilen: **Teil 1** ein Kopierknopf je
+Eigenschaftswert (dieser Abschnitt), **Teil 2** eine ziehbare Breite des Panels neben der Liste mit
+mitwachsender Namensspalte. **Teil 2 ist nicht gebaut**; er beginnt nach der Freigabe von Teil 1 und
+wird hier angehängt. **Nur Frontend:** kein Endpunkt, kein Statement, kein Feld, keine Migration —
+keine Abfrage, also keine Messung nach L7 und kein `EXPLAIN` in der Produktion.
+
+#### E‑1207: die Vorgabe des Auftraggebers
+
+| Nummer | Entscheidung des Auftraggebers | Umgesetzt in |
+|---|---|---|
+| **E‑1207** | **Kopierknopf „bei Überfahren“.** Der Knopf erscheint, wenn die Zeile überfahren wird oder den Fokus enthält. Auf Geräten ohne Überfahren bleibt er verborgen, und ein Tippen auf den Wert kopiert ihn | `features/nachrichten/components/eigenschaft-zeile.tsx` (die Zeile), `features/nachrichten/components/kopier-knopf.tsx` (`KopierKnopf`, `useKopieren`, herausgelöst aus der `MessageID`), `features/nachrichten/kopieren.ts` (`tippenKopiert`, `KOPIERT_ANZEIGE_MS`), `i18n/de.ts` und `en.ts` (`wertKopieren`, `wertKopiert`) |
+
+**Vergabe der Nummern** — jeder Treffer gelesen, nicht gezählt:
+
+| Was | Suche | Ergebnis |
+|---|---|---|
+| Entscheidungen | `git grep -o -E "E.{0,3}1(19[5-9]\|2[0-9][0-9])\b"` über alle lokalen und entfernten Zweige, `grep -rhoE` über `docs`, `frontend/src` und `frontend/tests` aller zehn Arbeitsbäume aus `git worktree list`; `.{0,3}` fängt den U+2011 bytegenau | höchste **E‑1206** (`nachrichtenliste.md`, Nachtrag vom 17.11.2026; dazu `benutzerverwaltung-frontend.md`, `process-view.md`, `auswahl-feld.tsx`, `rollen-auswahl.test.tsx` — alle sechs Fundstellen gelesen), nichts darüber. Folge: **E‑1207** für E‑A des Auftrags; E‑B bis E‑D vergibt Teil 2 neu nach derselben Suche |
+| Offene Punkte | `\| 10(5[5-9]\|[6-9][0-9]) \|` über `docs/offene-punkte.md` aller Zweige und Arbeitsbäume | höchste **1057**; das Register nennt „Nächste freie Nummer: 1058“. Folge: **1058 bis 1060** |
+| Messungen | — | keine: Die Sichtprüfung misst Lage und Verhalten, keine Abfrage |
+
+#### Was gebaut ist
+
+**Die Zeile** (`eigenschaft-zeile.tsx`) ist weiterhin die eine Darstellung einer Eigenschaft (§10.16),
+und damit steht der Knopf an allen vier Stellen ohne weiteren Eingriff: im Block *Technische
+Eigenschaften*, unter dem *Eingang*, unter jeder Schrittzeile und unter *Ohne Schritt in der
+Zeitleiste*.
+
+- **Die dritte Spalte.** Am Zeilenende, hinter dem Kappungskennzeichen, steht ein `button` fester
+  Größe (`size-7`, 1,75 rem), **immer reserviert**: Er nimmt seinen Platz auch verborgen ein, und der
+  Wert springt nicht, wenn er erscheint. `mr-1` hält ihn 0,25 rem vom rechten Rand, damit sein
+  Fokusring nicht an der Schnittkante des aufklappbaren Inhalts endet (`overflow-hidden`, §10.16).
+- **Verborgen über die Deckkraft** (`opacity-0`), nicht über `visibility`, `display` oder `hidden`. So
+  bleibt er in der Tab-Reihenfolge und für Vorleseprogramme erreichbar, auch am Touchgerät.
+- **Sichtbar** bei `:focus-within` der Zeile (`group-focus-within/eigenschaft:opacity-100`) und beim
+  Überfahren der Zeile (`group-hover/eigenschaft:opacity-100`), solange das Häkchen steht
+  (`data-kopiert:opacity-100`). **Das Überfahren gilt nur unter `@media (hover: hover)`, und das
+  leistet die `hover:`-Variante des Projekts von selbst:** Tailwind 4.3.3 legt jede `hover:`-Variante,
+  auch `group-hover:`, in diesen Block (in der installierten Quelle `dist/lib.js` gelesen und im
+  übersetzten CSS belegt, unten). Eine eigene Begrenzung ist deshalb nicht gebaut; ohne sie bliebe der
+  Knopf auf iOS nach einem Tippen hängend sichtbar.
+- **Kein Übergang** (`transition-none`): Der `Button` des Generators trägt `transition-all`, und ein
+  Überfahren, das einblendet, wäre genau der Übergang, den [`visuelles-konzept.md`](visuelles-konzept.md)
+  §7 im Nachrichtendetail ausschließt. `tailwind-merge` löst die beiden gegeneinander auf.
+- **Anfassbarkeit:** `button` mit `aria-label` **und** `title` „Wert von <Name> kopieren“, nach dem
+  Kopieren „Wert von <Name> kopiert“; Fokusring, `Enter` und `Leertaste` vom `Button`. Zeichen `Copy`,
+  nach dem Kopieren für **1,5 s** `Check` (`lucide-react`), dann wieder `Copy`. Farbe nur über Tokens
+  (`text-muted-foreground`, beim Überfahren des Knopfs die des Generators).
+- **Die Ansage** ist dieselbe wie an der `MessageID` seit Schritt 5: Der zugängliche Name wechselt.
+  Eine Live-Region hat der Knopf der `MessageID` nicht; deshalb auch dieser nicht. Kein Toast.
+- **Kopiert wird der Wert aus den Daten** (`wert` der Antwort), nie Text aus dem DOM. Bei einem
+  gekappten Wert ist das der gelieferte Teil; das Kappungskennzeichen bleibt, wie es ist.
+- **Ohne sicheren Kontext** (keine Zwischenablage, kein Recht) geschieht nichts: kein Fehler, kein
+  Häkchen, der Wert bleibt sichtbar und markierbar — das Verhalten der `MessageID` (§10.3).
+
+**Tippen auf den Wert.** Ein Klick auf den Wert kopiert, wenn er aus einem Finger oder Stift kommt,
+**entschieden je Geste** in `tippenKopiert` und nicht über `matchMedia` — ein Laptop mit Maus und
+Touchscreen kann beides. Ein Mausklick kopiert nicht; die Textauswahl bleibt dort unberührt. Das
+Häkchen erscheint in der dritten Spalte, auch wenn der Knopf sonst verborgen ist; der Wert selbst
+wird nicht ersetzt. **Zwei Quellen für die Zeigerart** (Abweichung, unten): zuerst `pointerType` am
+Klick, dann die Zeigerart des `pointerup` derselben Geste am Wert.
+
+**In aufklappbaren Zeilen schaltet ein Klick auf Knopf oder Wert nichts auf oder zu.** Das war schon
+so gebaut: Der Inhalt ist ein Geschwister der Schaltfläche und kein Nachfahre (§10.16); ein Test hält
+es jetzt fest.
+
+**Der gemeinsame Baustein.** Der Kopierknopf der `MessageID` stand inline in `nachricht-detail.tsx`
+(`Kennung`). Er ist nach `features/nachrichten/components/kopier-knopf.tsx` herausgelöst: `useKopieren(wert)` hält
+Zustand und Zeitgeber, `KopierKnopf` zeichnet den Knopf. Der Zustand liegt beim Aufrufer, weil die
+Zeile ihn auch ohne Knopf auslöst. Beide Verbraucher bekommen dasselbe Verhalten ohne sicheren
+Kontext und dieselbe Ansage.
+
+#### Abweichungen vom Auftrag, benannt
+
+| | |
+|---|---|
+| **Zweig `feat/eigenschaft-kopieren` statt `fix/eigenschaft-kopieren`** | `DEVELOPMENT_GUIDELINES.md` §12 ist seit 1.1.0 neu gefasst (E‑1127): Weiterentwicklung auf `feat/<thema>`, Fixes auf `fix/<thema>`. Der Auftrag sah vor, in dem Fall der neuen Regel zu folgen. Teil 2 heißt entsprechend `feat/panelbreite` |
+| **§10.21 statt §10.19** | §10.19 (Ende je Schritt, E‑1184) und §10.20 (Vollansicht, E‑1194 bis E‑1197) waren vergeben |
+| **Zwei Quellen für die Zeigerart** | Der Auftrag entscheidet allein am `pointerType` des Klickereignisses. **Safari feuert den Klick erst seit 18.2 als `PointerEvent` und meldet dort beim Tippen `"mouse"`**; `pointerup` und `pointerdown` derselben Geste tragen `"touch"` (WebKit-Bug 282988, Stand der Recherche 17.11.2026: wieder geöffnet). Davor war der Klick ein `MouseEvent` ohne Zeigerart. Allein am Klick entschieden, kopierte ein Tippen am iPhone also nicht. `tippenKopiert` nimmt deshalb zuerst die Zeigerart am Klick und sonst die des `pointerup` derselben Geste am Wert. Weiterhin je Geste, nicht über `matchMedia`; eine echte Maus meldet an beiden Stellen `"mouse"`. Am echten Gerät nicht gesehen (Punkt 1060) |
+| **Das Häkchen der `MessageID` kehrt nach 1,5 s zurück** | Bis dahin blieb es bis zum Nachrichtenwechsel stehen. Mit dem gemeinsamen Baustein gilt die Rückmeldung aus dem Auftrag für beide. Der zugängliche Name steht jetzt in `aria-label` statt in einer `sr-only`-Spanne — derselbe Name, dieselbe Ansage |
+| **Knopfgröße `size-7`, nicht die Höhe eines Bedienelements** | Die `MessageID` trägt `min-h-bedienelement`, das unter `pointer: coarse` auf 44 px springt. Die Zeile ist fest `h-zeile` (2,25 rem); ein 44‑px‑Knopf ragte am Touchgerät über die Nachbarzeilen. Dort ist er ohnehin verborgen, und das Ziel ist der Wert |
+| **Datenstand und Prüfnachricht** | Die Testkopie reicht für `NEXANS` bis **30.12.2025, 03:09:47 UTC**, nicht bis 08.07.2026 (gelesen über `/api/nachrichten?zeitraum=24h`). **Eine Zusammenführung fand sich in den 400 jüngsten Nachrichten der sieben Tage nicht** (keine Rolle `MERGE_*`); unter den 200 jüngsten war der längste Eigenschaftswert 62 Zeichen lang. Geprüft ist an `ea1060ee-…` (Lieferabruf BMW, VDA): Ihre GUID-Werte mit 52 Zeichen sind im Panel gekürzt, und sie trägt Werte im Block, unter dem Eingang und unter zwei Schritten |
+| **Geräteemulation über das Protokoll** | „In der Geräteemulation der Entwicklerwerkzeuge“ ist über das Chrome-DevTools-Protokoll gefahren — `Emulation.setTouchEmulationEnabled` und `setDeviceMetricsOverride` mit `mobile: true`, derselbe Mechanismus wie der Gerätemodus der Oberfläche. Thema und Anzeigegröße sind per Cookie gesetzt, nicht über das Menü geklickt; geklickt, getippt und getastet ist die Prüfung selbst |
+| **Die Sichtbarkeitsregel ist gegen Tailwind geprüft** | Der Auftrag verlangt die Prüfung über die Klassen. Der Test liest die Klassen am gerenderten Knopf **und** übersetzt sie mit dem `globals.css` des Projekts: Die Regel des Überfahrens muss in `@media (hover: hover)` stehen, die des Fokus in keinem `@media`. Eine eigene `@custom-variant hover` fiele damit auf (Verletzungsprobe P11) |
+| **Ein bestehender Fall ist angepasst** | `tests/eigenschaften-block.test.tsx` zählte alle Knöpfe der Zeitleiste (`ol button`) als Zeilenschalter. Seit E‑1207 steht im Inhalt der Schrittzeile der Kopierknopf; der Fall zählt jetzt `ol button[aria-controls]` |
+| **Befund für Teil 2, nicht geändert** | Die Namensspalte der Eigenschaftszeile ist `w-2/5` der Zeile und hängt **nicht** am Token `--dichte-beschriftung` des BAM-Blocks. Auf der eigenen Route ist sie damit heute rund 40 % von 72 rem, nicht 16 rem. Teil 2 („auf der eigenen Route 16 rem wie bisher“) setzt Letzteres voraus — zu klären vor Teil 2 |
+
+#### Tests
+
+**Vor dem Bau 1.691 Fälle in 58 Dateien, nach dem Bau 1.708 in 59; `pnpm check` grün.** Neu:
+
+| Datei | Fälle | Was |
+|---|---:|---|
+| `tests/eigenschaft-kopieren.test.tsx` *(neu, gerendert)* | 10 | je Zeile genau ein Knopf mit dem Namen im zugänglichen Namen, am Zeilenende; der Knopf kopiert den vollen Wert, gekappt den gelieferten Teil, das Kennzeichen bleibt; Tippen (`touch`, `pen`) kopiert und zeigt das Häkchen am verborgenen Knopf; ein Mausklick und ein Klick ohne Zeigerart kopieren nicht; Häkchen und zurück nach 1.500 ms (gestellte Uhr); ohne Zwischenablage kein Häkchen; fokussierbar ohne Überfahren; die Sichtbarkeitsregel an den Klassen und gegen Tailwind; in der aufgeklappten Schrittzeile schaltet weder Knopf noch Wert; der Knopf der `MessageID` ist derselbe Baustein |
+| `tests/nachrichtendetail.test.ts` | +4 | `tippenKopiert`: Finger und Stift ja, Maus nein; der Rückfall auf `pointerup` (Safari); ohne, leere und unbekannte Zeigerart nein; 1.500 ms |
+
+Dazu je ein Fall in `farbwerte` für die beiden neuen Quelldateien und einer in `serverbausteine` für
+`kopieren.ts` (die Datei ohne `"use client"`) — zusammen 17 —, und der eine angepasste Fall oben.
+Die gerenderten Fälle zählt `vitest.config.mts`: **386 in 31 Dateien**, vorher 376 in 30. **Der Test der Sprachdateien bleibt grün.**
+
+**Verletzungsproben** — je eine Stelle geändert, die beiden Testdateien gelaufen, die Datei aus einer
+Kopie zurückgeschrieben (nicht per `git checkout`, `git status` danach wie davor). **Geeicht in beide
+Richtungen:** ohne Eingriff und mit einem folgenlosen Kommentar bleibt alles grün.
+
+| Probe | Eingriff | rot |
+|---|---|---:|
+| P0 | keiner (Eichung) | 0 |
+| PK | ein Kommentar in `kopieren.ts` (Eichung: folgenlos) | 0 |
+| P1 | ohne `group-hover/eigenschaft:opacity-100` | 1 |
+| P2 | ohne `group-focus-within/eigenschaft:opacity-100` | 1 |
+| P3 | `invisible` statt `opacity-0` | 1 |
+| P4 | ohne `transition-none` | 1 |
+| P5 | die Maus kopiert auch | 4 |
+| P6 | Tippen kopiert nicht | 2 |
+| P7 | ohne den Rückfall auf `pointerup` | 1 |
+| P8 | das Häkchen bleibt stehen | 1 |
+| P9 | ein Element hinter dem Knopf (die dritte Spalte nicht am Zeilenende) | 1 |
+| P10 | ohne `data-kopiert:opacity-100` | 1 |
+| P11 | `@custom-variant hover (&:hover)` in `globals.css` — Überfahren ohne `(hover: hover)` | 1 |
+| P12 | der Name fehlt im zugänglichen Namen | 2 |
+| P13 | die `MessageID` ohne den gemeinsamen Baustein (Kennzeichen entfernt) | 1 |
+
+**Nicht als Probe zu fahren:** dass der Wert aus den Daten und nicht aus dem DOM kopiert wird. In
+`jsdom` gleicht der Text des Elements dem Wert — die Kürzung ist CSS. Belegt ist es im Code und im
+Browser (unten: eingefügt gleich `title`).
+
+#### Sichtprüfung im Browser (17.11.2026)
+
+`next dev` des Zweigs auf `:3000` gegen das Backend auf `:8080` (Profil `dev`, die Testkopie), beide
+aus diesem Arbeitsbaum gestartet, weil keine Dienste liefen. Ein eigenes Chrome mit Port 9222 und
+frischem Profil; **angemeldet hat sich der Auftraggeber** (`admin`, Mandant `NEXANS`). Gefahren über
+das Protokoll in einem eigenen Tab, danach geschlossen: Fläche 1.920 × 1.000
+(`setDeviceMetricsOverride`), `Emulation.setFocusEmulationEnabled`, Zwischenablage freigegeben
+(`Browser.grantPermissions`). **Echte Eingaben:** Überfahren und Klicks über
+`Input.dispatchMouseEvent`, `Tab` und `Enter` über `Input.dispatchKeyEvent`, Tippen über
+`Input.dispatchTouchEvent`; **eingefügt** wird per Strg+V (`commands: ["paste"]`) in ein Hilfsfeld,
+das danach wieder entfernt ist. Gemessen wird aus dem Dokument. Nachricht `ea1060ee-…`, Panel neben
+der Liste.
+
+**Ablauf je Zeile:** Maus weg, messen → Zeile überfahren → Klick auf den Namen, Maus weg → `Tab` →
+`Enter` → einfügen → 1,6 s warten.
+
+| Lage | Zeile | ruhend | überfahren | `Tab` | `Enter` | eingefügt = `title` | nach 1,6 s | Wert verschoben |
+|---|---|---|---|---|---|---|---|---|
+| hell, `xs` (Wurzel 14 px) | Block, `Message.Payload.GUID` | Deckkraft 0, gekürzt | 1 | Fokus am Knopf, Deckkraft 1 | `Check`, „… kopiert“ | ja, 52 Zeichen | `Copy`, „… kopieren“ | nein |
+| hell, `xs` | Eingang, `OFTPReader.Log.GUID` | 0, gekürzt | 1 | am Knopf, 1 | `Check` | ja, 52 | `Copy` | nein |
+| hell, `xs` | Schritt *Format Conversion*, `Converter.Log.GUID` | 0, gekürzt | 1 | am Knopf, 1 | `Check` | ja, 52 | `Copy` | nein |
+| hell, `l` (Wurzel 18 px) | Block | 0, gekürzt | 1 | am Knopf, 1 | `Check` | ja, 52 | `Copy` | nein |
+| dunkel, `xs` | Block | 0, gekürzt | 1 | am Knopf, 1 | `Check` | ja, 52 | `Copy` | nein |
+| dunkel, `l` | Block | 0, gekürzt | 1 | am Knopf, 1 | `Check` | ja, 52 | `Copy` | nein |
+
+- **Maße:** Knopf 24,5 × 24,5 px in `xs`, 31,5 × 31,5 px in `l`; Zeile 31,5 beziehungsweise 40,5 px;
+  `transition-property: none`. Nach dem Klick auf den Namen und mit der Maus außerhalb steht die
+  Deckkraft wieder auf 0.
+- **Ein Mausklick auf den Wert** (`Converter.Log.GUID`, zweite Zeile): Ereignisse `pointerup:mouse`,
+  `click:mouse`; Zeichen bleibt `Copy`, die Zwischenablage behält den vorher gesetzten Text. Alle fünf
+  aufklappbaren Zeilen (Belegdaten, Technische Eigenschaften, Eingang, zwei Schritte) bleiben offen.
+- **Fokusring** am Knopf der Schrittzeile vollständig, nicht an der Schnittkante abgeschnitten (Bild
+  `fokus-hell-xs-schritt.png`); im Dunkelmodus das gedämpfte Zeichen beim Überfahren
+  (`ueberfahren-dunkel-l-block.png`).
+
+**Geräteemulation** (Berührung, 1.366 × 1.024, `mobile: true`, hell, `m`): `(hover: hover)` falsch,
+`(pointer: coarse)` wahr. Der Block lässt sich per Tippen aufklappen. Ruhend Deckkraft 0. **Tippen
+auf den Namen:** Deckkraft 0 — kein hängendes Überfahren. **Tippen auf den Wert:** Ereignisse
+`pointerup:touch`, `click:touch`; Zeichen `Check`, Deckkraft 1, der Wert unverschoben; eingefügt gleich
+`title` (52 Zeichen). **Nach 1,6 s:** `Copy`, Deckkraft 0 — kein sichtbarer Knopf (Bild
+`touch-haekchen.png`).
+
+> **Belegvermerk** (Regel L10).
+> *Gesehen:* alle Zahlen und Zustände der Tabelle und der beiden Absätze darunter, gelesen aus dem
+> Dokument (`getBoundingClientRect`, `getComputedStyle`, `aria-label`, das eingefügte Feld) — und die drei
+> Bilder.
+> *Behauptet:* dass ein Tippen am iPhone kopiert und der Knopf dort nicht hängen bleibt.
+> **Die Lücke:** Chrome liefert am Klick `pointerType: "touch"`, die Emulation zeigt also nur den ersten
+> Weg von `tippenKopiert`. Den Rückfall auf `pointerup` belegen der reine Test und Probe P7, nicht der
+> Browser; Safari am echten Gerät ist nicht gesehen (Punkt 1060).
+
+#### Was nicht gebaut ist
+
+Kein Kopierknopf an Belegdaten (Punkt 1059), Kopf (Projekt, Prozess), Schrittnamen der Zeitleiste,
+Kettenblock oder Liste. Kein Kopieren per Mausklick auf den Wert. Kein dauerhaft sichtbarer Knopf am
+Touchgerät und kein Hinweistext dazu (Punkt 1058). Kein Toast, keine Animation, kein Übergang. Nichts an
+Kürzung, `title` und Kappungskennzeichen. Kein neuer Generatorbaustein (Skill `shadcn`: der vorhandene
+`Button`); keine neue Abhängigkeit.
+
 ---
 
 ## 11. Die bewussten Nicht-Entscheidungen
@@ -3661,3 +3874,16 @@ aufgelöst — das ist Schritt 8.
   um zur Liste zu kommen. So gebaut, weil nichts unter `xl` gebaut werden sollte und eine Abfrage der
   Fensterbreite in JavaScript ein zweiter Umbruchpunkt wäre (§10.7). Ob `voll` beim Teilen eines
   Links mitgehen soll, ist eine Entscheidung des Auftraggebers.
+- **1058 — Tippen zum Kopieren am Touchgerät ohne sichtbaren Hinweis** (17.11.2026, E‑1207, §10.21).
+  Am Gerät ohne Überfahren ist der Kopierknopf unsichtbar; dass ein Tippen auf den Wert kopiert,
+  erfährt der Nutzer erst durch das Häkchen. **Bewusst getragen**: Entscheidung des Auftraggebers, kein
+  dauerhaft sichtbarer Knopf und kein Hinweistext. Wieder aufzugreifen, wenn Nutzer am Tablet den
+  Weg nicht finden.
+- **1059 — Kein Kopierknopf an den Belegdaten** (17.11.2026, E‑1207, §10.21). **Bewusst nicht gebaut**
+  (Auftrag vom 17.11.2026, „Nicht bauen“). Belegnummern sind das, was ein Nutzer am ehesten
+  weitergibt; ob sie einen Knopf bekommen, ist eine eigene Entscheidung.
+- **1060 — Tippen zum Kopieren am echten Touchgerät nicht gesehen** (17.11.2026, §10.21). Gesehen ist
+  es in der Berührungsemulation von Chrome, wo der Klick `pointerType: "touch"` trägt. Der Rückfall auf
+  das `pointerup` derselben Geste — gebaut für Safari, das den Klick beim Tippen als `"mouse"` meldet
+  (WebKit-Bug 282988) — ist nur im Test belegt. Nachzuholen an einem iPhone oder iPad mit Safari und an
+  einem Android-Gerät: Tippen kopiert, das Häkchen erscheint, der Knopf bleibt danach nicht stehen.

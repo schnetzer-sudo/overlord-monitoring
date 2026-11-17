@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1058.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1061.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -44,18 +44,19 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 | | Teil 1: projektweit | Teil 2: Sichtprüfungen | Teil 3: lokal |
 |---|---:|---:|---:|
 | offen — Fehler | 32 | 0 | — |
-| offen — Verbesserung | 50 | 0 | — |
+| offen — Verbesserung | 52 | 0 | — |
 | offen — Entscheidung offen | 54 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 67 | 13 | — |
-| **offen gesamt** | **203** | **13** | — |
+| offen — Sichtprüfung oder Messung offen | 68 | 13 | — |
+| **offen gesamt** | **206** | **13** | — |
 | ungeprüft | — | — | 356 |
-| erledigt | 69 | 0 | 65 |
+| erledigt | 70 | 0 | 65 |
 | gegenstandslos | 3 | 0 | 5 |
-| **Zeilen** | 275 | 13 | 426 |
+| **Zeilen** | 279 | 13 | 426 |
 
-Offen sind damit **216** nummerierte Punkte; dazu kommen 356 ungeprüfte lokale (Teil 1 und Teil 3
-gezählt am 17.11.2026 nach „Vollansicht überall“ per Skript über die Tabellen; Teil 3 zuvor vom
-06.11.2026, seither nur `property-suche.md` §15 Nr. 14 aufgegriffen). Davon
+Offen sind damit **219** nummerierte Punkte; dazu kommen 356 ungeprüfte lokale (Teil 1 gezählt am
+17.11.2026 nach dem Kopierknopf je Eigenschaftswert per Skript über die Tabelle, dabei die bis dahin
+nicht nachgezählte, erledigte Zeile 1057 mitgezählt; Teil 3 am 17.11.2026 nach „Vollansicht überall“, davor
+vom 06.11.2026, seither nur `property-suche.md` §15 Nr. 14 aufgegriffen). Davon
 stammen 37 aus der Linie `assistent` und ihrer Zusammenführung (1000 bis 1006 aus A1; 1010 und 1012
 bis 1015 aus A2; 1017 bis 1022 aus A3; 1023 bis 1032 aus A4; 1033 bis 1037 aus 1.1.0; 1038 bis 1041
 aus dem Nachtrag zu 1.1.0, der Deployment-Routine). Dazu kommen 1042 bis 1044 aus dem Fix „Antworten
@@ -66,7 +67,8 @@ Auftraggebers am selben Tag erledigt. 1048 und 1049 (beide am 09.11.2026 erledig
 aus den Fixes an „Ihre Aufträge“ vom 09. und 10.11.2026, 1051 und 1052 aus „Ihre Aufträge neu
 gegliedert“ vom 10.11.2026, 1053 bis 1056 aus „Vollansicht überall“ vom 17.11.2026 (1053 ist der
 aufgegriffene lokale Punkt `property-suche.md` §15 Nr. 14 und am selben Tag erledigt, 1054 ebenso
-am selben Tag). 1009 ist
+am selben Tag), 1057 aus „Freies Zeitfenster“ vom selben Tag (dort erledigt), 1058 bis 1060 aus dem
+Kopierknopf je Eigenschaftswert vom selben Tag. 1009 ist
 seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
 M1003 erledigt. Am selben Tag erledigt: 255, 260 und 261 (`betrieb.md` §9).
 
@@ -361,6 +363,9 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1055 | Strg-, Cmd- und Mittelklick auf eine Zeile: ob der Mittelklick unter Windows das automatische Scrollen wirklich nicht startet, ob der neue Tab wie bei einem Verweis im Hintergrund aufgeht, und der Cmd-Klick unter macOS — über das Chrome-DevTools-Protokoll nicht zu sehen | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | offen — teilweise gesehen: Strg-Klick öffnet im Hintergrund (`nachrichtendetail.md` §10.20, „Nachgeholt“); offen Mittelklick samt automatischem Scrollen an echter Maus und Cmd-Klick unter macOS |
 | 1056 | Eine Adresse mit `voll` unter `xl`: Die Vollansicht ändert dort nichts, der Umschalter ist unsichtbar, und `Escape` verkleinert zuerst ohne sichtbare Wirkung — wer am schmalen Fenster einen solchen Link öffnet, drückt `Escape` zweimal | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Entscheidung offen | offen |
 | 1057 | „Auf ein Jahr erweitern“ in der Belegsuche schreibt das `bis` der Antwort mit Sekunden und Millisekunden; die Uhrzeitfelder zeigen es seit E‑1198 mit (`04:35:49,253`) — korrekt, aber unruhig für ein Minutenfeld. Anker auf die Minute runden? | [`nachrichtenliste.md`](nachrichtenliste.md) §8.2 · [`bam-suche.md`](bam-suche.md) §11.6 · 17.11.2026 | Entscheidung offen | **erledigt** — E‑1205 am selben Tag: „Bis“ auf das Ende seiner Stunde aufgerundet, „Von“ 365 Kalendertage davor zur vollen Stunde (`005e6e4`, [`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Nachtrag) |
+| 1058 | Tippen zum Kopieren am Touchgerät ohne sichtbaren Hinweis: Ohne Überfahren ist der Kopierknopf einer Eigenschaftszeile unsichtbar, dass ein Tippen auf den Wert kopiert, zeigt erst das Häkchen. Bewusst getragen (E‑1207) | [`nachrichtendetail.md`](nachrichtendetail.md) §10.21, §13 · 17.11.2026 | Verbesserung | offen — bewusst getragen |
+| 1059 | Kein Kopierknopf an den Belegdaten; bewusst nicht gebaut (Auftrag zu E‑1207) | [`nachrichtendetail.md`](nachrichtendetail.md) §10.21, §13 · 17.11.2026 | Verbesserung | offen — bewusst nicht gebaut |
+| 1060 | Tippen zum Kopieren am echten Touchgerät nicht gesehen: Safari meldet den Klick beim Tippen als `mouse` (WebKit-Bug 282988), der Rückfall auf `pointerup` ist nur im Test belegt; nachzuholen an iPhone oder iPad mit Safari und an einem Android-Gerät | [`nachrichtendetail.md`](nachrichtendetail.md) §10.21, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | offen |
 
 ---
 

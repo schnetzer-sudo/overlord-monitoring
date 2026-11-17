@@ -759,7 +759,7 @@ und weiterläuft. Eine ArchUnit-Regel hält das Verbot von `now()`.
 | Rollup je Stunde, Tag und Monat mit Delta- und Volllauf | [`rollup.md`](rollup.md) |
 | Live-Rest der laufenden Stunde und Fehler live in Baum und Übersicht | [`live-rest.md`](live-rest.md), [`fehler-live.md`](fehler-live.md) |
 | Nachrichtenliste mit Pflicht-Zeitfenster, Cursor, Filtern, Freitextsuche und Fensterverengung | [`nachrichtenliste.md`](nachrichtenliste.md), [`prozessauswahl.md`](prozessauswahl.md) |
-| Nachrichtendetail mit Schrittfolge in Klartext, Eigenschaften und Zeitleiste | [`nachrichtendetail.md`](nachrichtendetail.md) |
+| Nachrichtendetail mit Schrittfolge in Klartext, Eigenschaften mit Kopierknopf je Wert und Zeitleiste | [`nachrichtendetail.md`](nachrichtendetail.md) |
 | Verkettung über Aufteilung, Zusammenführung und Quittung | [`verkettung.md`](verkettung.md) |
 | Belegdaten am Detail | [`bam-werte.md`](bam-werte.md) |
 | Belegsuche („wo ist mein Lieferschein?“), exakt und mit Präfix, mit kuratierten Sollängen | [`bam-suche.md`](bam-suche.md), [`bam-sollaengen.md`](bam-sollaengen.md) |
