@@ -2129,6 +2129,69 @@ spürbar mehr Zeilen ins Fenster.
 > ist deshalb übersprungen. Als Eichung haben E‑161 und M178 angeschlagen. Der Punkt **182** ist auf
 > demselben Zweig vergeben, **183** ist frei.
 
+> ### ⚠️ Korrektur vom 17.11.2026 — ab der Schwelle ist das Projekt fest, Status und Ablauf teilen den Rest (E‑1193, M1018)
+>
+> **Der Kasten darüber bleibt wortgleich stehen.** Überholt sind seine Entscheidung *„Sobald das
+> Projekt dasteht, ist es die freie Spalte"* und in seiner Tabelle die Spalte „ab 1.167 px Hülle":
+> Status 17,875 rem, Ablauf 25,5 rem und Projekt „Rest". Ebenso überholt sind die beiden späteren
+> Kästen dieses Abschnitts, soweit sie sagen, die Statusspalte sei ab der Schwelle 17,875 rem breit
+> und das Projekt nehme den Rest.
+>
+> **Der Anlass:** eine Meldung des Auftraggebers vom 17.11.2026 aus der Produktion, Liste über die
+> volle Breite, Hülle rund 1.670 px. Projektnamen sind kurz, am breiten Fenster blieb rechts eine
+> große Lücke, und die Statusspalte kürzte den Schritt („Schritt: Conversion VDA4913 to…").
+>
+> **E‑1193 — die Entscheidung:** *E‑149 gilt auch für die Nachrichtenliste. Das Projekt ist nicht
+> mehr die freie Spalte.* Ab der Schwelle tragen Zeitpunkt und Projekt bei jeder Hüllenbreite ihre
+> Mindestbreite, und der Überschuss teilt sich auf Status und Ablauf im Verhältnis ihrer Breiten an
+> der Schwelle, 286 : 408. **An der Schwelle und darunter ändert sich nichts.** Schwelle (1.167 px),
+> Grundmenge (751 px) und Mindestbreiten bleiben, und unter der Schwelle kürzt der Schritt weiter.
+>
+> | Spalte | unter 1.167 px Hülle | ab 1.167 px Hülle (`@min-[72.9375rem]/nachrichtenliste`) |
+> |---|---|---|
+> | Zeitpunkt | 11,6875 rem (187 px) | unverändert |
+> | Status | 9,75 rem (156 px) | `calc((100cqw − 29,5625 rem) · 286/694)`, an der Schwelle 286 px |
+> | Ablauf | Rest | **Rest** — das ist 408/694 des Platzes neben Zeitpunkt und Projekt, an der Schwelle 408 px |
+> | Projekt | nicht da | **17,875 rem (286 px)**, bei jeder Breite |
+>
+> `table-layout: fixed` allein hätte den Überschuss auf alle vier bemaßten Spalten verteilt. Die
+> Statusspalte rechnet ihren Anteil deshalb aus der Breite der eigenen Hülle (`cqw`); 29,5625 rem sind
+> Zeitpunkt und Projekt. Der Ablauf bleibt freie Spalte und gleicht Rundungen aus. Die Herleitung
+> steht in [`spaltenwahl.md`](spaltenwahl.md) §5.4, Korrektur vom 17.11.2026.
+>
+> **M1018 — vorher gegen nachher, Dichte `m`** (Zeitpunkt · Status · Ablauf · Projekt, px). „Vorher" ist
+> aus den Klassen auf `main` gerechnet; bei 1.144, 1.208 und 1.655 px stand es so auch in M180
+> gemessen da. „Nachher" ist gemessen:
+>
+> | Fall | Hülle | vorher | nachher, gemessen |
+> |---|---:|---|---|
+> | `/nachrichten` ohne Panel, 1920 px | 1.655 | 187 · 286 · 408 · 774 | 187 · 487,094 · 694,906 · 286 |
+> | `/nachrichten` neben dem Panel, 1920 px | 1.159 | 187 · 156 · 816 · – | 187 · 156 · 816 · – |
+> | Prozessansicht neben dem Baum, 1920 px | 1.208 | 187 · 286 · 408 · 327 | 187 · 302,891 · 432,109 · 286 |
+> | Prozessansicht neben dem Panel, 1920 px | 1.144 | 187 · 156 · 801 · – | 187 · 156 · 801 · – |
+> | Hülle gestellt, die Meldung | 1.670 | 187 · 286 · 408 · 789 | 187 · 493,281 · 703,719 · 286 |
+> | Hülle gestellt | 1.920 | 187 · 286 · 408 · 1.039 | 187 · 596,313 · 850,688 · 286 |
+>
+> Bei `xs` steht `/nachrichten` ohne Panel (1.686 px) auf 163,625 · 524,234 · 747,891 · 250,25,
+> vorher 163,625 · 250,25 · 357 · 915,125. Bei `xs` hat die Liste auch neben dem Panel (1.252 px) alle
+> vier Spalten, denn die Schwelle liegt dort bei 1.021,125 px. **Kein Querlauf** in einem der Fälle,
+> **keine gekürzte Zelle ab der Schwelle**: Neben „Wartend" stehen 0 von 50 Schritten gekürzt, bei
+> 1.655 px (`m`) wie bei 1.686 px (`xs`). Unter der Schwelle sind es weiterhin 50 von 50, bei 751 und
+> bei 1.166 px.
+>
+> **Was es kostet:** Ein Projektname über 286 px kürzt jetzt auch am breiten Fenster, mit vollem
+> `title` (286 px ist der längste aus M177; in M1018 ist keiner gekürzt). Und die Statusspalte ist
+> breiter, als eine Plakette ohne Schritt braucht. Der Leerraum steht jetzt in Status und Ablauf statt
+> hinter dem Projekt.
+>
+> > **Belegvermerk** *(Regel L10)*. *Gemessen:* Chrome 157 mit Debug-Port, angemeldet durch den
+> > Auftraggeber, Entwicklungsbau auf `:3002`, Backend `dev` auf `:8081`, Mandant `NEXANS`, Dichte `m`
+> > und `xs`, je 50 Zeilen. Vollständig mit den gestellten Hüllen und den Kanten bei 750 bis 1.167 px
+> > in [`spaltenwahl.md`](spaltenwahl.md) §5.4. *Gerechnet, nicht gemessen:* die Spalte „vorher" bei
+> > 1.159, 1.670 und 1.920 px. *Nicht gemessen:* die Dichten `s` und `l`, Englisch, ein zweiter
+> > Mandant, Firefox. *Nicht gesehen:* der lange Schritt aus der Meldung, denn die Testkopie kennt nur
+> > „Send Message to Pool".
+
 > ### ⚠️ Was „Ablauf bekommt den Rest" heißt, wenn kein Rest da ist — gemessen am 02.09.2026
 >
 > Aufgefallen beim Bau der Prozessansicht, die diese Tabelle in einer **schmalen Spalte neben einem
