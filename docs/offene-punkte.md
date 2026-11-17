@@ -30,7 +30,7 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
   vergeben.
 - **Seit 1.1.0 (21.10.2026) eine Linie** (E‑1127): Neue Punkte schließen an die höchste vergebene
   Nummer an; der Bereich unter 1000 wird nicht weiter befüllt. Bis dahin begannen die Nummern auf
-  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1057.**
+  `assistent` bei 1000 (Entscheidung 7). **Nächste freie Nummer: 1058.**
 - **Doppelvergaben sind aufgelöst** (16.10.2026): 136 und 186 bis 189 waren je zweimal vergeben. Die
   Nummer behielt der Punkt, auf den andere Dateien öfter verweisen; der andere bekam 247 bzw. 248 bis
   251, mit datiertem Vermerk an seiner Fundstelle.
@@ -360,6 +360,7 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1054 | Vollansicht in Prozessansicht und Belegsuche, eigene Route mit Absprung und der Bildlauf der Übertragungsliste nach dem Verkleinern im Browser ungesehen; die Sichtprüfung brach nach der Nachrichtenliste ab | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | **erledigt** — `nachrichtendetail.md` §10.20: „Nachgeholt am 17.11.2026 … Damit ist Punkt 1054 erledigt“ |
 | 1055 | Strg-, Cmd- und Mittelklick auf eine Zeile: ob der Mittelklick unter Windows das automatische Scrollen wirklich nicht startet, ob der neue Tab wie bei einem Verweis im Hintergrund aufgeht, und der Cmd-Klick unter macOS — über das Chrome-DevTools-Protokoll nicht zu sehen | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | offen — teilweise gesehen: Strg-Klick öffnet im Hintergrund (`nachrichtendetail.md` §10.20, „Nachgeholt“); offen Mittelklick samt automatischem Scrollen an echter Maus und Cmd-Klick unter macOS |
 | 1056 | Eine Adresse mit `voll` unter `xl`: Die Vollansicht ändert dort nichts, der Umschalter ist unsichtbar, und `Escape` verkleinert zuerst ohne sichtbare Wirkung — wer am schmalen Fenster einen solchen Link öffnet, drückt `Escape` zweimal | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Entscheidung offen | offen |
+| 1057 | „Auf ein Jahr erweitern“ in der Belegsuche schreibt das `bis` der Antwort mit Sekunden und Millisekunden; die Uhrzeitfelder zeigen es seit E‑1198 mit (`04:35:49,253`) — korrekt, aber unruhig für ein Minutenfeld. Anker auf die Minute runden? | [`nachrichtenliste.md`](nachrichtenliste.md) §8.2 · [`bam-suche.md`](bam-suche.md) §11.6 · 17.11.2026 | Entscheidung offen | **erledigt** — E‑1205 am selben Tag: „Bis“ auf das Ende seiner Stunde aufgerundet, „Von“ 365 Kalendertage davor zur vollen Stunde (`005e6e4`, [`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Nachtrag) |
 
 ---
 

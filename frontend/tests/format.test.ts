@@ -12,7 +12,12 @@ import {
   formatiereZahl,
   formatiereZeitpunkt,
   formatiereZeitpunktGenau,
+  datumUndUhrzeitFuerEingabe,
+  stundenende,
+  stundeneintraege,
+  tageZurueckZurVollenStunde,
   wanduhrzeitFuerEingabe,
+  zeitpunktAusDatumUndUhrzeit,
   zeitpunktAusWanduhrzeit,
 } from "@/lib/format";
 
@@ -247,6 +252,278 @@ describe("Wanduhrzeit der Eingabefelder", () => {
     expect(zeitpunktAusWanduhrzeit("", BERLIN)).toBeNull();
     expect(zeitpunktAusWanduhrzeit("29.12.2025", BERLIN)).toBeNull();
     expect(wanduhrzeitFuerEingabe(null, BERLIN)).toBe("");
+  });
+});
+
+/**
+ * **Datum und Uhrzeit getrennt, die Uhrzeit freiwillig** *(17.11.2026, E‑1198,
+ * `docs/nachrichtenliste.md` §8.2)*.
+ *
+ * Ohne Uhrzeit beginnt „Von" um 00:00. Wo „Bis" endet, hängt am **Vertrag des
+ * Einhängepunkts**: Liste und Belegsuche lesen `bis` einschließend, auf die
+ * Sekunde (`MessageLastUpdate <= bis`, Spalte `timestamp` ohne Bruchteil) — das
+ * Ende des Tages ist 23:59:59. Die Prozessansicht liest `bis` als letzte
+ * enthaltene volle Stunde (E‑94, E‑95) — das Ende des Tages ist 23:00.
+ */
+describe("Datum und Uhrzeit der Zeitfensterfelder", () => {
+  const gelesen = (
+    datum: string,
+    uhrzeit: string,
+    grenze: "von" | "bis",
+    vertrag: "sekunde" | "stunde",
+    zone = BERLIN,
+  ) => zeitpunktAusDatumUndUhrzeit(datum, uhrzeit, grenze, vertrag, zone)?.toISOString() ?? null;
+
+  it("beginnt „Von“ ohne Uhrzeit um 00:00, in beiden Verträgen", () => {
+    expect(gelesen("2026-07-07", "", "von", "sekunde")).toBe("2026-07-06T22:00:00.000Z");
+    expect(gelesen("2026-07-07", "", "von", "stunde")).toBe("2026-07-06T22:00:00.000Z");
+    expect(gelesen("2026-01-07", "", "von", "sekunde")).toBe("2026-01-06T23:00:00.000Z");
+  });
+
+  it("endet „Bis“ ohne Uhrzeit am Ende des Tages im Vertrag des Einhängepunkts", () => {
+    expect(gelesen("2026-07-07", "", "bis", "sekunde"), "Liste, Suche").toBe(
+      "2026-07-07T21:59:59.000Z",
+    );
+    expect(gelesen("2026-07-07", "", "bis", "stunde"), "Prozessansicht").toBe(
+      "2026-07-07T21:00:00.000Z",
+    );
+  });
+
+  it("nimmt eine eingetragene Uhrzeit, wie sie dasteht — Minuten, Sekunden, Millisekunden", () => {
+    expect(gelesen("2026-07-07", "14:30", "von", "sekunde")).toBe("2026-07-07T12:30:00.000Z");
+    expect(gelesen("2026-07-07", "14:30", "bis", "sekunde")).toBe("2026-07-07T12:30:00.000Z");
+    expect(gelesen("2026-07-07", "14:00", "bis", "stunde")).toBe("2026-07-07T12:00:00.000Z");
+    expect(gelesen("2026-07-07", "14:30:15", "bis", "sekunde")).toBe("2026-07-07T12:30:15.000Z");
+    expect(gelesen("2026-07-07", "14:30:15.250", "von", "sekunde")).toBe(
+      "2026-07-07T12:30:15.250Z",
+    );
+  });
+
+  it("hängt an der Anzeigezone und nicht am Standort", () => {
+    expect(gelesen("2026-07-07", "", "von", "sekunde", "UTC")).toBe("2026-07-07T00:00:00.000Z");
+    expect(gelesen("2026-07-07", "", "bis", "sekunde", "UTC")).toBe("2026-07-07T23:59:59.000Z");
+  });
+
+  /**
+   * Am Tag der Vorstellung hat der Tag 23 Stunden, am Tag der Rückstellung 25.
+   * Ohne den zweiten Durchgang läge eine der beiden Grenzen eine Stunde daneben.
+   */
+  it("trifft beide Umstellungstage 2026, den 29.03. und den 25.10.", () => {
+    expect(gelesen("2026-03-29", "", "von", "sekunde")).toBe("2026-03-28T23:00:00.000Z");
+    expect(gelesen("2026-03-29", "", "bis", "sekunde")).toBe("2026-03-29T21:59:59.000Z");
+    expect(gelesen("2026-03-29", "", "bis", "stunde")).toBe("2026-03-29T21:00:00.000Z");
+    expect(gelesen("2026-03-29", "03:00", "von", "stunde")).toBe("2026-03-29T01:00:00.000Z");
+
+    expect(gelesen("2026-10-25", "", "von", "sekunde")).toBe("2026-10-24T22:00:00.000Z");
+    expect(gelesen("2026-10-25", "", "bis", "sekunde")).toBe("2026-10-25T22:59:59.000Z");
+    expect(gelesen("2026-10-25", "", "bis", "stunde")).toBe("2026-10-25T22:00:00.000Z");
+    expect(gelesen("2026-10-25", "03:00", "von", "stunde")).toBe("2026-10-25T02:00:00.000Z");
+  });
+
+  it("liest nichts, was kein Datum oder keine Uhrzeit ist", () => {
+    expect(gelesen("", "", "von", "sekunde"), "ohne Datum").toBeNull();
+    expect(gelesen("", "14:30", "von", "sekunde"), "Uhrzeit ohne Datum").toBeNull();
+    expect(gelesen("07.07.2026", "", "von", "sekunde")).toBeNull();
+    expect(gelesen("2026-02-30", "", "von", "sekunde"), "kein Kalendertag").toBeNull();
+    expect(gelesen("2026-07-07", "24:00", "bis", "sekunde")).toBeNull();
+    expect(gelesen("2026-07-07", "1430", "von", "sekunde")).toBeNull();
+  });
+
+  const felder = (iso: string | null, grenze: "von" | "bis", vertrag: "sekunde" | "stunde") =>
+    datumUndUhrzeitFuerEingabe(iso === null ? null : new Date(iso), grenze, vertrag, BERLIN);
+
+  /**
+   * **Die Uhrzeit bleibt leer genau dann, wenn der Wert der Vorgabe für „ohne
+   * Uhrzeit" entspricht** — sonst steht sie da, auf die Millisekunde.
+   */
+  it("lässt die Uhrzeit genau dann leer, wenn sie der Vorgabe entspricht", () => {
+    expect(felder("2026-07-06T22:00:00.000Z", "von", "sekunde")).toEqual({
+      datum: "2026-07-07",
+      uhrzeit: "",
+    });
+    expect(felder("2026-07-07T21:59:59.000Z", "bis", "sekunde")).toEqual({
+      datum: "2026-07-07",
+      uhrzeit: "",
+    });
+    expect(felder("2026-07-07T21:00:00.000Z", "bis", "stunde")).toEqual({
+      datum: "2026-07-07",
+      uhrzeit: "",
+    });
+
+    // Dieselben Zeitpunkte im anderen Vertrag oder an der anderen Grenze: keine Vorgabe.
+    expect(felder("2026-07-07T21:00:00.000Z", "bis", "sekunde").uhrzeit).toBe("23:00");
+    expect(felder("2026-07-07T21:59:59.000Z", "bis", "stunde").uhrzeit).toBe("23:59:59");
+    expect(felder("2026-07-06T22:00:00.000Z", "bis", "sekunde").uhrzeit).toBe("00:00");
+    expect(felder("2026-07-07T21:59:00.000Z", "bis", "sekunde").uhrzeit).toBe("23:59");
+    expect(felder("2026-07-07T21:59:59.500Z", "bis", "sekunde").uhrzeit).toBe("23:59:59.500");
+    expect(felder("2026-07-07T12:30:15.000Z", "von", "sekunde").uhrzeit).toBe("14:30:15");
+    expect(felder(null, "von", "sekunde")).toEqual({ datum: "", uhrzeit: "" });
+  });
+
+  /** Jede volle und halbe Stunde, dazu krumme Sekunden, über beide Umstellungstage 2026. */
+  function zeitpunkteUm(tagUtc: string): string[] {
+    const start = Date.parse(`${tagUtc}T00:00:00.000Z`) - 6 * 3_600_000;
+    const liste: string[] = [];
+    for (let schritt = 0; schritt < 2 * 36; schritt++) {
+      liste.push(new Date(start + schritt * 1_800_000).toISOString());
+    }
+    liste.push(new Date(start + 7 * 3_600_000 + 17_250).toISOString());
+    return liste;
+  }
+
+  /**
+   * **URL → Felder → URL, Zeichen für Zeichen.** Die eine Lücke ist die Stunde,
+   * die es am 25.10. zweimal gibt: Die Felder kennen keine Zone, „02:30" steht
+   * für beide. Gelesen wird sie als die **spätere** — die Felder zeigen beim
+   * ersten Durchlauf dieselbe Wanduhrzeit, die Adresse verschiebt sich um eine
+   * Stunde. Ausdrücklich festgehalten statt ausgelassen.
+   */
+  it("bringt die Adresse über die Felder zeichengleich zurück, an beiden Umstellungstagen", () => {
+    const doppelt = (iso: string) => iso >= "2026-10-25T00:00" && iso < "2026-10-25T01:00";
+    for (const vertrag of ["sekunde", "stunde"] as const) {
+      for (const grenze of ["von", "bis"] as const) {
+        for (const iso of [...zeitpunkteUm("2026-03-29"), ...zeitpunkteUm("2026-10-25")]) {
+          const { datum, uhrzeit } = felder(iso, grenze, vertrag);
+          const zurueck = gelesen(datum, uhrzeit, grenze, vertrag);
+          if (doppelt(iso)) {
+            expect(zurueck, `${iso} ist die frühere 02:xx`).toBe(
+              new Date(Date.parse(iso) + 3_600_000).toISOString(),
+            );
+          } else {
+            expect(zurueck, `${grenze} ${vertrag} ${iso}`).toBe(iso);
+          }
+        }
+      }
+    }
+  });
+
+  it("bringt die Felder über die Adresse unverändert zurück", () => {
+    const eingaben: [string, string, "von" | "bis", "sekunde" | "stunde"][] = [
+      ["2026-07-07", "", "von", "sekunde"],
+      ["2026-07-07", "", "bis", "sekunde"],
+      ["2026-07-07", "", "bis", "stunde"],
+      ["2026-07-07", "14:30", "bis", "sekunde"],
+      ["2026-07-07", "14:00", "von", "stunde"],
+      ["2026-03-29", "", "bis", "sekunde"],
+      ["2026-10-25", "", "bis", "stunde"],
+      ["2026-10-25", "04:00", "von", "stunde"],
+    ];
+    for (const [datum, uhrzeit, grenze, vertrag] of eingaben) {
+      const adresse = zeitpunktAusDatumUndUhrzeit(datum, uhrzeit, grenze, vertrag, BERLIN);
+      expect(datumUndUhrzeitFuerEingabe(adresse, grenze, vertrag, BERLIN)).toEqual({
+        datum,
+        uhrzeit,
+      });
+    }
+  });
+});
+
+/**
+ * **Die Stundenwahl an allen drei Stellen** *(17.11.2026, E‑1203, E‑1204,
+ * `docs/nachrichtenliste.md` §8.2)*. Seit E‑1203 gibt es keine Minuten mehr:
+ * „Von“ beginnt zur gewählten vollen Stunde, „Bis“ nennt das Ende der Stunde.
+ * Was „Bis 14:59“ als Zeitpunkt heißt, hängt am Vertrag: in der Prozessansicht
+ * die volle Stunde 14:00 (die letzte enthaltene, E‑94), in Liste und Suche ihre
+ * letzte Sekunde 14:59:59 (`bis` ist dort einschließend, E‑1204).
+ */
+describe("Die Stundenwahl", () => {
+  it("nennt bei Von die volle Stunde und bei Bis ihr Ende", () => {
+    for (const vertrag of ["sekunde", "stunde"] as const) {
+      const von = stundeneintraege("von", vertrag);
+      expect(von).toHaveLength(24);
+      expect(von[0]).toEqual({ wert: "00:00", text: "00:00" });
+      expect(von[14]).toEqual({ wert: "14:00", text: "14:00" });
+    }
+    expect(stundeneintraege("bis", "stunde")[14]).toEqual({ wert: "14:00", text: "14:59" });
+    expect(stundeneintraege("bis", "sekunde")[14]).toEqual({ wert: "14:59:59", text: "14:59" });
+    expect(stundeneintraege("bis", "sekunde")[23]).toEqual({ wert: "23:59:59", text: "23:59" });
+  });
+
+  /**
+   * **Die Wahl findet ihren Eintrag wieder** — sonst stünde nach dem Wählen der
+   * Rohwert im Feld. Ausgenommen ist genau die Vorgabe (Von 00:00, Bis die letzte
+   * Stunde): Sie ist der ganze Tag und steht leer da.
+   */
+  it("findet jede gewählte Stunde in den Feldern wieder, die Vorgabe als leer", () => {
+    for (const vertrag of ["sekunde", "stunde"] as const) {
+      for (const grenze of ["von", "bis"] as const) {
+        stundeneintraege(grenze, vertrag).forEach((eintrag, stunde) => {
+          const zeitpunkt = zeitpunktAusDatumUndUhrzeit(
+            "2026-07-07",
+            eintrag.wert,
+            grenze,
+            vertrag,
+            BERLIN,
+          );
+          const vorgabe = grenze === "von" ? stunde === 0 : stunde === 23;
+          expect(
+            datumUndUhrzeitFuerEingabe(zeitpunkt, grenze, vertrag, BERLIN).uhrzeit,
+            `${grenze} ${vertrag} ${eintrag.text}`,
+          ).toBe(vorgabe ? "" : eintrag.wert);
+        });
+      }
+    }
+  });
+
+  it("legt in Liste und Suche „Bis 14:59“ auf 14:59:59, in der Prozessansicht auf 14:00", () => {
+    const bis = (vertrag: "sekunde" | "stunde") =>
+      zeitpunktAusDatumUndUhrzeit(
+        "2026-07-07",
+        stundeneintraege("bis", vertrag)[14]?.wert ?? "",
+        "bis",
+        vertrag,
+        BERLIN,
+      )?.toISOString();
+    expect(bis("sekunde")).toBe("2026-07-07T12:59:59.000Z");
+    expect(bis("stunde")).toBe("2026-07-07T12:00:00.000Z");
+  });
+
+  /** Am 29.03. gibt es die Stunde 02 nicht; gewählt landet sie auf 03. */
+  it("lässt am Tag der Vorstellung die fehlende Stunde auf die nächste fallen", () => {
+    const zeitpunkt = zeitpunktAusDatumUndUhrzeit("2026-03-29", "02:00", "von", "sekunde", BERLIN);
+    expect(datumUndUhrzeitFuerEingabe(zeitpunkt, "von", "sekunde", BERLIN).uhrzeit).toBe("03:00");
+  });
+});
+
+/**
+ * **Fenster auf volle Stunden** *(17.11.2026, E‑1205)* — für „Auf ein Jahr
+ * erweitern“, die Präfixsuche und „Fenster verkleinern“ in der Belegsuche. Ohne
+ * Minuten in den Feldern muss ein dort gerechnetes Fenster auf Einträgen der
+ * Stundenwahl landen, sonst stünde der Rohwert im Feld.
+ */
+describe("Fenster auf volle Stunden", () => {
+  it("rundet einen Zeitpunkt auf das Ende seiner Stunde auf", () => {
+    const iso = (zeitpunkt: Date) => stundenende(zeitpunkt, BERLIN).toISOString();
+    expect(iso(new Date("2025-12-30T03:35:49.253Z"))).toBe("2025-12-30T03:59:59.000Z");
+    expect(iso(new Date("2025-12-30T03:00:00.000Z"))).toBe("2025-12-30T03:59:59.000Z");
+    expect(iso(new Date("2025-12-30T03:59:59.000Z"))).toBe("2025-12-30T03:59:59.000Z");
+  });
+
+  it("geht Kalendertage zurück und rückt auf die nächste volle Stunde", () => {
+    const iso = (zeitpunkt: string, tage: number) =>
+      tageZurueckZurVollenStunde(new Date(zeitpunkt), tage, BERLIN).toISOString();
+    // 30.12.2025, 04:59:59 → 30.12.2024, 05:00
+    expect(iso("2025-12-30T03:59:59.000Z", 365)).toBe("2024-12-30T04:00:00.000Z");
+    // eine volle Stunde bleibt, wie sie ist
+    expect(iso("2025-12-30T04:00:00.000Z", 30)).toBe("2025-11-30T04:00:00.000Z");
+    // 23:59:59 rückt auf 00:00 des Folgetags
+    expect(iso("2025-12-30T22:59:59.000Z", 365)).toBe("2024-12-30T23:00:00.000Z");
+  });
+
+  /**
+   * **Kalendertage, nicht 24-Stunden-Schritte.** Liegt nur eines der beiden Daten
+   * in der Sommerzeit, läge „Von“ sonst eine Stunde früher in der Wanduhrzeit —
+   * und das Backend, das in Wanduhrzeit `bis.minusYears(1)` prüft, wiese das
+   * Fenster als zu groß ab.
+   */
+  it("rechnet in Kalendertagen, auch über eine Zeitumstellung", () => {
+    // 29.03.2026, 12:59:59 Sommerzeit → 29.03.2025, 13:00 Winterzeit
+    const von = tageZurueckZurVollenStunde(new Date("2026-03-29T10:59:59.000Z"), 365, BERLIN);
+    expect(von.toISOString()).toBe("2025-03-29T12:00:00.000Z");
+    expect(datumUndUhrzeitFuerEingabe(von, "von", "sekunde", BERLIN)).toEqual({
+      datum: "2025-03-29",
+      uhrzeit: "13:00",
+    });
   });
 });
 

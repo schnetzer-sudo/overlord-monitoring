@@ -579,9 +579,12 @@ describe("Der Σ in der Nachrichtenliste", () => {
     blaetterblockSteht(behaelter);
   }
 
-  /** Setzt das Feld „Von" des freien Fensters, wie eine Eingabe es tut. */
+  /**
+   * Setzt das Datum „Von" des freien Fensters, wie eine Eingabe es tut. Seit
+   * E‑1198 ein Datum ohne Uhrzeit — der ganze Tag (`docs/nachrichtenliste.md` §8.2).
+   */
   async function setzeVon(behaelter: HTMLElement, wert: string): Promise<void> {
-    const feld = behaelter.querySelector('input[type="datetime-local"]') as HTMLInputElement;
+    const feld = behaelter.querySelector('input[type="date"]') as HTMLInputElement;
     expect(feld, "Eichung: das Feld Von steht").not.toBeNull();
     const setzer = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
     await act(async () => {
@@ -677,7 +680,7 @@ describe("Der Σ in der Nachrichtenliste", () => {
       expect(satzOhneErgebnis(behaelter), "Eichung: der Abbruch").not.toBeNull();
 
       await aufZeitraum(behaelter, TEXTE.nachrichten.zeitfenster.frei);
-      await setzeVon(behaelter, "2025-12-28T05:00");
+      await setzeVon(behaelter, "2025-12-28");
       expect(anfragen.at(-1), "Eichung: die Anfrage nur mit von").toContain("von=");
       expect(anfragen.at(-1)).not.toContain("bis=");
       ohneSeite(behaelter);

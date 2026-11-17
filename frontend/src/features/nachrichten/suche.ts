@@ -1,9 +1,11 @@
 import { createMultiParser, createParser } from "nuqs";
 
 import { ZEITFENSTER_PARAMETER, zeitfensterAlsParameter } from "@/lib/filter";
+import { stundenende, tageZurueckZurVollenStunde } from "@/lib/format";
+import type { ProblemFehler } from "@/lib/http";
 
 import type { BamAntwortmodus, BamTrefferWert } from "./api";
-import { NACHRICHTEN_PARAMETER } from "./filter";
+import { NACHRICHTEN_PARAMETER, zeitfensterFehler } from "./filter";
 
 /**
  * Der Zustand der Belegsuche — **in der URL, nicht im Komponentenzustand.**
@@ -497,9 +499,18 @@ const TAG_IN_MS = 24 * 60 * 60 * 1000;
  * Profil `dev` Monate hinter der realen Zeit, und ein aus `Date.now()`
  * gerechnetes Fenster liefe an den Daten vorbei. Das `bis` aus der Antwort ist
  * dagegen genau der Zeitpunkt, den das Backend selbst verwendet hat.
+ *
+ * **Auf volle Stunden** *(Entscheidung des Auftraggebers vom 17.11.2026,
+ * E‑1205)*: Das `bis` der Antwort trägt Sekunden und Millisekunden der
+ * Anwendungsuhr, die Felder kennen seit E‑1203 nur Stunden. „Bis“ rundet
+ * deshalb auf das Ende seiner Stunde **auf** — es geht keine neue Nachricht
+ * verloren, das Fenster reicht höchstens bis zum Ende der laufenden Stunde, und
+ * ein Fenster in der Zukunft ist kein Fehler. „Von“ liegt 365 Kalendertage davor,
+ * zur nächsten vollen Stunde ({@link fensterZurueck}). Beide landen auf
+ * Einträgen der Stundenwahl.
  */
-export function jahresfensterAb(bis: Date): { von: Date; bis: Date } {
-  return fensterZurueck(bis, JAHRESFENSTER_TAGE);
+export function jahresfensterAb(anker: Date, zone: string): { von: Date; bis: Date } {
+  return fensterZurueck(stundenende(anker, zone), JAHRESFENSTER_TAGE, zone);
 }
 
 /**
@@ -508,9 +519,17 @@ export function jahresfensterAb(bis: Date): { von: Date; bis: Date } {
  *
  * `bis` bleibt immer stehen: Es ist der Zeitpunkt, den das Backend verwendet hat
  * oder den der Nutzer gewählt hat, und in beiden Fällen der Anker (Regel Z1).
+ *
+ * **Seit E‑1205 liegt `von` auf einer vollen Stunde**, `tage` **Kalendertage**
+ * vor `bis` und zur nächsten vollen Stunde nach vorn gerundet — in der
+ * Wanduhrzeit der Anzeigezone (`lib/format.ts`, `tageZurueckZurVollenStunde`).
+ * Nach vorn, damit das Fenster ein Ausschnitt bleibt und unter jeder Grenze, die
+ * `tage` einhielt; in Kalendertagen, weil das Backend die Jahresgrenze in
+ * Wanduhrzeit prüft. Bis dahin rechnete diese Funktion `tage` × 24 Stunden
+ * zurück, und lag nur `bis` in der Sommerzeit, war das Jahresfenster ein `400`.
  */
-export function fensterZurueck(bis: Date, tage: number): { von: Date; bis: Date } {
-  return { von: new Date(bis.getTime() - tage * TAG_IN_MS), bis };
+export function fensterZurueck(bis: Date, tage: number, zone: string): { von: Date; bis: Date } {
+  return { von: tageZurueckZurVollenStunde(bis, tage, zone), bis };
 }
 
 /** Die Spanne eines Fensters in ganzen Tagen — für die Frage, ob „ein Jahr" noch etwas ändert. */
@@ -522,7 +541,8 @@ export function spanneInTagen(von: Date, bis: Date): number {
  * Das Fenster, über das der Präfixmodus laufen darf — **ein Ausschnitt des
  * gewählten, nie ein anderer.**
  *
- * `bis` bleibt stehen, `von` rückt auf `bis` minus {@link PRAEFIX_FENSTER_TAGE}.
+ * `bis` bleibt stehen, `von` rückt auf `bis` minus {@link PRAEFIX_FENSTER_TAGE},
+ * zur nächsten vollen Stunde (E‑1205, {@link fensterZurueck}).
  * Ist das gewählte Fenster schon so groß oder kleiner, ändert sich **nichts**,
  * und die Funktion sagt das mit `null` — der Aufrufer schreibt dann keinen
  * Zeitpunkt in die URL und lässt insbesondere die Vorgabe des Backends Vorgabe
@@ -543,11 +563,14 @@ export function spanneInTagen(von: Date, bis: Date): number {
  * Anwendungsuhr steht im Profil `dev` Monate hinter der realen Zeit. Übergeben
  * wird deshalb das Fenster, das das Backend **tatsächlich verwendet** hat.
  */
-export function praefixfenster(fenster: { von: Date; bis: Date }): { von: Date; bis: Date } | null {
+export function praefixfenster(
+  fenster: { von: Date; bis: Date },
+  zone: string,
+): { von: Date; bis: Date } | null {
   if (spanneInTagen(fenster.von, fenster.bis) <= PRAEFIX_FENSTER_TAGE) {
     return null;
   }
-  return fensterZurueck(fenster.bis, PRAEFIX_FENSTER_TAGE);
+  return fensterZurueck(fenster.bis, PRAEFIX_FENSTER_TAGE, zone);
 }
 
 /**
@@ -699,4 +722,45 @@ export function nulltrefferHinweis(
     return null;
   }
   return vorige.begriffe < aktuelleBegriffe ? vorige : null;
+}
+
+/**
+ * **Was an Stelle der Trefferliste steht — und ob eine Antwort an die Zeitfelder
+ * gehört** *(17.11.2026, E‑1200, `docs/bam-suche.md` §11.6)*.
+ *
+ * Bis dahin ersetzte jeder `zeitfenster-*`-Fehler die Trefferliste durch den
+ * Fehlerbaustein — auch der Moment, in dem erst „Von“ dasteht und die Anfrage
+ * mit `zeitfenster-unvollstaendig` zurückkommt. Seither gilt dieselbe Regel wie
+ * in der Nachrichtenliste (`listenanzeige`) und in der Prozessansicht
+ * (`letzterBaum`):
+ *
+ * - **Gehört die Antwort an die Felder** (`AM_ZEITFENSTER`, seit E‑1198 samt
+ *   `zeitfenster-zu-gross`) **oder steht erst einer der beiden Zeitpunkte**, ist
+ *   das eine *ruhige* Lage: Die Meldung steht an den Feldern, und an Stelle der
+ *   Trefferliste steht die **zuletzt gelieferte** Antwort. Gab es noch keine,
+ *   steht dort nichts — kein Fehlerbaustein.
+ * - **Jeder andere Fehler** bleibt, was er war: ein Fehler über der Liste, ohne
+ *   gehaltene Antwort. Das gilt ausdrücklich für `zeitfenster-mehrdeutig` (die
+ *   Oberfläche lässt ihn nicht entstehen — käme er, ist er ein Befund) und für
+ *   `praefixsuche-fenster-zu-gross`, der seinen eigenen Baustein mit Ausweg hat.
+ *
+ * Was als „zuletzt geliefert“ gilt, entscheidet `letzteLieferung` in
+ * `filter.ts` — ein Abbruch verwirft sie (E‑240). Rein, damit es ohne React
+ * prüfbar ist; die Ansicht zeigt nur an.
+ */
+export function trefferanzeige<E>(lage: {
+  ergebnis: E | undefined;
+  letztes: E | undefined;
+  fehler: unknown;
+  von: Date | null;
+  bis: Date | null;
+}): { ergebnis: E | undefined; amFeld: ProblemFehler | undefined; ruhig: boolean } {
+  const amFeld = zeitfensterFehler(lage.fehler);
+  const halb = (lage.von === null) !== (lage.bis === null);
+  const ruhig = amFeld !== undefined || halb;
+  return {
+    ergebnis: lage.ergebnis ?? (ruhig ? lage.letztes : undefined),
+    amFeld,
+    ruhig,
+  };
 }

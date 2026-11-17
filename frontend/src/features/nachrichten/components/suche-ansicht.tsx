@@ -1,21 +1,14 @@
 "use client";
 
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { Marke } from "@/components/marke";
 import { useAnzeigezone } from "@/components/zeitzone";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Fehler, Laden, Leer } from "@/components/zustand";
 import { einsetzen } from "@/i18n";
 import { useSprache, useTexte } from "@/i18n/provider";
-import {
-  formatiereZahl,
-  formatiereZeitpunkt,
-  wanduhrzeitFuerEingabe,
-  zeitpunktAusWanduhrzeit,
-} from "@/lib/format";
+import { formatiereZahl, formatiereZeitpunkt } from "@/lib/format";
 import { ProblemFehler, istPraefixfensterZuGross } from "@/lib/http";
 import { useBeginntOben, useInSicht, useZuletztGeschlossen } from "@/lib/in-sicht-bringen";
 import { KLEBENDE_SPALTE_AB_XL, VOLLANSICHT_AB_XL } from "@/lib/klebende-spalte";
@@ -23,7 +16,7 @@ import { ROUTEN, zeileImNeuenTab } from "@/lib/routen";
 import { cn } from "@/lib/utils";
 
 import type { BamSuchergebnis } from "../api";
-import { istVoll } from "../filter";
+import { istVoll, letzteLieferung } from "../filter";
 import {
   useBamSuche,
   useEscapeSchliesst,
@@ -44,6 +37,7 @@ import {
   nulltrefferHinweis,
   praefixfenster,
   spanneInTagen,
+  trefferanzeige,
   zeigtPraefixAngebot,
   zeigtTrefferspalte,
   type Suchmodus,
@@ -52,6 +46,7 @@ import {
 import { MarkenLeiste } from "./marken-leiste";
 import { NachrichtDetail } from "./nachricht-detail";
 import { TrefferTabelle } from "./treffer-tabelle";
+import { Zeitfensterfelder } from "./zeitfensterfelder";
 
 /** Der Problemtyp, den die Suche mit der Nachrichtenliste teilt — es entsteht kein zweiter. */
 const ABGEBROCHEN = "suche-abgebrochen";
@@ -99,6 +94,7 @@ const ABGEBROCHEN = "suche-abgebrochen";
  */
 export function SucheAnsicht() {
   const texte = useTexte();
+  const zone = useAnzeigezone();
   const {
     zustand,
     marken,
@@ -198,6 +194,32 @@ export function SucheAnsicht() {
       : undefined;
 
   /*
+   * **Die zuletzt gelieferte Antwort — und was an Stelle der Trefferliste
+   * steht** (E‑1200, `suche.ts` `trefferanzeige`). Gehört die Antwort des
+   * Servers an die Zeitfelder, oder steht erst einer der beiden Zeitpunkte,
+   * bleibt die zuletzt gelieferte Antwort stehen, wie in der Nachrichtenliste
+   * und in der Prozessansicht; ohne sie steht dort nichts. Ein Abbruch verwirft
+   * sie (`letzteLieferung`, E‑240). Angepasst während des Renderns, dasselbe
+   * Muster wie `stand` darüber.
+   */
+  const [letztes, setLetztes] = useState<BamSuchergebnis | undefined>(undefined);
+  const naechstes = letzteLieferung(
+    { seite: letztes, treffer: undefined },
+    { seite: ergebnis, treffer: undefined, fehler: anfrage.error },
+  ).seite;
+  if (naechstes !== letztes) {
+    setLetztes(naechstes);
+  }
+  const anzeige = trefferanzeige({
+    ergebnis,
+    letztes,
+    fehler: anfrage.error,
+    von: zustand.von,
+    bis: zustand.bis,
+  });
+  const angezeigt = anzeige.ergebnis;
+
+  /*
    * **Die Oberfläche löst diesen Fehler nie selbst aus** — der Knopf verkleinert
    * das Fenster vorher (`praefixfenster`), und „Auf ein Jahr erweitern" gibt es
    * im Präfixmodus nicht. Er kommt aus einer von Hand gebauten URL oder aus von
@@ -226,10 +248,10 @@ export function SucheAnsicht() {
    * ausgegangen ist.
    */
   const angebot = zeigtPraefixAngebot({
-    modus: modusAusAntwort(ergebnis?.modus),
-    treffer: ergebnis?.nachrichten.length ?? 0,
+    modus: modusAusAntwort(angezeigt?.modus),
+    treffer: angezeigt?.nachrichten.length ?? 0,
     begriffe: marken.length,
-    bamBegriffe: ergebnis?.begriffe.length ?? 0,
+    bamBegriffe: angezeigt?.begriffe.length ?? 0,
     abgebrochen: abgebrochen !== undefined,
   });
 
@@ -241,14 +263,14 @@ export function SucheAnsicht() {
    * die URL geschrieben.
    */
   const aufPraefix = useCallback(() => {
-    if (ergebnis === undefined) {
+    if (angezeigt === undefined) {
       return;
     }
     setzeModus(
       "praefix",
-      praefixfenster({ von: new Date(ergebnis.von), bis: new Date(ergebnis.bis) }),
+      praefixfenster({ von: new Date(angezeigt.von), bis: new Date(angezeigt.bis) }, zone),
     );
-  }, [ergebnis, setzeModus]);
+  }, [angezeigt, setzeModus, zone]);
 
   /** Der Rückweg. **Das Fenster bleibt stehen** — siehe `hooks.ts` `setzeModus`. */
   const aufExakt = useCallback(() => setzeModus(null, null), [setzeModus]);
@@ -287,12 +309,13 @@ export function SucheAnsicht() {
                 zu verstecken hieße, dem Nutzer das Werkzeug wegzunehmen, wenn er
                 es braucht (dieselbe Regel wie bei der Filterleiste der Liste). */}
             <Kopfzeilen
-              ergebnis={ergebnis}
+              ergebnis={angezeigt}
               modus={modus}
               aufExakt={aufExakt}
               von={zustand.von}
               bis={zustand.bis}
               aufFenster={setzeFenster}
+              zeitfensterfehler={anzeige.amFeld}
               nulltrefferVorher={stand.hinweis}
               voll={marken.length >= HOECHSTENS_BEGRIFFE}
             />
@@ -318,18 +341,23 @@ export function SucheAnsicht() {
               </p>
             ) : fensterZuGross !== undefined ? (
               <FensterZuGross fehler={fensterZuGross} bis={zustand.bis} aufFenster={setzeFenster} />
-            ) : anfrage.error ? (
+            ) : anfrage.error && !anzeige.ruhig ? (
               <Fehler fehler={anfrage.error} aufWiederholen={() => void anfrage.refetch()} />
-            ) : anfrage.isPending ? (
-              <Laden zeilen={8} />
-            ) : (ergebnis?.nachrichten.length ?? 0) === 0 ? (
+            ) : angezeigt === undefined ? (
+              /* Gehört die Antwort an die Zeitfelder und gab es noch keine
+                 Antwort, steht hier nichts — die Meldung steht an den Feldern
+                 (E‑1200). Sonst wird geladen. */
+              anzeige.amFeld !== undefined ? null : (
+                <Laden zeilen={8} />
+              )
+            ) : angezeigt.nachrichten.length === 0 ? (
               <Leer titel={texte.suche.ergebnis.keine} hinweis={texte.suche.ergebnis.keineHinweis}>
                 {angebot ? <PraefixAngebot aufPraefix={aufPraefix} /> : null}
               </Leer>
             ) : (
               <div className="border-border bg-card overflow-x-auto rounded-lg border">
                 <TrefferTabelle
-                  zeilen={ergebnis?.nachrichten ?? []}
+                  zeilen={angezeigt.nachrichten}
                   gewaehlt={gewaehlt}
                   aufAuswahl={waehleZeile}
                   gewaehlteZeile={merkeZeile}
@@ -341,7 +369,7 @@ export function SucheAnsicht() {
                   // Entschieden an der Frage (dem Zitat der Antwort), nicht an
                   // den Zellen — E-110, `suche.ts` `zeigtTrefferspalte`.
                   mitTrefferspalte={zeigtTrefferspalte({
-                    bamBegriffe: ergebnis?.begriffe.length ?? 0,
+                    bamBegriffe: angezeigt.begriffe.length,
                   })}
                 />
               </div>
@@ -419,6 +447,7 @@ function Kopfzeilen({
   von,
   bis,
   aufFenster,
+  zeitfensterfehler,
   nulltrefferVorher,
   voll,
 }: {
@@ -428,6 +457,8 @@ function Kopfzeilen({
   von: Date | null;
   bis: Date | null;
   aufFenster: (von: Date | null, bis: Date | null) => void;
+  /** Eine Antwort, die den Zeitfeldern gilt (E‑1200). */
+  zeitfensterfehler: ProblemFehler | undefined;
   nulltrefferVorher: VorigeRunde | null;
   voll: boolean;
 }) {
@@ -444,6 +475,7 @@ function Kopfzeilen({
         von={von}
         bis={bis}
         aufFenster={aufFenster}
+        fehler={zeitfensterfehler}
       />
       <Variantenzeile ergebnis={ergebnis} />
 
@@ -658,6 +690,7 @@ function FensterZuGross({
   aufFenster: (von: Date | null, bis: Date | null) => void;
 }) {
   const texte = useTexte();
+  const zone = useAnzeigezone();
 
   const grenzeTage = fehler.zahl("grenzeTage");
   const angefragtTage = fehler.zahl("angefragtTage");
@@ -680,7 +713,7 @@ function FensterZuGross({
           size="sm"
           className="min-h-beruehrung mt-3"
           onClick={() => {
-            const enger = fensterZurueck(bis, grenze);
+            const enger = fensterZurueck(bis, grenze, zone);
             aufFenster(enger.von, enger.bis);
           }}
         >
@@ -748,20 +781,20 @@ function Variantenzeile({ ergebnis }: { ergebnis: BamSuchergebnis | undefined })
  * liefe an den Daten vorbei. Deshalb:
  *
  * - **„Auf ein Jahr erweitern"** rechnet vom `bis` **aus der Antwort** zurück —
- *   also von dem Zeitpunkt, den das Backend selbst verwendet hat.
+ *   also von dem Zeitpunkt, den das Backend selbst verwendet hat —, seit
+ *   E‑1205 auf volle Stunden: „Bis" auf das Ende seiner Stunde aufgerundet,
+ *   „Von" 365 Kalendertage davor zur nächsten vollen Stunde.
  * - **„Vorgabe wiederherstellen"** entfernt beide Parameter und überlässt dem
  *   Backend seine 30 Tage. Ein zweiter Standardwert hier liefe dem ersten
  *   irgendwann hinterher.
- * - **Die beiden Felder** nehmen Wanduhrzeit entgegen und rechnen in der
- *   **Anzeigezone** um, nicht in der des Browsers (`lib/format.ts`).
- *
- * ## Ein halb getipptes Feld meldet sich nicht von selbst
- *
- * Ein `datetime-local` liefert seinen Wert erst, wenn **alle** Segmente stehen —
- * und feuert bis dahin kein `input`. Wer nur das Datum einträgt, sieht es im Feld
- * und die Anwendung täte nichts und sagte nichts. Herausgegeben wird der Zustand
- * allein über `validity.badInput`, gelesen an `keyup` und `blur`. Derselbe Befund
- * wie am freien Fenster der Liste (`docs/nachrichtenliste.md` §8.2).
+ * - **Die Felder** — je Zeitpunkt ein Datum und eine Stundenwahl, seit E‑1198
+ *   der gemeinsame Baustein `zeitfensterfelder.tsx`, seit E‑1203 ohne Minuten —
+ *   rechnen in der
+ *   **Anzeigezone** um, nicht in der des Browsers (`lib/format.ts`). Ein Datum
+ *   allein meint den ganzen Tag; „Bis" endet dann um 23:59:59, denn das `bis`
+ *   der Suche ist einschließend und sekundengenau. Halbe Eingaben melden sich
+ *   über `validity.badInput` (`docs/nachrichtenliste.md` §8.2), Antworten des
+ *   Servers zum Fenster stehen an den Feldern.
  */
 function Zeitfensterzeile({
   ergebnis,
@@ -769,30 +802,23 @@ function Zeitfensterzeile({
   von,
   bis,
   aufFenster,
+  fehler,
 }: {
   ergebnis: BamSuchergebnis | undefined;
   modus: Suchmodus;
   von: Date | null;
   bis: Date | null;
   aufFenster: (von: Date | null, bis: Date | null) => void;
+  fehler: ProblemFehler | undefined;
 }) {
   const texte = useTexte();
   const sprache = useSprache();
   const zone = useAnzeigezone();
-  const vonId = useId();
-  const bisId = useId();
-  const hinweisId = useId();
 
   // „Ändern gedrückt, aber noch nichts eingetragen" ist kein Filterzustand: Der
   // Ausschnitt ist derselbe wie vorher. Ohne diesen Komponentenzustand wären die
   // Felder aber gar nicht erreichbar, solange die Vorgabe gilt.
   const [offen, setOffen] = useState(false);
-  const [angefangen, setAngefangen] = useState({ von: false, bis: false });
-
-  function merkeEingabestand(feld: "von" | "bis", ziel: HTMLInputElement) {
-    const halb = ziel.validity.badInput;
-    setAngefangen((bisher) => (bisher[feld] === halb ? bisher : { ...bisher, [feld]: halb }));
-  }
 
   const eigenesFenster = von !== null || bis !== null;
   const felderSichtbar = offen || eigenesFenster;
@@ -803,13 +829,6 @@ function Zeitfensterzeile({
   const anker = ergebnis === undefined ? null : new Date(ergebnis.bis);
   const spanne =
     ergebnis === undefined ? null : spanneInTagen(new Date(ergebnis.von), new Date(ergebnis.bis));
-
-  const hinweis =
-    angefangen.von || angefangen.bis
-      ? texte.nachrichten.zeitfenster.unvollstaendig
-      : (von === null) !== (bis === null)
-        ? texte.nachrichten.zeitfenster.beideNoetig
-        : undefined;
 
   return (
     <div className="flex flex-col gap-1">
@@ -849,7 +868,7 @@ function Zeitfensterzeile({
             size="sm"
             className="min-h-beruehrung"
             onClick={() => {
-              const jahr = jahresfensterAb(anker);
+              const jahr = jahresfensterAb(anker, zone);
               aufFenster(jahr.von, jahr.bis);
             }}
           >
@@ -863,10 +882,9 @@ function Zeitfensterzeile({
             variant="ghost"
             size="sm"
             className="min-h-beruehrung"
-            onClick={() => {
-              setAngefangen({ von: false, bis: false });
-              aufFenster(null, null);
-            }}
+            // Die Felder übernehmen den leeren Wert von außen und hängen sich
+            // neu ein — auch ein halb getipptes Datum ist danach weg.
+            onClick={() => aufFenster(null, null)}
           >
             {texte.suche.fenster.vorgabe}
           </Button>
@@ -874,53 +892,15 @@ function Zeitfensterzeile({
       </div>
 
       {felderSichtbar ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-col gap-0.5">
-            <Label htmlFor={vonId} className="text-beiwerk">
-              {texte.nachrichten.zeitfenster.von}
-            </Label>
-            <Input
-              id={vonId}
-              type="datetime-local"
-              className="h-bedienelement w-auto"
-              aria-describedby={hinweis === undefined ? undefined : hinweisId}
-              value={wanduhrzeitFuerEingabe(von, zone)}
-              onKeyUp={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
-              onBlur={(ereignis) => merkeEingabestand("von", ereignis.currentTarget)}
-              onChange={(ereignis) => {
-                merkeEingabestand("von", ereignis.currentTarget);
-                aufFenster(zeitpunktAusWanduhrzeit(ereignis.target.value, zone), bis);
-              }}
-            />
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <Label htmlFor={bisId} className="text-beiwerk">
-              {texte.nachrichten.zeitfenster.bis}
-            </Label>
-            <Input
-              id={bisId}
-              type="datetime-local"
-              className="h-bedienelement w-auto"
-              aria-describedby={hinweis === undefined ? undefined : hinweisId}
-              value={wanduhrzeitFuerEingabe(bis, zone)}
-              onKeyUp={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
-              onBlur={(ereignis) => merkeEingabestand("bis", ereignis.currentTarget)}
-              onChange={(ereignis) => {
-                merkeEingabestand("bis", ereignis.currentTarget);
-                aufFenster(von, zeitpunktAusWanduhrzeit(ereignis.target.value, zone));
-              }}
-            />
-          </div>
-        </div>
+        <Zeitfensterfelder
+          von={von}
+          bis={bis}
+          aufAenderung={aufFenster}
+          fehler={fehler}
+          vertrag="sekunde"
+          anordnung="untereinander"
+        />
       ) : null}
-
-      {hinweis === undefined ? null : (
-        // Dieselbe ruhige Farbrolle wie am Suchfeld der Liste: Der Nutzer hat
-        // nichts falsch gemacht, er ist nur noch nicht fertig.
-        <p id={hinweisId} className="text-muted-foreground text-beiwerk max-w-prose">
-          {hinweis}
-        </p>
-      )}
 
       <span className="sr-only">
         {ergebnis === undefined

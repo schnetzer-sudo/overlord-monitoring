@@ -198,9 +198,17 @@ export const de = {
     FREI: "Frei",
     von: "Von",
     bis: "Bis",
-    // Ein datetime-local liefert erst dann einen Wert, wenn Datum UND Uhrzeit
-    // vollständig sind — erkannt an validity.badInput (`docs/nachrichtenliste.md` §8.2).
-    unvollstaendig: "Bitte Datum und Uhrzeit vollständig eintragen.",
+    // Seit E‑1198 (17.11.2026) je Zeitpunkt ein Datum und eine Stundenwahl —
+    // an allen drei Stellen mit freiem Fenster: Nachrichtenliste, Belegsuche,
+    // Prozessansicht (`docs/nachrichtenliste.md` §8.2); seit E‑1203 ohne Minuten.
+    // Der Name gilt der Stundenwahl, die keine sichtbare Beschriftung neben
+    // „Von“ und „Bis“ hat.
+    stunde: "{grenze}, Stunde (freiwillig)",
+    // Die leere Stundenwahl: der ganze Tag.
+    ganzerTag: "Ganzer Tag",
+    // Ein halb getipptes Datum liefert keinen Wert und kein `input` — erkannt an
+    // validity.badInput, gelesen an keyup und blur (`docs/nachrichtenliste.md` §8.2).
+    datumUnvollstaendig: "Bitte das Datum vollständig eintragen.",
     beideNoetig: "Für ein freies Zeitfenster fehlt noch der zweite Zeitpunkt.",
   },
 
@@ -660,19 +668,12 @@ export const de = {
       d7: "7 Tage",
       d30: "30 Tage",
       frei: "Frei",
-      von: "Von",
-      bis: "Bis",
       // Bewusst ohne Zahl: Die Vorgabe steht im Backend (Regel L1), und ein
       // zweiter Wert hier liefe dem ersten irgendwann hinterher.
       standardHinweis: "Ohne Auswahl gilt das Standardfenster des Servers.",
       zuruecksetzen: "Zeitfenster zurücksetzen",
-      // Ein datetime-local liefert erst dann einen Wert, wenn Datum UND Uhrzeit
-      // vollstaendig sind. Wer nur das Datum eintippt, sieht es im Feld stehen —
-      // und die Anwendung tut nichts und sagt nichts. Genau das war der Befund
-      // vom 07.08.2026; erkannt wird der Zustand an validity.badInput.
-      unvollstaendig: "Bitte Datum und Uhrzeit vollständig eintragen.",
-      // Beide Zeitpunkte fehlen noch: kein Fehler, sondern ein Zwischenzustand.
-      beideNoetig: "Für ein freies Zeitfenster fehlt noch der zweite Zeitpunkt.",
+      // Beschriftungen und Meldungen der Felder stehen seit E‑1198 unter
+      // `zeitraum` — ein Baustein für alle drei Stellen (`zeitfensterfelder.tsx`).
     },
 
     statusfilter: {

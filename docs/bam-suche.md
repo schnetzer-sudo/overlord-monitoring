@@ -1357,6 +1357,58 @@ Trefferzahl und nicht in den Voreinstellungen.
 > | **„Vorgabe wiederherstellen"** | entfernt beide Parameter und überlässt dem Backend seine 30 Tage. **Kein zweiter Standardwert im Frontend** — er liefe dem ersten irgendwann hinterher |
 > | **Die beiden Felder** | nehmen Wanduhrzeit entgegen und rechnen in der **Anzeigezone** um. Ein halb getipptes `datetime-local` meldet sich nicht von selbst; herausgegeben wird der Zustand allein über `validity.badInput`, gelesen an `keyup` und `blur` — derselbe Befund wie am freien Fenster der Liste ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2) |
 
+> ### ⚠️ Korrektur vom 17.11.2026 — Datum und freiwillige Uhrzeit, Meldungen am Feld (E‑1198, E‑1200, E‑1202)
+>
+> **Die Zeile „Die beiden Felder“ der Tabelle darüber ist überholt.** Statt zweier `datetime-local`
+> stehen je Zeitpunkt ein Datum und eine freiwillige Uhrzeit (`input type="time"`, Minuten) — der
+> gemeinsame Baustein der drei freien Fenster, beschrieben in
+> [`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Korrektur vom 17.11.2026. **Ein Datum allein
+> meint den ganzen Tag:** „Von“ ab 00:00, „Bis“ bis 23:59:59. Das `bis` der Suche ist
+> einschließend und sekundengenau (`BamSucheRepository`: `MESSAGELASTUPDATE.le(fenster.bis())`,
+> `MessageLastUpdate` ohne Bruchteil) — am Code geprüft, nicht angenommen. Umgerechnet wird
+> weiterhin in der **Anzeigezone**, mit zwei Durchgängen; keines der drei Bedienelemente rechnet gegen
+> die Browseruhr (Regel Z1).
+>
+> | Bedienelement | seit dem 17.11.2026 |
+> |---|---|
+> | **„Auf ein Jahr erweitern“** | unverändert: setzt **beide** Zeitpunkte, 365 Tage vor dem `bis` der Antwort. **Die Felder zeigen das Ergebnis** — Datum und Uhrzeit, so genau, wie die Adresse es trägt: Das `bis` der Antwort trägt Sekunden und Millisekunden, die Uhrzeitfelder zeigen sie dann mit — im Browser `04:35:49,253` (Sichtprüfung vom 17.11.2026). Ob der Anker auf die Minute gerundet werden soll, ist **Punkt 1057** |
+> | **„Vorgabe wiederherstellen“** | unverändert; die Felder übernehmen den leeren Wert und hängen sich neu ein — auch ein halb getipptes Datum ist danach weg |
+> | **Die Felder** | Datum und freiwillige Uhrzeit; eine halbe Eingabe meldet sich über `validity.badInput` an `keyup` und `blur` und **ändert die Adresse nicht** (E‑1202) |
+>
+> **Neu: Antworten zum Zeitfenster stehen am Feld (E‑1200).** Bis dahin ersetzte jeder
+> `zeitfenster-*`-Fehler die Trefferliste durch den Fehlerbaustein — auch der Moment, in dem erst
+> „Von“ steht und die Anfrage mit `zeitfenster-unvollstaendig` zurückkommt. Seither gilt die Regel der
+> Nachrichtenliste: `zeitfenster-unvollstaendig`, `zeitfenster-ungueltig`, `zeitpunkt-ungueltig` und
+> `zeitfenster-zu-gross` (`AM_ZEITFENSTER`) stehen an den Feldern, und **an Stelle der Trefferliste
+> bleibt die zuletzt gelieferte Antwort stehen**, samt Trefferzeile darüber; ohne frühere Antwort
+> steht dort nichts. Dasselbe, solange erst einer der beiden Zeitpunkte dasteht. Ein Abbruch verwirft
+> die gehaltene Antwort (`letzteLieferung`, E‑240). Entschieden in der reinen Funktion
+> `trefferanzeige` (`features/nachrichten/suche.ts`); **jeder andere Fehler** bleibt der
+> Fehlerbaustein über der Liste, ausdrücklich auch `zeitfenster-mehrdeutig` und
+> `praefixsuche-fenster-zu-gross` mit seinem eigenen Ausweg. Die Nulltreffer-Zeile und der Absprung in
+> den Prozessbaum lesen weiterhin die Antwort der aktuellen Abfrage.
+>
+> **Was ein ganzer Tag am Rand kann:** Ein Jahresfenster aus zwei Daten ohne Uhrzeit reicht bis
+> 23:59:59 und kann damit über das Kalenderjahr aus Regel L1 gehen — dann steht
+> `zeitfenster-zu-gross` am Feld. Das Frontend rechnet die Grenze nicht nach.
+>
+> Tests: `tests/suche.test.ts` (fünf Fälle zu `trefferanzeige`) und
+> `tests/freies-zeitfenster.test.tsx` (sechs gerenderte Fälle zur Belegsuche, darunter „Auf ein Jahr
+> erweitern“ und `zeitfenster-zu-gross` ohne frühere Antwort). Gesamtbild, Verletzungsproben und
+> Sichtprüfung: [`nachrichtenliste.md`](nachrichtenliste.md) §8.2.
+>
+> **Nachtrag vom selben Tag (E‑1203, E‑1205):** Statt des Uhrzeitfelds steht auch hier die
+> Stundenwahl der Prozessansicht, ohne Minuten; „Bis 14:59“ ist 14:59:59. **„Auf ein Jahr erweitern“
+> rundet das `bis` der Antwort auf das Ende seiner Stunde auf**, „Von“ beginnt 365 Kalendertage davor
+> zur nächsten vollen Stunde — im Browser aus dem Anker 04:33 „30.12.2024, 05:00“ bis „30.12.2025,
+> 04:59“, vom Backend angenommen. Punkt 1057 ist damit erledigt. **Die Präfixsuche und „Fenster
+> verkleinern“** lassen `bis` stehen und rücken `von` auf die nächste volle Stunde vor: Das Fenster
+> bleibt ein Ausschnitt des alten (§23) und unter dem Deckel. Alle drei rechnen seither in
+> Kalendertagen der Anzeigezone statt in 24-Stunden-Schritten; vorher war „Auf ein Jahr erweitern“
+> ein `400`, wenn nur `bis` in der Sommerzeit lag ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2,
+> Nachtrag).
+
+
 **Die Nulltreffer-Zeile.** Jede Marke verengt. Landet die dritte bei null, sieht der Nutzer nicht,
 welche es war — und mit einer nicht mitgetippten führenden Null passiert genau das. **Die vorige
 Trefferzahl steht ohnehin auf dem Schirm:** *„Mit diesem Begriff: 0. Ohne ihn: 12."* kostet

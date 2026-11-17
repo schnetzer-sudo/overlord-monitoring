@@ -4040,6 +4040,40 @@ nichts Fachliches geändert hat; die Beobachtung steht in §33, nicht in der Zus
 | **Die Codes** | `lib/rollupzeitraum.ts`: `FREI` als Code der Antwort (`Baumzeitraum`), **kein** viertes Paar in `ROLLUPZEITRAEUME`; dazu `Baumfensterzustand`, `baumfenstermodus`, `angezeigterBaumfenstermodus`, `mitPaar`, `mitFreiemBaumfenster`, `hervorgehobenerBaumzeitraum`, `baumfensterAlsParameter` — **nachgebaut aus `lib/filter.ts`, nicht importiert**; dort liegen die Zeitraumcodes der Liste, eine andere Menge |
 | **Die Beschriftungen** | `texte.zeitraum`: `FREI`, `von`, `bis`, `unvollstaendig`, `beideNoetig`; `fehler["zeitfenster-zu-genau"]`. Beide Sprachen, `sprachdateien.test.ts` ohne neue Ausnahme |
 
+> ### ⚠️ Korrektur vom 17.11.2026 — Datum und Stundenwahl, ohne Uhrzeit der ganze Tag (E‑1198, E‑1199, E‑1201, E‑1202)
+>
+> **Die Zeilen „Die Datumsfelder“ und „Die Beschriftungen“ der Tabelle oben sind überholt.** Statt
+> zweier `datetime-local` mit `step=3600` stehen je Zeitpunkt ein **Datum** (`input type="date"`)
+> und eine **Stundenwahl** über `components/auswahl-feld.tsx` — kein neues `<select>`. Sie kommen
+> aus dem gemeinsamen Baustein der drei freien Fenster
+> (`features/nachrichten/components/zeitfensterfelder.tsx`, Anordnung `in-der-zeile`);
+> `baumfenster-felder.tsx` ist entfallen. Gesamtbild in [`nachrichtenliste.md`](nachrichtenliste.md)
+> §8.2, Korrektur vom 17.11.2026.
+>
+> | | seit dem 17.11.2026 |
+> |---|---|
+> | **Ohne Stunde** | „Von“ 00:00, „Bis“ **23:00** der Anwendungszone — `bis` ist hier die letzte enthaltene Stunde (E‑94); beide Grenzen liegen auf vollen Stunden, ein Datum allein kann also kein `zeitfenster-zu-genau` auslösen (E‑95) |
+> | **Die Stundenwahl** | „Ganzer Tag“, dann 24 Einträge. „Von“ nennt die Stunde (`14:00`), **„Bis“ ihr Ende** (`14:59`); gespeichert wird in beiden die volle Stunde. Wer bei „Bis“ die letzte Stunde wählt, sieht danach „Ganzer Tag“ — es ist derselbe Wert. Ein Wert, den die Liste nicht kennt (eine von Hand gebaute Adresse mit `13:30`), steht wie er ist (Regel Q4); das Backend weist ihn mit `zeitfenster-zu-genau` ab, die Meldung steht am Feld |
+> | **Tastatur** | Datum tippbar; die Stundenwahl öffnet mit `↓`, springt in der offenen Liste per Zeichen („1“, „4“ → 14, E‑1201) und wählt mit `Enter` |
+> | **Höhe** | Datum und Stundenwahl in Bedienelementhöhe (`h-bedienelement`, dafür wählt `AuswahlFeld` die Höhe über die freiwillige Angabe `hoehe` — eine `className` ließ `cn()` neben `h-feld` stehen, gesehen in der Sichtprüfung: 37,5 statt 30 px); die Zeile wird beim Klick auf „Frei“ breiter, nicht höher, wie seit §45 |
+> | **Hinweistext** | **keiner** (E‑1199). Der Auftrag wollte den Satz „Volle Stunden; „Bis“ ist die letzte enthaltene Stunde.“ sinngemäß erhalten — den gibt es seit dem Nachtrag zu §45 vom 07.09.2026 nicht mehr. Auf Rückfrage entschieden: Die Stundenwahl sagt es selbst. Die Regel „kein Hinweistext ohne Anlass“ bleibt |
+> | **Beschriftungen** | `texte.zeitraum`: `unvollstaendig` ist ersetzt durch `datumUnvollstaendig` und `uhrzeitUnvollstaendig`; neu `ganzerTag`, `uhrzeit`, `stunde` (zugängliche Namen von Uhrzeitfeld und Stundenwahl). Beide Sprachen |
+> | **Halbe Eingabe** | nur am Datum möglich; sie meldet sich am Feld und **ändert die Adresse nicht** (E‑1202) — der Baum bleibt stehen, es geht keine Anfrage hinaus |
+>
+> **`kalendertagfenster` (E‑1196) rechnet seither über dieselbe Funktion** wie die Felder
+> (`zeitpunktAusDatumUndUhrzeit` im Vertrag `stunde`): Der Kalendertag des Absprungs und ein Datum
+> ohne Stunde sind damit an genau einer Stelle definiert. Seine acht Fälle in
+> `tests/prozessansicht.test.ts` sind unverändert grün und fallen in Verletzungsprobe V1 mit.
+>
+> **Unverändert:** Zustand und URL (Tabelle „Zustand und URL“ oben), wo die Meldungen stehen
+> (`AM_BAUMFENSTER`), der letzte gelieferte Baum bleibt stehen, „Frei“ beginnt leer.
+>
+> **Nachtrag vom selben Tag (E‑1203, E‑1206):** Dieselbe Stundenwahl steht seither auch in
+> der Nachrichtenliste und in der Belegsuche. Ihre offene Liste ist höchstens 18 rem hoch und scrollt —
+> sie klappte mit 25 Zeilen bis an den unteren Bildrand auf. An dieser Ansicht ändert sich sonst
+> nichts ([`nachrichtenliste.md`](nachrichtenliste.md) §8.2, Nachtrag).
+
+
 ### Zustand und URL
 
 | | in der URL | Verlauf |

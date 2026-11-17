@@ -728,7 +728,8 @@ describe("Neu laden in der Prozessansicht", () => {
       expect(bedienelemente().at(-1), "ohne freies Fenster").toBe(knopf);
 
       await klicke(letzter);
-      const felder = (kopf as Element).querySelectorAll('input[type="datetime-local"]');
+      // Seit E‑1198 je Zeitpunkt ein Datum und eine Stundenwahl (`docs/process-view.md` §41).
+      const felder = (kopf as Element).querySelectorAll('input[type="date"]');
       expect(felder, "Eichung: die Datumsfelder stehen").toHaveLength(2);
       expect(bedienelemente().at(-1), "im freien Modus").toBe(knopf);
     } finally {
