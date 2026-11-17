@@ -255,6 +255,24 @@ describe("Der Sprung per Zeichen", () => {
     }
   });
 
+  /**
+   * **Die offene Liste klappt nicht bis an den unteren Bildrand auf** *(E‑1206,
+   * Meldung des Auftraggebers vom 17.11.2026)*: höchstens 18 rem hoch, darin
+   * scrollt sie — dieselbe Höhe wie die Prozessauswahl (`max-h-72`). Eine Regel,
+   * die selbst eine Klasse ist; Höhen rechnet jsdom nicht.
+   */
+  it("begrenzt die offene Liste in der Höhe und lässt sie scrollen", async () => {
+    const { behaelter, abbauen } = await stundenwahl(vi.fn());
+    try {
+      await taste(behaelter.querySelector("#stunde"), "ArrowDown");
+      const klassen = [...(liste()?.classList ?? [])];
+      expect(klassen).toContain("max-h-72");
+      expect(klassen).toContain("overflow-y-auto");
+    } finally {
+      await abbauen();
+    }
+  });
+
   it("ändert am geschlossenen Feld nichts und lässt Tasten mit Strg durch", async () => {
     const aufWahl = vi.fn();
     const { behaelter, abbauen } = await stundenwahl(aufWahl);

@@ -11,6 +11,7 @@ import { useTexte } from "@/i18n/provider";
 import { fehleranzeige } from "@/lib/fehlertext";
 import {
   datumUndUhrzeitFuerEingabe,
+  stundeneintraege,
   zeitpunktAusDatumUndUhrzeit,
   type DatumUndUhrzeit,
   type Fenstergrenze,
@@ -20,12 +21,7 @@ import type { ProblemFehler } from "@/lib/http";
 
 const GRENZEN = ["von", "bis"] as const satisfies readonly Fenstergrenze[];
 
-/** Die 24 Stunden der Stundenwahl, zweistellig. */
-const STUNDEN = Array.from({ length: 24 }, (_, stunde) => String(stunde).padStart(2, "0"));
-
-type Teil = "datum" | "uhrzeit";
-
-/** Was die beiden Felder eines Zeitpunkts führen, und woher es kam. */
+/** Was Datum und Stundenwahl eines Zeitpunkts führen, und woher es kam. */
 type Feldstand = {
   /** Datum und Uhrzeit, wie sie in den Feldern stehen. */
   entwurf: DatumUndUhrzeit;
@@ -33,10 +29,10 @@ type Feldstand = {
   quelle: number | null;
   /** Der Wert von außen, den die Felder zuletzt gesehen haben. */
   gesehen: number | null;
-  /** Steigt, wenn ein Wert von außen kommt: Die Felder hängen sich dann neu ein. */
+  /** Steigt, wenn ein Wert von außen kommt: Das Datumsfeld hängt sich dann neu ein. */
   fassung: number;
-  /** Halb getippt — der Zustand, den nur `validity.badInput` herausgibt. */
-  halb: Record<Teil, boolean>;
+  /** Das Datum ist halb getippt — der Zustand, den nur `validity.badInput` herausgibt. */
+  halb: boolean;
 };
 
 type Stand = { zone: string; von: Feldstand; bis: Feldstand };
@@ -49,63 +45,69 @@ const zahl = (wert: Date | null): number | null => (wert === null ? null : wert.
  * der Nachrichtenliste, das Zeitfenster der Belegsuche und das freie Fenster der
  * Prozessansicht.
  *
- * ## Je Zeitpunkt ein Datum und eine freiwillige Uhrzeit
+ * ## Je Zeitpunkt ein Datum und eine Stundenwahl
  *
  * Bis dahin stand an allen drei Stellen ein `datetime-local`. Das liefert erst
  * einen Wert, wenn Datum **und** Uhrzeit vollständig sind; wer nur ein Datum
  * eintrug, bekam eine Meldung statt eines Ergebnisses (gemeldet vom
- * Auftraggeber am 17.11.2026). **Jetzt genügt das Datum.** Ohne Uhrzeit beginnt
+ * Auftraggeber am 17.11.2026). **Jetzt genügt das Datum.** Ohne Stunde beginnt
  * „Von“ um 00:00 und endet „Bis“ am Ende des Tages **im Vertrag des
  * Einhängepunkts** (`vertrag`, `lib/format.ts`): 23:59:59 in Liste und Suche,
  * 23:00 in der Prozessansicht, deren `bis` die letzte enthaltene Stunde ist
  * (E‑94).
  *
+ * **Seit E‑1203 (am selben Tag) überall die Stundenwahl, keine Minuten.** Liste
+ * und Suche trugen zuerst ein `input type="time"`, dessen aufgeklappte Fläche
+ * der Browser in seinen eigenen Farben zeichnet (Punkt 180); der Auftraggeber
+ * wollte alle drei Stellen wie die Prozessansicht. „Von“ nennt die volle
+ * Stunde, „Bis“ ihr Ende; im Sekundenvertrag ist „Bis 14:59“ 14:59:59 (E‑1204,
+ * `stundeneintraege`).
+ *
  * | | Liste, Suche (`untereinander`) | Prozessansicht (`in-der-zeile`) |
  * |---|---|---|
  * | Datum | `input type="date"` | `input type="date"` |
- * | Uhrzeit | `input type="time"`, Minuten | Stundenwahl aus `components/auswahl-feld.tsx`, „Bis“ nennt das Ende der Stunde |
+ * | Stunde | Stundenwahl aus `components/auswahl-feld.tsx` | dieselbe |
  * | Beschriftung | über den Feldern | links daneben, in der Zeile des Umschalters |
  * | Meldung | unter den Feldern | hinter den Feldern, in derselben Zeile |
  *
  * ## Die Felder führen einen Entwurf — und die Adresse gewinnt, wenn sie sich ändert
  *
- * Datum und Uhrzeit stehen im **Komponentenzustand**, nicht nur in der Adresse:
- * Eine Uhrzeit ohne Datum ist noch kein Zeitpunkt, und ein gesteuertes Feld, das
- * seinen Wert nur aus der Adresse läse, verlöre sie beim nächsten Rendern. In
- * die Adresse geht ein Zeitpunkt, sobald das Datum steht.
+ * Datum und Stunde stehen im **Komponentenzustand**, nicht nur in der Adresse:
+ * Eine Stunde ohne Datum ist noch kein Zeitpunkt, und eine Wahl, die ihren Wert
+ * nur aus der Adresse läse, verlöre sie beim nächsten Rendern. In die Adresse
+ * geht ein Zeitpunkt, sobald das Datum steht.
  *
  * **Ändert sich der Wert von außen** — ein Link, das Zurück des Browsers, „Auf
- * ein Jahr erweitern“, „Vorgabe wiederherstellen“ —, übernehmen die Felder ihn
- * und hängen sich neu ein (`fassung`): Ein halb getipptes Datum leert sich nur
- * so, denn `value` ist dabei schon leer, und React setzte es nicht noch einmal.
- * Kommt dagegen der Wert zurück, den die Felder selbst geschrieben haben, bleibt
- * der Entwurf, wie er ist — sonst sprängen die Felder beim Tippen.
+ * ein Jahr erweitern“, „Vorgabe wiederherstellen“ —, übernehmen die Felder ihn,
+ * und das Datumsfeld hängt sich neu ein (`fassung`): Ein halb getipptes Datum
+ * leert sich nur so, denn `value` ist dabei schon leer, und React setzte es
+ * nicht noch einmal. Kommt dagegen der Wert zurück, den die Felder selbst
+ * geschrieben haben, bleibt der Entwurf, wie er ist.
  *
- * **Die Uhrzeit bleibt leer genau dann, wenn sie der Vorgabe entspricht.** Aus
- * der Adresse gelesen sowieso; nach einer Eingabe beim Verlassen des Felds und
- * nach einer Wahl in der Stundenwahl. Wer „Von 00:00“ tippt, sieht danach ein
- * leeres Feld — es heißt dasselbe.
+ * **Die Stunde bleibt leer („Ganzer Tag“) genau dann, wenn sie der Vorgabe
+ * entspricht** — aus der Adresse gelesen und nach jeder Eingabe. Wer „Von
+ * 00:00“ oder bei „Bis“ die letzte Stunde wählt, sieht danach „Ganzer Tag“: Es
+ * heißt dasselbe. Ein Wert, den die Stundenwahl nicht kennt — ein alter Link mit
+ * Minuten —, steht, wie er ist (Regel Q4).
  *
  * ## Eine halbe Eingabe ist keine Auswahl (E‑1202)
  *
- * Ein halb getipptes Datum oder eine halbe Uhrzeit liefert `value === ""` und
- * feuert kein `input`; herausgegeben wird der Zustand allein über
- * `validity.badInput`, gelesen an `keyup` und `blur` — der Befund vom
- * 07.08.2026, übernommen und nicht neu gefunden. **Die Adresse bleibt dabei,
- * wie sie war**; die Meldung steht am Feld. **Eine leere Uhrzeit ist keine halbe
- * Eingabe**, sondern der ganze Tag.
+ * Ein halb getipptes Datum liefert `value === ""` und feuert kein `input`;
+ * herausgegeben wird der Zustand allein über `validity.badInput`, gelesen an
+ * `keyup` und `blur` — der Befund vom 07.08.2026, übernommen und nicht neu
+ * gefunden. **Die Adresse bleibt dabei, wie sie war**; die Meldung steht am
+ * Feld.
  *
  * ## Wo die Meldungen stehen, in dieser Reihenfolge
  *
- * 1. Ein halbes oder fehlendes Datum (auch: Uhrzeit ohne Datum).
- * 2. Eine halbe Uhrzeit.
- * 3. Die Antwort des Servers, falls sie an die Felder gehört (`fehler`) — die
+ * 1. Ein halbes oder fehlendes Datum (auch: Stunde ohne Datum).
+ * 2. Die Antwort des Servers, falls sie an die Felder gehört (`fehler`) — die
  *    Prüfung bleibt im Backend; das Frontend rechnet keine Jahresgrenze nach.
- * 4. Erst einer der beiden Zeitpunkte steht.
+ * 3. Erst einer der beiden Zeitpunkte steht.
  *
- * **Kein Hinweistext ohne Anlass** (`docs/process-view.md` §45, E‑1199): Was „ohne
- * Uhrzeit“ heißt, sagt die Stundenwahl selbst („Ganzer Tag“, „Bis“ mit dem Ende
- * der Stunde); das Uhrzeitfeld sagt es in seinem Namen.
+ * **Kein Hinweistext ohne Anlass** (`docs/process-view.md` §45, E‑1199): Was
+ * „ohne Stunde“ heißt, sagt die Stundenwahl selbst („Ganzer Tag“, „Bis“ mit dem
+ * Ende der Stunde).
  */
 export function Zeitfensterfelder({
   von,
@@ -138,7 +140,7 @@ export function Zeitfensterfelder({
       quelle: zahl(wert),
       gesehen: zahl(wert),
       fassung,
-      halb: { datum: false, uhrzeit: false },
+      halb: false,
     };
   }
 
@@ -176,64 +178,50 @@ export function Zeitfensterfelder({
   }
 
   /**
-   * Übernimmt, was ein Feld gerade herausgibt — an `change`, `keyup` und `blur`.
-   * `keyup` und `blur` fangen auch den Weg von halb zu leer, der kein `input`
-   * auslöst.
+   * Übernimmt einen neuen Entwurf und schreibt den Zeitpunkt in die Adresse,
+   * sobald das Datum steht. Steht er, wird die Stunde so geschrieben, wie die
+   * Adresse sie zurückgäbe — leer, wenn sie die Vorgabe ist.
    */
-  function uebernimm(grenze: Fenstergrenze, teil: Teil, wert: string, halbJetzt: boolean) {
-    const feld = stand[grenze];
-    const halb = { ...feld.halb, [teil]: halbJetzt };
-    if (halbJetzt) {
-      if (!feld.halb[teil]) {
-        setStand((bisher) => ({ ...bisher, [grenze]: { ...bisher[grenze], halb } }));
-      }
-      return;
-    }
-    const entwurf = { ...feld.entwurf, [teil]: wert };
-    if (entwurf.datum === feld.entwurf.datum && entwurf.uhrzeit === feld.entwurf.uhrzeit) {
-      if (feld.halb[teil]) {
-        setStand((bisher) => ({ ...bisher, [grenze]: { ...bisher[grenze], halb } }));
-      }
-      return;
-    }
+  function uebernimm(grenze: Fenstergrenze, entwurf: DatumUndUhrzeit) {
     const zeitpunkt =
       entwurf.datum === ""
         ? null
         : zeitpunktAusDatumUndUhrzeit(entwurf.datum, entwurf.uhrzeit, grenze, vertrag, zone);
+    const geglaettet =
+      zeitpunkt === null ? entwurf : datumUndUhrzeitFuerEingabe(zeitpunkt, grenze, vertrag, zone);
     const quelle = zahl(zeitpunkt);
-    setStand((bisher) => ({ ...bisher, [grenze]: { ...bisher[grenze], entwurf, quelle, halb } }));
-    // Steht der andere Teil desselben Zeitpunkts halb da, wartet die Adresse auf ihn.
-    const anderesHalb = teil === "datum" ? halb.uhrzeit : halb.datum;
-    if (!anderesHalb && quelle !== zahl(werte[grenze])) {
+    setStand((bisher) => ({
+      ...bisher,
+      [grenze]: { ...bisher[grenze], entwurf: geglaettet, quelle, halb: false },
+    }));
+    if (quelle !== zahl(werte[grenze])) {
       aufAenderung(grenze === "von" ? zeitpunkt : von, grenze === "bis" ? zeitpunkt : bis);
     }
   }
 
-  /** Schreibt die Uhrzeit so, wie die Adresse sie zurückgäbe — leer, wenn sie die Vorgabe ist. */
-  function glaette(grenze: Fenstergrenze) {
-    setStand((bisher) => {
-      const feld = bisher[grenze];
-      if (feld.halb.datum || feld.halb.uhrzeit || feld.quelle === null) {
-        return bisher;
+  /**
+   * Was das Datumsfeld gerade herausgibt — an `change`, `keyup` und `blur`.
+   * `keyup` und `blur` fangen auch den Weg von halb zu leer, der kein `input`
+   * auslöst. Eine halbe Eingabe ändert die Adresse nicht (E‑1202).
+   */
+  function uebernimmDatum(grenze: Fenstergrenze, feld: HTMLInputElement) {
+    const bisher = stand[grenze];
+    const halb = feld.validity.badInput;
+    if (halb || feld.value === bisher.entwurf.datum) {
+      if (halb !== bisher.halb) {
+        setStand((vorher) => ({ ...vorher, [grenze]: { ...vorher[grenze], halb } }));
       }
-      const entwurf = datumUndUhrzeitFuerEingabe(new Date(feld.quelle), grenze, vertrag, zone);
-      return entwurf.datum === feld.entwurf.datum && entwurf.uhrzeit === feld.entwurf.uhrzeit
-        ? bisher
-        : { ...bisher, [grenze]: { ...feld, entwurf } };
-    });
+      return;
+    }
+    uebernimm(grenze, { ...bisher.entwurf, datum: feld.value });
   }
 
   function hinweistext(): string | undefined {
     const felder = GRENZEN.map((grenze) => aktuell[grenze]);
     if (
-      felder.some(
-        (feld) => feld.halb.datum || (feld.entwurf.datum === "" && feld.entwurf.uhrzeit !== ""),
-      )
+      felder.some((feld) => feld.halb || (feld.entwurf.datum === "" && feld.entwurf.uhrzeit !== ""))
     ) {
       return texte.zeitraum.datumUnvollstaendig;
-    }
-    if (felder.some((feld) => feld.halb.uhrzeit)) {
-      return texte.zeitraum.uhrzeitUnvollstaendig;
     }
     if (fehler !== undefined) {
       return fehleranzeige(fehler, texte).text;
@@ -251,18 +239,6 @@ export function Zeitfensterfelder({
     bis: texte.zeitraum.bis,
   };
 
-  function stundeneintraege(grenze: Fenstergrenze): Auswahleintrag<string>[] {
-    return [
-      { wert: "", text: texte.zeitraum.ganzerTag },
-      // „Bis“ ist die letzte enthaltene Stunde (E‑94) — genannt wird ihr Ende,
-      // gespeichert die volle Stunde.
-      ...STUNDEN.map((stunde) => ({
-        wert: `${stunde}:00`,
-        text: grenze === "bis" ? `${stunde}:59` : `${stunde}:00`,
-      })),
-    ];
-  }
-
   function datumsfeld(grenze: Fenstergrenze) {
     const feld = aktuell[grenze];
     return (
@@ -276,71 +252,9 @@ export function Zeitfensterfelder({
         className="h-bedienelement w-auto"
         aria-describedby={beschriebenDurch}
         value={feld.entwurf.datum}
-        onChange={(ereignis) =>
-          uebernimm(
-            grenze,
-            "datum",
-            ereignis.currentTarget.value,
-            ereignis.currentTarget.validity.badInput,
-          )
-        }
-        onKeyUp={(ereignis) =>
-          uebernimm(
-            grenze,
-            "datum",
-            ereignis.currentTarget.value,
-            ereignis.currentTarget.validity.badInput,
-          )
-        }
-        onBlur={(ereignis) => {
-          uebernimm(
-            grenze,
-            "datum",
-            ereignis.currentTarget.value,
-            ereignis.currentTarget.validity.badInput,
-          );
-          glaette(grenze);
-        }}
-      />
-    );
-  }
-
-  function uhrzeitfeld(grenze: Fenstergrenze) {
-    const feld = aktuell[grenze];
-    return (
-      <Input
-        key={`uhrzeit-${feld.fassung}`}
-        id={`${kennung}-${grenze}-uhrzeit`}
-        type="time"
-        aria-label={einsetzen(texte.zeitraum.uhrzeit, { grenze: beschriftung[grenze] })}
-        className="h-bedienelement w-auto"
-        aria-describedby={beschriebenDurch}
-        value={feld.entwurf.uhrzeit}
-        onChange={(ereignis) =>
-          uebernimm(
-            grenze,
-            "uhrzeit",
-            ereignis.currentTarget.value,
-            ereignis.currentTarget.validity.badInput,
-          )
-        }
-        onKeyUp={(ereignis) =>
-          uebernimm(
-            grenze,
-            "uhrzeit",
-            ereignis.currentTarget.value,
-            ereignis.currentTarget.validity.badInput,
-          )
-        }
-        onBlur={(ereignis) => {
-          uebernimm(
-            grenze,
-            "uhrzeit",
-            ereignis.currentTarget.value,
-            ereignis.currentTarget.validity.badInput,
-          );
-          glaette(grenze);
-        }}
+        onChange={(ereignis) => uebernimmDatum(grenze, ereignis.currentTarget)}
+        onKeyUp={(ereignis) => uebernimmDatum(grenze, ereignis.currentTarget)}
+        onBlur={(ereignis) => uebernimmDatum(grenze, ereignis.currentTarget)}
       />
     );
   }
@@ -349,6 +263,12 @@ export function Zeitfensterfelder({
     const feld = aktuell[grenze];
     const id = `${kennung}-${grenze}-stunde`;
     const name = einsetzen(texte.zeitraum.stunde, { grenze: beschriftung[grenze] });
+    const eintraege: Auswahleintrag<string>[] = [
+      { wert: "", text: texte.zeitraum.ganzerTag },
+      // „Von“ nennt die volle Stunde, „Bis“ ihr Ende; der Wert hängt am Vertrag
+      // (E‑1204, `lib/format.ts`).
+      ...stundeneintraege(grenze, vertrag),
+    ];
     return (
       <>
         <Label htmlFor={id} className="sr-only">
@@ -360,12 +280,9 @@ export function Zeitfensterfelder({
             id={id}
             beschriftung={name}
             wert={feld.entwurf.uhrzeit}
-            eintraege={stundeneintraege(grenze)}
+            eintraege={eintraege}
             hoehe="bedienelement"
-            aufWahl={(wert) => {
-              uebernimm(grenze, "uhrzeit", wert, false);
-              glaette(grenze);
-            }}
+            aufWahl={(wert) => uebernimm(grenze, { ...stand[grenze].entwurf, uhrzeit: wert })}
           />
         </div>
       </>
@@ -417,7 +334,7 @@ export function Zeitfensterfelder({
   }
 
   /*
-   * Datum und Uhrzeit eines Zeitpunkts stehen eng beieinander, die beiden
+   * Datum und Stunde eines Zeitpunkts stehen eng beieinander, die beiden
    * Zeitpunkte mit Abstand: Gelesen werden zwei Grenzen, nicht vier Felder. Am
    * schmalen Fenster bricht „Bis“ als Ganzes in die nächste Zeile.
    */
@@ -431,7 +348,7 @@ export function Zeitfensterfelder({
             </Label>
             <div className="flex items-center gap-1">
               {datumsfeld(grenze)}
-              {uhrzeitfeld(grenze)}
+              {stundenwahl(grenze)}
             </div>
           </div>
         ))}

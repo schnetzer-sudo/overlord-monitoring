@@ -122,12 +122,9 @@ export const en: Texte = {
     FREI: "Custom",
     von: "From",
     bis: "To",
-    uhrzeit: "{grenze}, time (optional)",
     stunde: "{grenze}, hour (optional)",
     ganzerTag: "Whole day",
     datumUnvollstaendig: "Please enter the complete date.",
-    uhrzeitUnvollstaendig:
-      "Please complete or clear the time. Without a time, the whole day applies.",
     beideNoetig: "A custom time window still needs its second point in time.",
   },
 

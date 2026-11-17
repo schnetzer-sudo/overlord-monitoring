@@ -17,6 +17,8 @@ import { rendere } from "./hilfe/rendern";
  * **Freies Zeitfenster: Datum ohne Uhrzeit sucht den ganzen Tag** *(17.11.2026,
  * E‑1198, `docs/nachrichtenliste.md` §8.2, `docs/bam-suche.md` §11.6,
  * `docs/process-view.md` §41)* — die Fälle, die nur ein gerenderter Baum trägt.
+ * **Seit E‑1203 (am selben Tag)** steht an allen drei Stellen statt eines
+ * Uhrzeitfelds die Stundenwahl der Prozessansicht, ohne Minuten.
  *
  * | Fall | Warum ein Baum |
  * |---|---|
@@ -260,10 +262,42 @@ function datumsfelder(behaelter: HTMLElement): [HTMLInputElement, HTMLInputEleme
   return [felder[0] as HTMLInputElement, felder[1] as HTMLInputElement];
 }
 
-function uhrzeitfelder(behaelter: HTMLElement): [HTMLInputElement, HTMLInputElement] {
-  const felder = behaelter.querySelectorAll<HTMLInputElement>('input[type="time"]');
-  expect(felder, "zwei Uhrzeitfelder").toHaveLength(2);
-  return [felder[0] as HTMLInputElement, felder[1] as HTMLInputElement];
+/** Die Stundenwahl einer Grenze — der Auslöser, gefunden über seine Beschriftung. */
+function stundenwahl(grenze: "von" | "bis"): HTMLButtonElement {
+  const text = einsetzen(Z.stunde, { grenze: grenze === "von" ? Z.von : Z.bis });
+  const beschriftung = [...document.querySelectorAll("label")].find(
+    (kandidat) => kandidat.textContent === text,
+  );
+  expect(beschriftung, `Beschriftung ${text}`).toBeDefined();
+  const feld = document.getElementById(beschriftung?.htmlFor ?? "");
+  expect(feld?.getAttribute("aria-haspopup"), "eine Liste der Anwendung").toBe("listbox");
+  return feld as HTMLButtonElement;
+}
+
+/**
+ * **An allen drei Stellen dieselbe Bauform** *(E‑1203)*: je Zeitpunkt ein Datum
+ * und die Stundenwahl der Anwendung — kein Uhrzeitfeld, kein `<select>`, deren
+ * aufgeklappte Fläche der Browser zeichnete. Die Stundenwahl in
+ * Bedienelementhöhe und nur in dieser: Welche von zwei Höhenklassen gewönne,
+ * entschiede die Reihenfolge im Stylesheet (Sichtprüfung vom 17.11.2026: 37,5
+ * statt 30 px).
+ */
+function nurStundenwahl(behaelter: HTMLElement): void {
+  expect(behaelter.querySelectorAll('input[type="time"]'), "kein Uhrzeitfeld").toHaveLength(0);
+  expect(behaelter.querySelector("select"), "kein natives Auswahlfeld").toBeNull();
+  for (const grenze of ["von", "bis"] as const) {
+    const klassen = [...stundenwahl(grenze).classList];
+    expect(klassen, `Stundenwahl ${grenze}`).toContain("h-bedienelement");
+    expect(klassen, `Stundenwahl ${grenze}`).not.toContain("h-feld");
+  }
+}
+
+/** Wählt in der Stundenwahl einer Grenze den Eintrag mit diesem Wert, per Klick. */
+async function waehleStunde(grenze: "von" | "bis", wert: string): Promise<void> {
+  await klicke(stundenwahl(grenze));
+  const zeile = document.querySelector(`[role="option"][data-wert="${wert}"]`);
+  expect(zeile, `Eintrag ${wert}`).not.toBeNull();
+  await klicke(zeile as HTMLElement);
 }
 
 /** Der Text, auf den ein Feld über `aria-describedby` zeigt — die Meldung **am Feld**. */
@@ -319,7 +353,7 @@ async function rendereAnsicht(ansicht: Ansicht, suchparameter: string) {
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
-describe("Die Nachrichtenliste: freies Fenster mit Datum und freiwilliger Uhrzeit", () => {
+describe("Die Nachrichtenliste: freies Fenster mit Datum und Stundenwahl", () => {
   async function frei(suchparameter = "") {
     const gerendert = await rendereAnsicht("nachrichten", suchparameter);
     const umschalter = gerendert.behaelter.querySelector(
@@ -335,6 +369,7 @@ describe("Die Nachrichtenliste: freies Fenster mit Datum und freiwilliger Uhrzei
   it("sucht mit nur einem Datum in Von und Bis die ganzen Tage, und die Liste lädt", async () => {
     const gerendert = await frei();
     try {
+      nurStundenwahl(gerendert.behaelter);
       const [von, bis] = datumsfelder(gerendert.behaelter);
       await trageEin(von, "2026-07-06");
       await trageEin(bis, "2026-07-07");
@@ -366,29 +401,39 @@ describe("Die Nachrichtenliste: freies Fenster mit Datum und freiwilliger Uhrzei
     }
   });
 
-  it("zeigt eine Adresse in den Feldern, die Uhrzeit nur, wo sie nicht die Vorgabe ist", async () => {
-    const gerendert = await frei("?von=2026-07-06T22:00:00.000Z&bis=2026-07-07T12:30:00.000Z");
+  /**
+   * **Adresse → Felder.** „Bis 14:59“ ist in der Liste 14:59:59 (E‑1204); eine
+   * Adresse mit Minuten — ein alter Link — steht, wie sie ist (Regel Q4).
+   */
+  it("zeigt eine Adresse in den Feldern, die Stunde nur, wo sie nicht die Vorgabe ist", async () => {
+    const gerendert = await frei("?von=2026-07-06T22:00:00.000Z&bis=2026-07-07T12:59:59.000Z");
     try {
       const [vonDatum, bisDatum] = datumsfelder(gerendert.behaelter);
-      const [vonZeit, bisZeit] = uhrzeitfelder(gerendert.behaelter);
-      expect([vonDatum.value, vonZeit.value]).toEqual(["2026-07-07", ""]);
-      expect([bisDatum.value, bisZeit.value]).toEqual(["2026-07-07", "14:30"]);
+      expect([vonDatum.value, stundenwahl("von").textContent]).toEqual(["2026-07-07", Z.ganzerTag]);
+      expect([bisDatum.value, stundenwahl("bis").textContent]).toEqual(["2026-07-07", "14:59"]);
     } finally {
       await gerendert.abbauen();
     }
+    const alt = await frei("?von=2026-07-07T12:30:00.000Z&bis=2026-07-07T21:59:59.000Z");
+    try {
+      expect(stundenwahl("von").textContent, "ein alter Link mit Minuten").toBe("14:30");
+      expect(stundenwahl("bis").textContent).toBe(Z.ganzerTag);
+    } finally {
+      await alt.abbauen();
+    }
   });
 
-  it("meldet eine halbe Uhrzeit am Feld und lässt die Liste stehen", async () => {
+  it("meldet ein halbes Datum am Feld und lässt die Liste stehen", async () => {
     const gerendert = await frei("?von=2026-07-06T22:00:00.000Z&bis=2026-07-07T21:59:59.000Z");
     try {
       expect(zeilen(gerendert.behaelter), "Eichung: die Liste steht").toHaveLength(3);
       const vorher = abrufe("/api/nachrichten").length;
-      const [, bisZeit] = uhrzeitfelder(gerendert.behaelter);
+      const [, bis] = datumsfelder(gerendert.behaelter);
 
-      await tippeHalb(bisZeit);
+      await tippeHalb(bis);
 
-      expect(meldungAm(bisZeit)).toBe(Z.uhrzeitUnvollstaendig);
-      meldungIstRuhig(bisZeit);
+      expect(meldungAm(bis)).toBe(Z.datumUnvollstaendig);
+      meldungIstRuhig(bis);
       expect(zeilen(gerendert.behaelter)).toHaveLength(3);
       expect(abrufe("/api/nachrichten"), "keine neue Anfrage").toHaveLength(vorher);
       expect(gerendert.adresse().get("bis"), "die Adresse bleibt").toBe("2026-07-07T21:59:59.000Z");
@@ -399,25 +444,34 @@ describe("Die Nachrichtenliste: freies Fenster mit Datum und freiwilliger Uhrzei
   });
 
   /**
-   * **Die Felder springen beim Tippen nicht.** Kommt der Wert zurück, den die
-   * Felder selbst geschrieben haben, bleibt der Entwurf stehen; erst beim
-   * Verlassen wird die Uhrzeit so geschrieben, wie die Adresse sie zurückgäbe —
-   * leer, wenn sie die Vorgabe ist.
+   * **Die Stundenwahl im Sekundenvertrag** (E‑1203, E‑1204): „Von 14:00“ ist
+   * 14:00:00, „Bis 14:59“ ist 14:59:59 — die ganze Stunde eingeschlossen. Die
+   * letzte Stunde von „Bis“ ist 23:59:59 und damit wieder der ganze Tag.
    */
-  it("lässt eine getippte Vorgabe-Uhrzeit stehen, bis das Feld verlassen wird", async () => {
-    const gerendert = await frei();
+  it("wählt die Stunde per Tastatur, „Bis 14:59“ endet um 14:59:59", async () => {
+    const gerendert = await frei("?von=2026-07-06T22:00:00.000Z&bis=2026-07-07T21:59:59.000Z");
     try {
-      const [vonDatum] = datumsfelder(gerendert.behaelter);
-      const [vonZeit] = uhrzeitfelder(gerendert.behaelter);
-      await trageEin(vonDatum, "2026-07-07");
-      await trageEin(vonZeit, "00:00");
+      await taste(stundenwahl("von"), "ArrowDown");
+      const liste = document.querySelector('[role="listbox"]') as HTMLElement;
+      expect(liste, "Eichung: die Liste ist offen").not.toBeNull();
+      await taste(liste, "1");
+      await taste(liste, "4");
+      await taste(document.activeElement as Element, "Enter");
+      expect(gerendert.adresse().get("von")).toBe("2026-07-07T12:00:00.000Z");
+      expect(stundenwahl("von").textContent).toBe("14:00");
 
-      expect(gerendert.adresse().get("von"), "der ganze Tag").toBe("2026-07-06T22:00:00.000Z");
-      expect(vonZeit.value, "beim Tippen bleibt, was getippt ist").toBe("00:00");
+      await waehleStunde("bis", "14:59:59");
+      expect(gerendert.adresse().get("bis")).toBe("2026-07-07T12:59:59.000Z");
+      expect(stundenwahl("bis").textContent).toBe("14:59");
+      expect(abrufe("/api/nachrichten").at(-1)?.get("bis"), "die Liste fragt damit").toBe(
+        "2026-07-07T12:59:59.000Z",
+      );
 
-      await ereignis(vonZeit, new FocusEvent("focusout", { bubbles: true }));
-      expect(vonZeit.value, "nach dem Verlassen: leer heißt dasselbe").toBe("");
-      expect(gerendert.adresse().get("von")).toBe("2026-07-06T22:00:00.000Z");
+      await waehleStunde("bis", "23:59:59");
+      expect(gerendert.adresse().get("bis")).toBe("2026-07-07T21:59:59.000Z");
+      expect(stundenwahl("bis").textContent, "die Vorgabe zeigt sich als ganzer Tag").toBe(
+        Z.ganzerTag,
+      );
     } finally {
       await gerendert.abbauen();
     }
@@ -449,7 +503,7 @@ describe("Die Nachrichtenliste: freies Fenster mit Datum und freiwilliger Uhrzei
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
-describe("Die Belegsuche: Zeitfenster mit Datum und freiwilliger Uhrzeit", () => {
+describe("Die Belegsuche: Zeitfenster mit Datum und Stundenwahl", () => {
   async function suche(suchparameter = "?begriff=:4711") {
     const gerendert = await rendereAnsicht("suche", suchparameter);
     if (gerendert.behaelter.querySelectorAll('input[type="date"]').length === 0) {
@@ -461,6 +515,7 @@ describe("Die Belegsuche: Zeitfenster mit Datum und freiwilliger Uhrzeit", () =>
   it("sucht mit nur einem Datum in Von und Bis die ganzen Tage, und die Trefferliste lädt", async () => {
     const gerendert = await suche();
     try {
+      nurStundenwahl(gerendert.behaelter);
       const [von, bis] = datumsfelder(gerendert.behaelter);
       await trageEin(von, "2026-07-06");
       await trageEin(bis, "2026-07-07");
@@ -491,19 +546,19 @@ describe("Die Belegsuche: Zeitfenster mit Datum und freiwilliger Uhrzeit", () =>
     }
   });
 
-  it("meldet eine halbe Uhrzeit am Feld und lässt die Trefferliste stehen", async () => {
+  it("meldet ein halbes Datum am Feld und lässt die Trefferliste stehen", async () => {
     const gerendert = await suche(
       "?begriff=:4711&von=2026-07-06T22:00:00.000Z&bis=2026-07-07T21:59:59.000Z",
     );
     try {
       expect(zeilen(gerendert.behaelter), "Eichung: die Trefferliste steht").toHaveLength(3);
       const vorher = abrufe("/api/bam/suche").length;
-      const [vonZeit] = uhrzeitfelder(gerendert.behaelter);
+      const [von] = datumsfelder(gerendert.behaelter);
 
-      await tippeHalb(vonZeit);
+      await tippeHalb(von);
 
-      expect(meldungAm(vonZeit)).toBe(Z.uhrzeitUnvollstaendig);
-      meldungIstRuhig(vonZeit);
+      expect(meldungAm(von)).toBe(Z.datumUnvollstaendig);
+      meldungIstRuhig(von);
       expect(zeilen(gerendert.behaelter)).toHaveLength(3);
       expect(abrufe("/api/bam/suche"), "keine neue Anfrage").toHaveLength(vorher);
       ohneFehlerbaustein(gerendert.behaelter);
@@ -559,18 +614,22 @@ describe("Die Belegsuche: Zeitfenster mit Datum und freiwilliger Uhrzeit", () =>
     }
   });
 
-  it("setzt mit „Auf ein Jahr erweitern“ beide Zeitpunkte, und die Felder zeigen sie", async () => {
+  /**
+   * **Auf volle Stunden** (E‑1205): „Bis“ rundet auf das Ende seiner Stunde auf,
+   * „Von“ beginnt 365 Kalendertage davor zur nächsten vollen Stunde — beide
+   * landen auf Einträgen der Stundenwahl statt als Rohwert im Feld.
+   */
+  it("setzt mit „Auf ein Jahr erweitern“ beide Zeitpunkte auf volle Stunden, die Felder zeigen sie", async () => {
     const gerendert = await rendereAnsicht("suche", "?begriff=:4711");
     try {
       await klicke(knopfMitText(gerendert.behaelter, TEXTE.suche.fenster.einJahr));
 
       // Der Anker ist `bis` der Antwort: 08.07.2026, 04:09:47 UTC — in Berlin 06:09:47.
-      expect(gerendert.adresse().get("bis")).toBe("2026-07-08T04:09:47.000Z");
-      expect(gerendert.adresse().get("von")).toBe("2025-07-08T04:09:47.000Z");
+      expect(gerendert.adresse().get("bis")).toBe("2026-07-08T04:59:59.000Z");
+      expect(gerendert.adresse().get("von")).toBe("2025-07-08T05:00:00.000Z");
       const [vonDatum, bisDatum] = datumsfelder(gerendert.behaelter);
-      const [vonZeit, bisZeit] = uhrzeitfelder(gerendert.behaelter);
-      expect([vonDatum.value, vonZeit.value]).toEqual(["2025-07-08", "06:09:47"]);
-      expect([bisDatum.value, bisZeit.value]).toEqual(["2026-07-08", "06:09:47"]);
+      expect([vonDatum.value, stundenwahl("von").textContent]).toEqual(["2025-07-08", "07:00"]);
+      expect([bisDatum.value, stundenwahl("bis").textContent]).toEqual(["2026-07-08", "06:59"]);
     } finally {
       await gerendert.abbauen();
     }
@@ -592,26 +651,10 @@ describe("Die Prozessansicht: freies Fenster mit Datum und Stundenwahl", () => {
     return gerendert;
   }
 
-  /** Die Stundenwahl einer Grenze — der Auslöser, gefunden über seine Beschriftung. */
-  function stundenwahl(grenze: "von" | "bis"): HTMLButtonElement {
-    const text = einsetzen(Z.stunde, { grenze: grenze === "von" ? Z.von : Z.bis });
-    const beschriftung = [...document.querySelectorAll("label")].find(
-      (kandidat) => kandidat.textContent === text,
-    );
-    expect(beschriftung, `Beschriftung ${text}`).toBeDefined();
-    const feld = document.getElementById(beschriftung?.htmlFor ?? "");
-    expect(feld?.getAttribute("aria-haspopup"), "eine Liste der Anwendung").toBe("listbox");
-    return feld as HTMLButtonElement;
-  }
-
   it("macht aus nur einem Datum 00:00 bis 23:00 der Zone, ohne zeitfenster-zu-genau", async () => {
     const gerendert = await frei();
     try {
-      expect(
-        gerendert.behaelter.querySelectorAll('input[type="time"]'),
-        "keine Uhrzeitfelder",
-      ).toHaveLength(0);
-      expect(gerendert.behaelter.querySelector("select"), "kein natives Auswahlfeld").toBeNull();
+      nurStundenwahl(gerendert.behaelter);
       const [von, bis] = datumsfelder(gerendert.behaelter);
       await trageEin(von, "2026-07-06");
       await trageEin(bis, "2026-07-07");
@@ -625,14 +668,6 @@ describe("Die Prozessansicht: freies Fenster mit Datum und Stundenwahl", () => {
       expect(gerendert.behaelter.textContent, "der Baum steht").toContain("BMW");
       expect(stundenwahl("von").textContent).toBe(Z.ganzerTag);
       expect(stundenwahl("bis").textContent).toBe(Z.ganzerTag);
-      // In der Zeile des Umschalters in Bedienelementhöhe, nicht in Feldhöhe — und
-      // nur eine der beiden, denn welche gewönne, entschiede die Reihenfolge im
-      // Stylesheet (gefunden in der Sichtprüfung vom 17.11.2026: 37,5 statt 30 px).
-      for (const grenze of ["von", "bis"] as const) {
-        const klassen = [...stundenwahl(grenze).classList];
-        expect(klassen, `Stundenwahl ${grenze}`).toContain("h-bedienelement");
-        expect(klassen, `Stundenwahl ${grenze}`).not.toContain("h-feld");
-      }
     } finally {
       await gerendert.abbauen();
     }

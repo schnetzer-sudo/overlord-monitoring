@@ -94,6 +94,7 @@ const ABGEBROCHEN = "suche-abgebrochen";
  */
 export function SucheAnsicht() {
   const texte = useTexte();
+  const zone = useAnzeigezone();
   const {
     zustand,
     marken,
@@ -267,9 +268,9 @@ export function SucheAnsicht() {
     }
     setzeModus(
       "praefix",
-      praefixfenster({ von: new Date(angezeigt.von), bis: new Date(angezeigt.bis) }),
+      praefixfenster({ von: new Date(angezeigt.von), bis: new Date(angezeigt.bis) }, zone),
     );
-  }, [angezeigt, setzeModus]);
+  }, [angezeigt, setzeModus, zone]);
 
   /** Der Rückweg. **Das Fenster bleibt stehen** — siehe `hooks.ts` `setzeModus`. */
   const aufExakt = useCallback(() => setzeModus(null, null), [setzeModus]);
@@ -689,6 +690,7 @@ function FensterZuGross({
   aufFenster: (von: Date | null, bis: Date | null) => void;
 }) {
   const texte = useTexte();
+  const zone = useAnzeigezone();
 
   const grenzeTage = fehler.zahl("grenzeTage");
   const angefragtTage = fehler.zahl("angefragtTage");
@@ -711,7 +713,7 @@ function FensterZuGross({
           size="sm"
           className="min-h-beruehrung mt-3"
           onClick={() => {
-            const enger = fensterZurueck(bis, grenze);
+            const enger = fensterZurueck(bis, grenze, zone);
             aufFenster(enger.von, enger.bis);
           }}
         >
@@ -779,12 +781,15 @@ function Variantenzeile({ ergebnis }: { ergebnis: BamSuchergebnis | undefined })
  * liefe an den Daten vorbei. Deshalb:
  *
  * - **„Auf ein Jahr erweitern"** rechnet vom `bis` **aus der Antwort** zurück —
- *   also von dem Zeitpunkt, den das Backend selbst verwendet hat.
+ *   also von dem Zeitpunkt, den das Backend selbst verwendet hat —, seit
+ *   E‑1205 auf volle Stunden: „Bis" auf das Ende seiner Stunde aufgerundet,
+ *   „Von" 365 Kalendertage davor zur nächsten vollen Stunde.
  * - **„Vorgabe wiederherstellen"** entfernt beide Parameter und überlässt dem
  *   Backend seine 30 Tage. Ein zweiter Standardwert hier liefe dem ersten
  *   irgendwann hinterher.
- * - **Die Felder** — je Zeitpunkt ein Datum und eine freiwillige Uhrzeit, seit
- *   E‑1198 der gemeinsame Baustein `zeitfensterfelder.tsx` — rechnen in der
+ * - **Die Felder** — je Zeitpunkt ein Datum und eine Stundenwahl, seit E‑1198
+ *   der gemeinsame Baustein `zeitfensterfelder.tsx`, seit E‑1203 ohne Minuten —
+ *   rechnen in der
  *   **Anzeigezone** um, nicht in der des Browsers (`lib/format.ts`). Ein Datum
  *   allein meint den ganzen Tag; „Bis" endet dann um 23:59:59, denn das `bis`
  *   der Suche ist einschließend und sekundengenau. Halbe Eingaben melden sich
@@ -863,7 +868,7 @@ function Zeitfensterzeile({
             size="sm"
             className="min-h-beruehrung"
             onClick={() => {
-              const jahr = jahresfensterAb(anker);
+              const jahr = jahresfensterAb(anker, zone);
               aufFenster(jahr.von, jahr.bis);
             }}
           >

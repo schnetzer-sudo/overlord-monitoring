@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { texteFuer } from "@/i18n";
+import { datumUndUhrzeitFuerEingabe, stundeneintraege } from "@/lib/format";
 import { ProblemFehler } from "@/lib/http";
 import type { BamTrefferWert } from "@/features/nachrichten/api";
 import {
@@ -46,6 +47,8 @@ import {
  * gerenderten Baum nicht belegbar und stehen deshalb in
  * `tests/suche-marken.test.tsx`; alles Übrige steht hier.
  */
+
+const BERLIN = "Europe/Berlin";
 
 const zustand = (teil: Partial<Suchzustand>): Suchzustand => ({
   begriff: null,
@@ -353,14 +356,29 @@ describe("Das Fenster, über das der Präfixmodus läuft", () => {
    * leer (`docs/bam-suche.md` §23).
    */
   it("verkleinert ein Jahresfenster auf den Deckel", () => {
-    const jahr = jahresfensterAb(bis);
+    const jahr = jahresfensterAb(bis, BERLIN);
 
-    const enger = praefixfenster(jahr);
+    const enger = praefixfenster(jahr, BERLIN);
 
     expect(enger).not.toBeNull();
-    expect(enger!.bis.getTime()).toBe(bis.getTime());
+    expect(enger!.bis.getTime()).toBe(jahr.bis.getTime());
     expect(spanneInTagen(enger!.von, enger!.bis)).toBe(PRAEFIX_FENSTER_TAGE);
     expect(enger!.von.getTime()).toBeGreaterThan(jahr.von.getTime());
+  });
+
+  /**
+   * **Seit E‑1205 rückt `von` auf die nächste volle Stunde** — nach vorn, damit
+   * das Fenster ein Ausschnitt bleibt und unter dem Deckel; `bis` bleibt, wie es
+   * war, auch mit Sekunden.
+   */
+  it("lässt Bis stehen und rückt Von auf die nächste volle Stunde", () => {
+    const roh = new Date("2025-12-30T03:35:49.253Z");
+    const enger = praefixfenster({ von: new Date(roh.getTime() - TAGE(365)), bis: roh }, BERLIN);
+
+    expect(enger!.bis).toBe(roh);
+    // 30.11.2025, 04:35:49 Wanduhrzeit → 05:00
+    expect(enger!.von.toISOString()).toBe("2025-11-30T04:00:00.000Z");
+    expect(enger!.bis.getTime() - enger!.von.getTime()).toBeLessThanOrEqual(TAGE(30));
   });
 
   /**
@@ -369,13 +387,12 @@ describe("Das Fenster, über das der Präfixmodus läuft", () => {
    * des Backends — statt still zu einem eigenen Zeitpunkt in der URL zu werden.
    */
   it("lässt ein Fenster in Höhe des Deckels unangetastet", () => {
-    expect(praefixfenster({ von: new Date(bis.getTime() - TAGE(30)), bis })).toBeNull();
+    expect(praefixfenster({ von: new Date(bis.getTime() - TAGE(30)), bis }, BERLIN)).toBeNull();
   });
 
   it("lässt ein kleineres Fenster unangetastet", () => {
-    expect(praefixfenster({ von: new Date(bis.getTime() - TAGE(7)), bis })).toBeNull();
+    expect(praefixfenster({ von: new Date(bis.getTime() - TAGE(7)), bis }, BERLIN)).toBeNull();
   });
-
   /**
    * Der Deckel steht hier **und** im Backend (`BamSuchfilter.PRAEFIX_FENSTER_MAXIMUM`),
    * und das ist Absicht — dieselbe Bauform wie bei {@link HOECHSTENS_BEGRIFFE}.
@@ -699,10 +716,35 @@ describe("Das Jahresfenster", () => {
   it("rechnet vom gelieferten Ende zurück", () => {
     const bis = new Date("2025-12-30T00:00:00.000Z");
 
-    const fenster = jahresfensterAb(bis);
+    const fenster = jahresfensterAb(bis, BERLIN);
 
-    expect(fenster.bis).toBe(bis);
+    expect(fenster.bis.getTime()).toBeGreaterThanOrEqual(bis.getTime());
     expect(spanneInTagen(fenster.von, fenster.bis)).toBe(365);
+  });
+
+  /**
+   * **Auf volle Stunden** *(Entscheidung des Auftraggebers vom 17.11.2026,
+   * E‑1205)*: „Bis“ rundet auf das Ende seiner Stunde auf, „Von“ beginnt 365
+   * Kalendertage davor zur nächsten vollen Stunde. Beide landen auf einem Eintrag
+   * der Stundenwahl; es geht keine neue Nachricht verloren.
+   */
+  it("rundet Bis auf das Ende seiner Stunde auf und lässt Von zur vollen Stunde beginnen", () => {
+    const anker = new Date("2025-12-30T03:35:49.253Z");
+
+    const fenster = jahresfensterAb(anker, BERLIN);
+
+    expect(fenster.bis.toISOString()).toBe("2025-12-30T03:59:59.000Z");
+    expect(fenster.von.toISOString()).toBe("2024-12-30T04:00:00.000Z");
+    const bisFeld = datumUndUhrzeitFuerEingabe(fenster.bis, "bis", "sekunde", BERLIN);
+    const vonFeld = datumUndUhrzeitFuerEingabe(fenster.von, "von", "sekunde", BERLIN);
+    expect(bisFeld).toEqual({ datum: "2025-12-30", uhrzeit: "04:59:59" });
+    expect(vonFeld).toEqual({ datum: "2024-12-30", uhrzeit: "05:00" });
+    expect(stundeneintraege("bis", "sekunde").map((eintrag) => eintrag.wert)).toContain(
+      bisFeld.uhrzeit,
+    );
+    expect(stundeneintraege("von", "sekunde").map((eintrag) => eintrag.wert)).toContain(
+      vonFeld.uhrzeit,
+    );
   });
 
   /**
@@ -714,14 +756,31 @@ describe("Das Jahresfenster", () => {
   it("bleibt auch über einen Schalttag unter einem Kalenderjahr", () => {
     const bis = new Date("2028-02-29T00:00:00.000Z");
 
-    const fenster = jahresfensterAb(bis);
+    const fenster = jahresfensterAb(bis, BERLIN);
 
-    const kalenderjahr = new Date(bis);
-    kalenderjahr.setUTCFullYear(bis.getUTCFullYear() - 1);
+    const kalenderjahr = new Date(fenster.bis);
+    kalenderjahr.setUTCFullYear(fenster.bis.getUTCFullYear() - 1);
     expect(fenster.von.getTime()).toBeGreaterThanOrEqual(kalenderjahr.getTime());
   });
-});
 
+  /**
+   * **Auch über eine Zeitumstellung unter einem Kalenderjahr — in Wanduhrzeit.**
+   * Das Backend prüft `von >= bis.minusYears(1)` in der Wanduhrzeit. Bis E‑1205
+   * rechnete das Frontend 365 × 24 Stunden zurück; lag nur `bis` in der
+   * Sommerzeit, war `von` eine Stunde zu früh und das Fenster ein `400`.
+   */
+  it("bleibt über eine Zeitumstellung in Wanduhrzeit unter einem Kalenderjahr", () => {
+    const anker = new Date("2026-03-29T10:35:00.000Z"); // 12:35 Sommerzeit
+
+    const fenster = jahresfensterAb(anker, BERLIN);
+
+    const bisFeld = datumUndUhrzeitFuerEingabe(fenster.bis, "bis", "sekunde", BERLIN);
+    const vonFeld = datumUndUhrzeitFuerEingabe(fenster.von, "von", "sekunde", BERLIN);
+    expect(bisFeld).toEqual({ datum: "2026-03-29", uhrzeit: "12:59:59" });
+    // Ein Kalenderjahr vor „Bis“ ist 29.03.2025, 12:59:59 — „Von“ liegt danach.
+    expect(vonFeld).toEqual({ datum: "2025-03-29", uhrzeit: "13:00" });
+  });
+});
 describe("Die Abschneidemeldung", () => {
   /**
    * **Sie nennt Abschneidung und Fenster zusammen.** Nur eines von beidem ist

@@ -223,7 +223,17 @@ export function AuswahlFeld<W extends string>({
           )?.focus();
         }}
       >
-        <ul ref={liste} role="listbox" aria-label={beschriftung} onKeyDown={inDerListe}>
+        {/* Höchstens 18 rem hoch, darin scrollt die Liste — dieselbe Höhe wie die
+            Prozessauswahl. Die Stundenwahl hat 25 Zeilen und klappte sonst bis an
+            den unteren Bildrand auf (E‑1206, Meldung des Auftraggebers vom
+            17.11.2026). Der Fokus auf der gewählten Zeile holt sie ins Bild. */}
+        <ul
+          ref={liste}
+          role="listbox"
+          aria-label={beschriftung}
+          onKeyDown={inDerListe}
+          className="max-h-72 overflow-y-auto"
+        >
           {eintraege.map((eintrag) => {
             const gewaehlt = eintrag.wert === wert;
             const waehlbar = eintrag.waehlbar ?? true;

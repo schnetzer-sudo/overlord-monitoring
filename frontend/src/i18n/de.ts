@@ -198,21 +198,17 @@ export const de = {
     FREI: "Frei",
     von: "Von",
     bis: "Bis",
-    // Seit E‑1198 (17.11.2026) je Zeitpunkt ein Datum und eine freiwillige
-    // Uhrzeit — an allen drei Stellen mit freiem Fenster: Nachrichtenliste,
-    // Belegsuche, Prozessansicht (`docs/nachrichtenliste.md` §8.2). Die beiden
-    // Namen gelten dem Uhrzeitfeld beziehungsweise der Stundenwahl, die keine
-    // sichtbare Beschriftung neben „Von“ und „Bis“ haben.
-    uhrzeit: "{grenze}, Uhrzeit (freiwillig)",
+    // Seit E‑1198 (17.11.2026) je Zeitpunkt ein Datum und eine Stundenwahl —
+    // an allen drei Stellen mit freiem Fenster: Nachrichtenliste, Belegsuche,
+    // Prozessansicht (`docs/nachrichtenliste.md` §8.2); seit E‑1203 ohne Minuten.
+    // Der Name gilt der Stundenwahl, die keine sichtbare Beschriftung neben
+    // „Von“ und „Bis“ hat.
     stunde: "{grenze}, Stunde (freiwillig)",
-    // Die leere Stundenwahl der Prozessansicht: 00:00 bei „Von“, 23:00 bei „Bis“.
+    // Die leere Stundenwahl: der ganze Tag.
     ganzerTag: "Ganzer Tag",
-    // Ein halb getipptes Feld liefert keinen Wert und kein `input` — erkannt an
+    // Ein halb getipptes Datum liefert keinen Wert und kein `input` — erkannt an
     // validity.badInput, gelesen an keyup und blur (`docs/nachrichtenliste.md` §8.2).
-    // Eine leere Uhrzeit ist keine halbe Eingabe, sondern der ganze Tag.
     datumUnvollstaendig: "Bitte das Datum vollständig eintragen.",
-    uhrzeitUnvollstaendig:
-      "Bitte die Uhrzeit vollständig eintragen oder leeren. Ohne Uhrzeit gilt der ganze Tag.",
     beideNoetig: "Für ein freies Zeitfenster fehlt noch der zweite Zeitpunkt.",
   },
 

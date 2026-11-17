@@ -13,6 +13,9 @@ import {
   formatiereZeitpunkt,
   formatiereZeitpunktGenau,
   datumUndUhrzeitFuerEingabe,
+  stundenende,
+  stundeneintraege,
+  tageZurueckZurVollenStunde,
   wanduhrzeitFuerEingabe,
   zeitpunktAusDatumUndUhrzeit,
   zeitpunktAusWanduhrzeit,
@@ -412,6 +415,115 @@ describe("Datum und Uhrzeit der Zeitfensterfelder", () => {
         uhrzeit,
       });
     }
+  });
+});
+
+/**
+ * **Die Stundenwahl an allen drei Stellen** *(17.11.2026, E‑1203, E‑1204,
+ * `docs/nachrichtenliste.md` §8.2)*. Seit E‑1203 gibt es keine Minuten mehr:
+ * „Von“ beginnt zur gewählten vollen Stunde, „Bis“ nennt das Ende der Stunde.
+ * Was „Bis 14:59“ als Zeitpunkt heißt, hängt am Vertrag: in der Prozessansicht
+ * die volle Stunde 14:00 (die letzte enthaltene, E‑94), in Liste und Suche ihre
+ * letzte Sekunde 14:59:59 (`bis` ist dort einschließend, E‑1204).
+ */
+describe("Die Stundenwahl", () => {
+  it("nennt bei Von die volle Stunde und bei Bis ihr Ende", () => {
+    for (const vertrag of ["sekunde", "stunde"] as const) {
+      const von = stundeneintraege("von", vertrag);
+      expect(von).toHaveLength(24);
+      expect(von[0]).toEqual({ wert: "00:00", text: "00:00" });
+      expect(von[14]).toEqual({ wert: "14:00", text: "14:00" });
+    }
+    expect(stundeneintraege("bis", "stunde")[14]).toEqual({ wert: "14:00", text: "14:59" });
+    expect(stundeneintraege("bis", "sekunde")[14]).toEqual({ wert: "14:59:59", text: "14:59" });
+    expect(stundeneintraege("bis", "sekunde")[23]).toEqual({ wert: "23:59:59", text: "23:59" });
+  });
+
+  /**
+   * **Die Wahl findet ihren Eintrag wieder** — sonst stünde nach dem Wählen der
+   * Rohwert im Feld. Ausgenommen ist genau die Vorgabe (Von 00:00, Bis die letzte
+   * Stunde): Sie ist der ganze Tag und steht leer da.
+   */
+  it("findet jede gewählte Stunde in den Feldern wieder, die Vorgabe als leer", () => {
+    for (const vertrag of ["sekunde", "stunde"] as const) {
+      for (const grenze of ["von", "bis"] as const) {
+        stundeneintraege(grenze, vertrag).forEach((eintrag, stunde) => {
+          const zeitpunkt = zeitpunktAusDatumUndUhrzeit(
+            "2026-07-07",
+            eintrag.wert,
+            grenze,
+            vertrag,
+            BERLIN,
+          );
+          const vorgabe = grenze === "von" ? stunde === 0 : stunde === 23;
+          expect(
+            datumUndUhrzeitFuerEingabe(zeitpunkt, grenze, vertrag, BERLIN).uhrzeit,
+            `${grenze} ${vertrag} ${eintrag.text}`,
+          ).toBe(vorgabe ? "" : eintrag.wert);
+        });
+      }
+    }
+  });
+
+  it("legt in Liste und Suche „Bis 14:59“ auf 14:59:59, in der Prozessansicht auf 14:00", () => {
+    const bis = (vertrag: "sekunde" | "stunde") =>
+      zeitpunktAusDatumUndUhrzeit(
+        "2026-07-07",
+        stundeneintraege("bis", vertrag)[14]?.wert ?? "",
+        "bis",
+        vertrag,
+        BERLIN,
+      )?.toISOString();
+    expect(bis("sekunde")).toBe("2026-07-07T12:59:59.000Z");
+    expect(bis("stunde")).toBe("2026-07-07T12:00:00.000Z");
+  });
+
+  /** Am 29.03. gibt es die Stunde 02 nicht; gewählt landet sie auf 03. */
+  it("lässt am Tag der Vorstellung die fehlende Stunde auf die nächste fallen", () => {
+    const zeitpunkt = zeitpunktAusDatumUndUhrzeit("2026-03-29", "02:00", "von", "sekunde", BERLIN);
+    expect(datumUndUhrzeitFuerEingabe(zeitpunkt, "von", "sekunde", BERLIN).uhrzeit).toBe("03:00");
+  });
+});
+
+/**
+ * **Fenster auf volle Stunden** *(17.11.2026, E‑1205)* — für „Auf ein Jahr
+ * erweitern“, die Präfixsuche und „Fenster verkleinern“ in der Belegsuche. Ohne
+ * Minuten in den Feldern muss ein dort gerechnetes Fenster auf Einträgen der
+ * Stundenwahl landen, sonst stünde der Rohwert im Feld.
+ */
+describe("Fenster auf volle Stunden", () => {
+  it("rundet einen Zeitpunkt auf das Ende seiner Stunde auf", () => {
+    const iso = (zeitpunkt: Date) => stundenende(zeitpunkt, BERLIN).toISOString();
+    expect(iso(new Date("2025-12-30T03:35:49.253Z"))).toBe("2025-12-30T03:59:59.000Z");
+    expect(iso(new Date("2025-12-30T03:00:00.000Z"))).toBe("2025-12-30T03:59:59.000Z");
+    expect(iso(new Date("2025-12-30T03:59:59.000Z"))).toBe("2025-12-30T03:59:59.000Z");
+  });
+
+  it("geht Kalendertage zurück und rückt auf die nächste volle Stunde", () => {
+    const iso = (zeitpunkt: string, tage: number) =>
+      tageZurueckZurVollenStunde(new Date(zeitpunkt), tage, BERLIN).toISOString();
+    // 30.12.2025, 04:59:59 → 30.12.2024, 05:00
+    expect(iso("2025-12-30T03:59:59.000Z", 365)).toBe("2024-12-30T04:00:00.000Z");
+    // eine volle Stunde bleibt, wie sie ist
+    expect(iso("2025-12-30T04:00:00.000Z", 30)).toBe("2025-11-30T04:00:00.000Z");
+    // 23:59:59 rückt auf 00:00 des Folgetags
+    expect(iso("2025-12-30T22:59:59.000Z", 365)).toBe("2024-12-30T23:00:00.000Z");
+  });
+
+  /**
+   * **Kalendertage, nicht 24-Stunden-Schritte.** Liegt nur eines der beiden Daten
+   * in der Sommerzeit, läge „Von“ sonst eine Stunde früher in der Wanduhrzeit —
+   * und das Backend, das in Wanduhrzeit `bis.minusYears(1)` prüft, wiese das
+   * Fenster als zu groß ab.
+   */
+  it("rechnet in Kalendertagen, auch über eine Zeitumstellung", () => {
+    // 29.03.2026, 12:59:59 Sommerzeit → 29.03.2025, 13:00 Winterzeit
+    const von = tageZurueckZurVollenStunde(new Date("2026-03-29T10:59:59.000Z"), 365, BERLIN);
+    expect(von.toISOString()).toBe("2025-03-29T12:00:00.000Z");
+    expect(datumUndUhrzeitFuerEingabe(von, "von", "sekunde", BERLIN)).toEqual({
+      datum: "2025-03-29",
+      uhrzeit: "13:00",
+    });
   });
 });
 

@@ -610,3 +610,111 @@ export function datumUndUhrzeitFuerEingabe(
     uhrzeit: uhrzeit === uhrzeitOhneEingabe(grenze, vertrag) ? "" : uhrzeit,
   };
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Die Stundenwahl und Fenster auf vollen Stunden (E‑1203 bis E‑1205)
+
+   Seit E‑1203 (17.11.2026, am selben Tag wie E‑1198) gibt es an keiner der drei
+   Stellen Minuten: je Zeitpunkt ein Datum und eine Stundenwahl. „Von“ beginnt
+   zur gewählten vollen Stunde, „Bis“ nennt das **Ende** der Stunde und schließt
+   sie ein. Was das als Zeitpunkt heißt, entscheidet wieder der Vertrag:
+
+   | Vertrag | „Bis 14:59“ ist |
+   |---|---|
+   | `stunde` (Prozessansicht) | 14:00 — die letzte enthaltene Stunde (E‑94) |
+   | `sekunde` (Liste, Belegsuche) | 14:59:59 — einschließend, auf die Sekunde (E‑1204) |
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/** Ein Eintrag der Stundenwahl: der Wert, den die Felder führen, und was dasteht. */
+export type Stundeneintrag = { wert: string; text: string };
+
+const zweistellig = (zahl: number) => String(zahl).padStart(2, "0");
+
+/**
+ * Die 24 Einträge der Stundenwahl einer Grenze.
+ *
+ * **Der Wert ist zeichengleich mit der Uhrzeit**, die
+ * {@link datumUndUhrzeitFuerEingabe} für denselben Zeitpunkt liefert — sonst
+ * fände die Wahl nach dem Rundlauf über die Adresse ihren Eintrag nicht und das
+ * Feld zeigte den Rohwert. Die Vorgabe (Von 00:00, Bis die letzte Stunde) ist
+ * darunter; sie kommt als leere Uhrzeit zurück und steht als „Ganzer Tag“ da.
+ */
+export function stundeneintraege(grenze: Fenstergrenze, vertrag: Fenstervertrag): Stundeneintrag[] {
+  return Array.from({ length: 24 }, (_, stunde) => {
+    const hh = zweistellig(stunde);
+    if (grenze === "von") {
+      return { wert: `${hh}:00`, text: `${hh}:00` };
+    }
+    return { wert: vertrag === "stunde" ? `${hh}:00` : `${hh}:59:59`, text: `${hh}:59` };
+  });
+}
+
+/** Die Wanduhrzeit eines Zeitpunkts in einer Zone, als Zahlen. */
+function wanduhrteile(zeitpunkt: Date, zone: string) {
+  const teile = new Intl.DateTimeFormat("en-US", { ...TEILE, timeZone: zone }).formatToParts(
+    zeitpunkt,
+  );
+  const feld = (art: Intl.DateTimeFormatPartTypes) =>
+    Number(teile.find((teil) => teil.type === art)?.value ?? "0");
+  return {
+    jahr: feld("year"),
+    monat: feld("month"),
+    tag: feld("day"),
+    stunde: feld("hour"),
+    minute: feld("minute"),
+    sekunde: feld("second"),
+    millisekunde: zeitpunkt.getUTCMilliseconds(),
+  };
+}
+
+const kalendertag = (jahr: number, monat: number, tag: number) =>
+  `${String(jahr).padStart(4, "0")}-${zweistellig(monat)}-${zweistellig(tag)}`;
+
+/**
+ * **Das Ende der Stunde, in der ein Zeitpunkt liegt** — HH:59:59 der
+ * Anzeigezone (E‑1205). Ein Zeitpunkt mit Sekunden landet damit auf einem
+ * Eintrag der Stundenwahl im Sekundenvertrag. Es geht nichts verloren, was die
+ * Quelle führt: `MessageLastUpdate` hat keine Bruchteile.
+ */
+export function stundenende(zeitpunkt: Date, zone: string): Date {
+  const w = wanduhrteile(zeitpunkt, zone);
+  return (
+    zeitpunktAusDatumUndUhrzeit(
+      kalendertag(w.jahr, w.monat, w.tag),
+      `${zweistellig(w.stunde)}:59:59`,
+      "bis",
+      "sekunde",
+      zone,
+    ) ?? zeitpunkt
+  );
+}
+
+/**
+ * **`tage` Kalendertage vor einem Zeitpunkt, zur nächsten vollen Stunde** — in
+ * der Wanduhrzeit der Anzeigezone (E‑1205). Ein Zeitpunkt, der schon auf einer
+ * vollen Stunde liegt, bleibt dort.
+ *
+ * **Kalendertage und nicht 24-Stunden-Schritte:** Das Backend prüft die
+ * Jahresgrenze in Wanduhrzeit (`bis.minusYears(1)`). Liegt nur einer der
+ * beiden Tage in der Sommerzeit, läge ein in Millisekunden gerechnetes „Von“
+ * eine Stunde zu früh, und das Fenster wäre ein `400`.
+ *
+ * **Nach vorn gerundet**, nie zurück: Das Ergebnis liegt nie vor dem
+ * ungerundeten — ein Fenster bis zu einem `bis` bleibt damit ein Ausschnitt und
+ * unter jeder Grenze, die es vorher einhielt.
+ */
+export function tageZurueckZurVollenStunde(zeitpunkt: Date, tage: number, zone: string): Date {
+  const w = wanduhrteile(zeitpunkt, zone);
+  const aufVoll = w.minute > 0 || w.sekunde > 0 || w.millisekunde > 0 ? 1 : 0;
+  // Nur als Kalender gerechnet: UTC ohne Zone, damit Tages- und Stundenüberlauf stimmen.
+  const ziel = new Date(Date.UTC(w.jahr, w.monat - 1, w.tag - tage, w.stunde + aufVoll));
+  return (
+    zeitpunktAusDatumUndUhrzeit(
+      kalendertag(ziel.getUTCFullYear(), ziel.getUTCMonth() + 1, ziel.getUTCDate()),
+      `${zweistellig(ziel.getUTCHours())}:00`,
+      "von",
+      "sekunde",
+      zone,
+    ) ?? new Date(zeitpunkt.getTime() - tage * 24 * 60 * 60 * 1000)
+  );
+}
