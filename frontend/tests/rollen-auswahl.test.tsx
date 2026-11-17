@@ -178,7 +178,7 @@ describe("Die Rollenauswahl", () => {
 });
 
 /**
- * **Der Sprung per Zeichen in der offenen Liste** *(17.11.2026, E‑1198,
+ * **Der Sprung per Zeichen in der offenen Liste** *(17.11.2026, E‑1201,
  * `docs/benutzerverwaltung-frontend.md` §18)* — für die Stundenwahl der
  * Prozessansicht, die 25 Zeilen hat: Bis zur 14 waren es fünfzehnmal `↓`.
  *

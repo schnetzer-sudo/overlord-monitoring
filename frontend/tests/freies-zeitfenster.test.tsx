@@ -498,7 +498,7 @@ describe("Die Belegsuche: Zeitfenster mit Datum und freiwilliger Uhrzeit", () =>
   });
 
   /**
-   * **Neu mit E‑1198:** Bis dahin ersetzte ein `zeitfenster-*`-Fehler die
+   * **Neu mit E‑1200:** Bis dahin ersetzte ein `zeitfenster-*`-Fehler die
    * Trefferliste durch den Fehlerbaustein. Jetzt steht er am Feld, und die
    * zuletzt gelieferte Antwort bleibt stehen.
    */

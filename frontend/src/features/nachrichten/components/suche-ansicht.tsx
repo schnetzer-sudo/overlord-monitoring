@@ -194,7 +194,7 @@ export function SucheAnsicht() {
 
   /*
    * **Die zuletzt gelieferte Antwort — und was an Stelle der Trefferliste
-   * steht** (E‑1198, `suche.ts` `trefferanzeige`). Gehört die Antwort des
+   * steht** (E‑1200, `suche.ts` `trefferanzeige`). Gehört die Antwort des
    * Servers an die Zeitfelder, oder steht erst einer der beiden Zeitpunkte,
    * bleibt die zuletzt gelieferte Antwort stehen, wie in der Nachrichtenliste
    * und in der Prozessansicht; ohne sie steht dort nichts. Ein Abbruch verwirft
@@ -345,7 +345,7 @@ export function SucheAnsicht() {
             ) : angezeigt === undefined ? (
               /* Gehört die Antwort an die Zeitfelder und gab es noch keine
                  Antwort, steht hier nichts — die Meldung steht an den Feldern
-                 (E‑1198). Sonst wird geladen. */
+                 (E‑1200). Sonst wird geladen. */
               anzeige.amFeld !== undefined ? null : (
                 <Laden zeilen={8} />
               )
@@ -456,7 +456,7 @@ function Kopfzeilen({
   von: Date | null;
   bis: Date | null;
   aufFenster: (von: Date | null, bis: Date | null) => void;
-  /** Eine Antwort, die den Zeitfeldern gilt (E‑1198). */
+  /** Eine Antwort, die den Zeitfeldern gilt (E‑1200). */
   zeitfensterfehler: ProblemFehler | undefined;
   nulltrefferVorher: VorigeRunde | null;
   voll: boolean;

@@ -87,7 +87,7 @@ const zahl = (wert: Date | null): number | null => (wert === null ? null : wert.
  * nach einer Wahl in der Stundenwahl. Wer „Von 00:00“ tippt, sieht danach ein
  * leeres Feld — es heißt dasselbe.
  *
- * ## Eine halbe Eingabe ist keine Auswahl
+ * ## Eine halbe Eingabe ist keine Auswahl (E‑1202)
  *
  * Ein halb getipptes Datum oder eine halbe Uhrzeit liefert `value === ""` und
  * feuert kein `input`; herausgegeben wird der Zustand allein über
@@ -104,7 +104,7 @@ const zahl = (wert: Date | null): number | null => (wert === null ? null : wert.
  *    Prüfung bleibt im Backend; das Frontend rechnet keine Jahresgrenze nach.
  * 4. Erst einer der beiden Zeitpunkte steht.
  *
- * **Kein Hinweistext ohne Anlass** (`docs/process-view.md` §45): Was „ohne
+ * **Kein Hinweistext ohne Anlass** (`docs/process-view.md` §45, E‑1199): Was „ohne
  * Uhrzeit“ heißt, sagt die Stundenwahl selbst („Ganzer Tag“, „Bis“ mit dem Ende
  * der Stunde); das Uhrzeitfeld sagt es in seinem Namen.
  */

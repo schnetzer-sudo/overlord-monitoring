@@ -389,7 +389,8 @@ export function formatiereDauer(sekunden: number, einheiten: Dauereinheiten): st
 /* ─────────────────────────────────────────────────────────────────────────────
    Wanduhrzeit ↔ Zeitpunkt — für die Eingabefelder des freien Zeitfensters
 
-   Ein `<input type="datetime-local">` kennt keine Zone: Es liefert und erwartet
+   Ein `<input type="datetime-local">` — so standen die Felder bis zum 17.11.2026; seither
+   Datum und Uhrzeit getrennt, siehe unten — kennt keine Zone: Es liefert und erwartet
    „2025-12-29T00:00" als reine Wanduhrzeit. Läse man diesen Wert mit `new Date()`,
    bekäme er die Zone des Browsers — und das freie Zeitfenster wäre gegen die Daten
    verschoben, sobald jemand nicht zufällig in der Zone des Servers sitzt. Genau der

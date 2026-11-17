@@ -704,7 +704,7 @@ export function nulltrefferHinweis(
 
 /**
  * **Was an Stelle der Trefferliste steht — und ob eine Antwort an die Zeitfelder
- * gehört** *(17.11.2026, E‑1198, `docs/bam-suche.md` §11.6)*.
+ * gehört** *(17.11.2026, E‑1200, `docs/bam-suche.md` §11.6)*.
  *
  * Bis dahin ersetzte jeder `zeitfenster-*`-Fehler die Trefferliste durch den
  * Fehlerbaustein — auch der Moment, in dem erst „Von“ dasteht und die Anfrage

@@ -816,7 +816,7 @@ describe("Die Sätze des Präfixmodus", () => {
 
 /**
  * **Was an Stelle der Trefferliste steht, wenn die Antwort den Zeitfensterfeldern
- * gilt** *(17.11.2026, E‑1198, `docs/bam-suche.md` §11.6)*.
+ * gilt** *(17.11.2026, E‑1200, `docs/bam-suche.md` §11.6)*.
  *
  * Bis dahin ersetzte jeder `zeitfenster-*`-Fehler die Trefferliste durch den
  * Fehlerbaustein — auch der Moment, in dem erst „Von" steht. Seither steht die

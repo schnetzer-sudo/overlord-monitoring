@@ -74,7 +74,7 @@ export type Auswahleintrag<W extends string> = {
  * still auf einen der bekannten. **Eine Wahl, die nichts ändert, meldet nichts**
  * — wie das native `change`, das beim selben Wert nicht feuert.
  *
- * ## Der Sprung per Zeichen *(17.11.2026, E‑1198)*
+ * ## Der Sprung per Zeichen *(17.11.2026, E‑1201)*
  *
  * **In der offenen Liste** sammeln sich getippte Zeichen zu einem Anfang, und der
  * Fokus springt auf die nächste wählbare Zeile, die so beginnt — das Muster der
@@ -106,7 +106,7 @@ export function AuswahlFeld<W extends string>({
   gesperrt?: boolean;
   /**
    * Zusätzliche Klassen am geschlossenen Feld — etwa `h-bedienelement`, wo es in
-   * einer Zeile mit Schaltflächen steht (Prozessansicht, E‑1198). Sie gewinnen
+   * einer Zeile mit Schaltflächen steht (Prozessansicht, E‑1199). Sie gewinnen
    * gegen die eigenen (`cn`).
    */
   className?: string;
