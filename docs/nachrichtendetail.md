@@ -3342,6 +3342,36 @@ Mittelklick unter Windows das automatische Scrollen wirklich nicht startet, ob d
 Hintergrund aufgeht, der Cmd-Klick unter macOS. Unter `xl` ist nichts gesehen, dort ist nichts gebaut
 (Punkt 1056).
 
+> ### Nachgeholt am 17.11.2026 — Prozessansicht, Belegsuche und eigene Route (Punkt 1054 erledigt)
+>
+> **Gesehen im Chrome des Auftraggebers mit der Erweiterung**, nachdem er sich neu angemeldet hatte:
+> `next dev` auf `:3000` aus diesem Arbeitsbaum (Stand `f95de69`, also mit `main` zusammengeführt),
+> sein Backend auf `:8080`, Profil `dev`, Mandant `NEXANS`. Fenster 1920 × 945 und sichtbar, eigene
+> Tabs, danach geschlossen. **Echte Klicks und echtes `Escape`** über die Erweiterung; gemessen wird aus
+> dem Dokument. *Eine Falle der Erweiterung:* Nach dem ersten Bildschirmfoto nimmt sie Klicks im
+> Raster des Fotos (1568 statt 1920 px); zwei Klicks gingen deshalb daneben und sind wiederholt.
+>
+> | Ablauf | gesehen |
+> |---|---|
+> | **Prozessansicht** `40090_BMW_LAB_VDA`, `zeitraum=12M`: „Nächste Seite", die Übertragungsliste in ihrem eigenen Bereich auf 400 px, Zeile 18 geöffnet | Seite zwei (ein Listenabruf); Baum weg, `main` 45 px, Panel 450 px klebend; Umschalter „Ohne Liste anzeigen" vor „Ansicht schließen"; **kein Absprung** |
+> | Umschalter | Adresse `…&voll=true`; Baum und Übertragungsliste weg (50 Zeilen eingehängt), **Seitenkopf „Prozesse" und Prozesskopf „BMW LAB (VDA)" stehen**; Panel bei x = 214, 1.080 px breit, 113 px unter der Oberkante von `main`, nichts klebt oder scrollt für sich, Beschriftungsspalte 16 rem; `main` 0; kein Abruf |
+> | Umschalter zurück | ohne `voll`; **die Übertragungsliste wieder bei 400 px**, Seite zwei, Zeile 18 im Bild ihrer Liste, `main` 45 px, Panel 450 px klebend; kein Abruf |
+> | maximiert, echtes `Escape` | dasselbe |
+> | maximiert, **X** | ohne `nachricht` und `voll`; der Baum wieder da und **`main` bei 820 px** — sein Stand von vor dem Öffnen —, die Liste bei 400 px auf Seite zwei, **Fokus auf Zeile 18**; kein Abruf |
+> | echter **Strg-Klick** auf Zeile 13 | neuer Tab `/nachrichten/<id>` **ohne Abfragezeichenkette**; die Ausgangsseite unverändert, kein Panel; **der Tab geht im Hintergrund auf** — die Ausgangsseite bleibt sichtbar, kein Sichtbarkeitswechsel |
+> | **eigene Route** in diesem Tab | Nachricht aus demselben Prozess, Zeitpunkt 30.12.2025, 01:35 (Berlin); **Absprung auf den Kalendertag** `von` 2025‑12‑29T23:00Z, `bis` 2025‑12‑30T22:00Z = 30.12. 00:00 bis 23:00 Berlin; „Neben der Liste anzeigen" unverändert, 1.080 px |
+> | dem Absprung gefolgt (echter Klick) | `/prozesse?von=…&bis=…&prozess=…&nachricht=…`: **der Baum nimmt den Kalendertag an**, keine Fehlermeldung, 50 Übertragungen des Tages, die Nachricht im Panel, dort kein Absprung |
+> | **Belegsuche** (ein Lieferantennummer-Wert der Nachricht, Typ 9014; 50 Treffer, abgeschnitten), `main` auf 500 px, Treffer 16 geöffnet | Panel 450 px klebend, **mit Umschalter**; Absprung mit dem gerundeten Fenster der Antwort, 30.11. 03:00 bis 30.12. 03:00 UTC (E‑111 unverändert) |
+> | Umschalter | ohne Überschrift, Marken und Trefferliste (50 Zeilen eingehängt); Panel bei x = 214, 1.080 px, nichts klebt, 16 rem; `main` 0; Absprung da; **keine neue Suche** |
+> | echtes `Escape` | ohne `voll`; **`main` wieder bei 500 px**, die Trefferzeile im Bild; keine neue Suche |
+> | echter Strg-Klick auf Treffer 13 | neuer Tab `/nachrichten/<id>` ohne Abfragezeichenkette, im Hintergrund; die Suche samt offenem Panel unverändert |
+>
+> **Damit ist Punkt 1054 erledigt.** **Offen bleibt Punkt 1055, eingeengt:** der Mittelklick an einer
+> echten Maus unter Windows samt dem automatischen Scrollen — die Erweiterung kennt keine mittlere
+> Taste, und über das Protokoll ist das Scrollen nicht zu beobachten — und der Cmd-Klick unter macOS.
+> Dass ein Strg-Klick den Tab im Hintergrund öffnet, ist gesehen. *Wie oben:* Beim Schließen neben der
+> Liste (nicht aus der Vollansicht) bleibt die Beobachtung aus der Nachrichtenliste ununtersucht.
+
 #### Was nicht gebaut ist
 
 Kein Doppelklick. Kein Backend, kein Fenster in der Antwort der Liste. An der eigenen Route
@@ -3611,8 +3641,9 @@ aufgelöst — das ist Schritt 8.
   > **Nr. 3 ist seit dem 17.11.2026 gegenstandslos** (E‑1194, §10.20): Die Suche trägt den Umschalter,
   > und sein Rückweg endet in der Suche — einen eigenen braucht sie nicht. Die übrigen drei bleiben
   > offen.
-- **1054 — Vollansicht in Prozessansicht und Belegsuche, eigene Route und Bildlauf der
-  Übertragungsliste im Browser ungesehen** (17.11.2026, §10.20). Gesehen ist die Nachrichtenliste:
+- ~~**1054 — Vollansicht in Prozessansicht und Belegsuche, eigene Route und Bildlauf der
+  Übertragungsliste im Browser ungesehen** (17.11.2026, §10.20).~~ **Erledigt am 17.11.2026:** am
+  selben Tag nachgeholt, alles gesehen (§10.20, „Nachgeholt am 17.11.2026"). Gesehen ist die Nachrichtenliste:
   Vollansicht, Verkleinern per Umschalter und `Escape`, Schließen, Neuladen, neuer Tab. Die übrigen
   Ansichten belegen die gerenderten Fälle in `tests/detail-vollansicht.test.tsx` am Baum; ob die
   Übertragungsliste nach dem Verkleinern auf demselben Pixel steht, zeigt erst der Browser.
@@ -3621,7 +3652,9 @@ aufgelöst — das ist Schritt 8.
   öffnen und die Ausgangsseite bleibt. **Nicht gesehen:** ob der Mittelklick unter Windows das
   automatische Scrollen tatsächlich nicht startet (über das Protokoll nicht zu beobachten), ob
   der Tab wie bei einem Verweis im Hintergrund aufgeht, und der Cmd-Klick unter macOS. Von Hand an einer
-  echten Maus nachzuholen.
+  echten Maus nachzuholen. *Eingeengt am 17.11.2026 (§10.20, „Nachgeholt"):* Der Strg-Klick öffnet den
+  Tab im Hintergrund — gesehen. Offen sind der Mittelklick samt automatischem Scrollen an einer echten
+  Maus unter Windows und der Cmd-Klick unter macOS.
 - **1056 — Eine Adresse mit `voll` unter `xl`** (17.11.2026, §10.20). Die Vollansicht ändert dort
   nichts, der Umschalter ist unsichtbar (`hidden xl:inline-flex`), und `Escape` verkleinert zuerst —
   ohne sichtbare Wirkung. Wer am schmalen Fenster einen solchen Link öffnet, drückt `Escape` zweimal,

@@ -46,14 +46,14 @@ Fixes der Release-Linie 1.x kommen aus diesem Register (`DEVELOPMENT_GUIDELINES.
 | offen — Fehler | 32 | 0 | — |
 | offen — Verbesserung | 50 | 0 | — |
 | offen — Entscheidung offen | 54 | 0 | — |
-| offen — Sichtprüfung oder Messung offen | 68 | 13 | — |
-| **offen gesamt** | **204** | **13** | — |
+| offen — Sichtprüfung oder Messung offen | 67 | 13 | — |
+| **offen gesamt** | **203** | **13** | — |
 | ungeprüft | — | — | 356 |
-| erledigt | 68 | 0 | 65 |
+| erledigt | 69 | 0 | 65 |
 | gegenstandslos | 3 | 0 | 5 |
 | **Zeilen** | 275 | 13 | 426 |
 
-Offen sind damit **217** nummerierte Punkte; dazu kommen 356 ungeprüfte lokale (Teil 1 und Teil 3
+Offen sind damit **216** nummerierte Punkte; dazu kommen 356 ungeprüfte lokale (Teil 1 und Teil 3
 gezählt am 17.11.2026 nach „Vollansicht überall“ per Skript über die Tabellen; Teil 3 zuvor vom
 06.11.2026, seither nur `property-suche.md` §15 Nr. 14 aufgegriffen). Davon
 stammen 37 aus der Linie `assistent` und ihrer Zusammenführung (1000 bis 1006 aus A1; 1010 und 1012
@@ -65,7 +65,8 @@ ohne Innenleben“ vom 26.10.2026; 1042 ist seit M1009 am selben Tag erledigt. 1
 Auftraggebers am selben Tag erledigt. 1048 und 1049 (beide am 09.11.2026 erledigt) und 1050 kommen
 aus den Fixes an „Ihre Aufträge“ vom 09. und 10.11.2026, 1051 und 1052 aus „Ihre Aufträge neu
 gegliedert“ vom 10.11.2026, 1053 bis 1056 aus „Vollansicht überall“ vom 17.11.2026 (1053 ist der
-aufgegriffene lokale Punkt `property-suche.md` §15 Nr. 14 und am selben Tag erledigt). 1009 ist
+aufgegriffene lokale Punkt `property-suche.md` §15 Nr. 14 und am selben Tag erledigt, 1054 ebenso
+am selben Tag). 1009 ist
 seit dem 21.10.2026 erledigt, 1011 seit A3 entschieden, 1016 seit
 M1003 erledigt. Am selben Tag erledigt: 255, 260 und 261 (`betrieb.md` §9).
 
@@ -356,8 +357,8 @@ Stände widersprüchlicher Fundstellen hat Lukas am 16.10.2026 entschieden (unte
 | 1051 | Die Typdefinition hat keine Feldart; „Ihre Aufträge“ entscheidet an der Länge des Werts, ob ein Feld eine Spalte oder die ganze Breite bekommt (E‑1192), kein Wert in `--text-basis`. Nach Art ginge es erst mit einer Feldart in der Definition, ihrer Prüfung und ihr in der Antwort — gemeldet, nicht gebaut | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.15 · 10.11.2026 | Entscheidung offen | offen |
 | 1052 | Die Nachrichten-ID passt in „Ihre Aufträge“ bei 1.280 px in keiner Anzeigegröße in eine Zeile (in `xs` 7,1 px zu wenig), bei 1.440 px in `m` und `l` nicht; sie endet dort mit Auslassungspunkten (M1016) | [`assistent-frontend.md`](assistent-frontend.md) §12.11, §12.15 · 10.11.2026 | Entscheidung offen | offen |
 | 1053 | Die Antwort der Nachrichtenliste nennt ihr aufgelöstes Fenster nicht; Absprung in den Prozessbaum nur im freien Modus (bis 17.11.2026 lokaler Punkt `property-suche.md` §15 Nr. 14, aufgegriffen) | [`property-suche.md`](property-suche.md) §15, Punkt 14 · [`nachrichtendetail.md`](nachrichtendetail.md) §10.20 · 17.11.2026 | Verbesserung | **erledigt** — `property-suche.md` §15: „Erledigt am 17.11.2026 (E‑1196), projektweit Punkt 1053: Ohne Fenster in der Antwort führt der Absprung auf den Kalendertag der Nachricht; der Backend-Bau entfällt“ |
-| 1054 | Vollansicht in Prozessansicht und Belegsuche, eigene Route mit Absprung und der Bildlauf der Übertragungsliste nach dem Verkleinern im Browser ungesehen; die Sichtprüfung brach nach der Nachrichtenliste ab | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | offen |
-| 1055 | Strg-, Cmd- und Mittelklick auf eine Zeile: ob der Mittelklick unter Windows das automatische Scrollen wirklich nicht startet, ob der neue Tab wie bei einem Verweis im Hintergrund aufgeht, und der Cmd-Klick unter macOS — über das Chrome-DevTools-Protokoll nicht zu sehen | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | offen |
+| 1054 | Vollansicht in Prozessansicht und Belegsuche, eigene Route mit Absprung und der Bildlauf der Übertragungsliste nach dem Verkleinern im Browser ungesehen; die Sichtprüfung brach nach der Nachrichtenliste ab | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | **erledigt** — `nachrichtendetail.md` §10.20: „Nachgeholt am 17.11.2026 … Damit ist Punkt 1054 erledigt“ |
+| 1055 | Strg-, Cmd- und Mittelklick auf eine Zeile: ob der Mittelklick unter Windows das automatische Scrollen wirklich nicht startet, ob der neue Tab wie bei einem Verweis im Hintergrund aufgeht, und der Cmd-Klick unter macOS — über das Chrome-DevTools-Protokoll nicht zu sehen | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Sichtprüfung oder Messung offen | offen — teilweise gesehen: Strg-Klick öffnet im Hintergrund (`nachrichtendetail.md` §10.20, „Nachgeholt“); offen Mittelklick samt automatischem Scrollen an echter Maus und Cmd-Klick unter macOS |
 | 1056 | Eine Adresse mit `voll` unter `xl`: Die Vollansicht ändert dort nichts, der Umschalter ist unsichtbar, und `Escape` verkleinert zuerst ohne sichtbare Wirkung — wer am schmalen Fenster einen solchen Link öffnet, drückt `Escape` zweimal | [`nachrichtendetail.md`](nachrichtendetail.md) §10.20, §13 · 17.11.2026 | Entscheidung offen | offen |
 
 ---

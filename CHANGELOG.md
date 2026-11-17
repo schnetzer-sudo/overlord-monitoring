@@ -159,7 +159,8 @@ Tags und die Definition of Done für ein Release stehen in
   Belegsuche vor der ersten Antwort. Ohne bekanntes Fenster führt er jetzt auf den Kalendertag der
   Nachricht (00:00 bis 23:00 der Anwendungszone, an den Umstellungstagen 23 und 25 Stunden). Nur
   Frontend; das Fenster in der Antwort der Liste, das dafür vorgesehen war (Punkt 1053), wird nicht
-  gebraucht. `docs/README.md` nennt die beiden neuen Sichtprüfungen 1054 und 1055.
+  gebraucht. `docs/README.md` nennt die offene Sichtprüfung 1055 (Mittelklick und Cmd-Klick an
+  echter Hardware); 1054 ist am selben Tag im Browser nachgeholt.
 - **„Ihre Aufträge“ zeigt bei einem Auftragstyp ohne Schlüssel keine Ersatzbeschriftung mehr**
   (Entscheidungen des Auftraggebers vom 10.11.2026, E‑1185 bis E‑1187,
   [`docs/assistent-frontend.md`](docs/assistent-frontend.md) §12.14). Befund: Ein Neudurchlauf eines

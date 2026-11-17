@@ -87,9 +87,8 @@ Registers: **1018 bis 1022** für Chatbox und Karte, mit eingeschaltetem Assiste
 ([`assistent-frontend.md`](assistent-frontend.md) §11), und **1028 bis 1032** für den Block „Ihre
 Aufträge“ ([`assistent-frontend.md`](assistent-frontend.md) §12.12). Seit 1.1.0 sind sie mit dem
 Mandanten `SYSTEM` zu fahren, dem einzigen freigeschalteten ([`tasks.md`](tasks.md) §3.9).
-Dazu **1054 und 1055** für die Vollansicht des Nachrichtendetails in Prozessansicht und Belegsuche
-und für Strg-, Cmd- und Mittelklick auf eine Zeile ([`nachrichtendetail.md`](nachrichtendetail.md)
-§10.20).
+Dazu **1055** für den Mittelklick auf eine Zeile an einer echten Maus unter Windows und den Cmd-Klick
+unter macOS ([`nachrichtendetail.md`](nachrichtendetail.md) §10.20).
 
 ---
 
