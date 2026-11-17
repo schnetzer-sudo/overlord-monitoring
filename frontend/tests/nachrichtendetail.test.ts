@@ -15,6 +15,7 @@ import {
   zusatzzeile,
   type Eigenschaftenverteilung,
 } from "@/features/nachrichten/detail";
+import { KOPIERT_ANZEIGE_MS, tippenKopiert } from "@/features/nachrichten/kopieren";
 
 /**
  * Die Zeitleiste der Detailansicht.
@@ -874,5 +875,38 @@ describe("Die Breite der Spalte „Ende“ je Nachricht", () => {
         expect(endeSpalte(schritte, start, "de", ZONE)).toBe(voll ? "voll-de" : "kurz-de");
       }
     }
+  });
+});
+
+/**
+ * **Wann ein Klick auf einen Eigenschaftswert kopiert** (E‑1207,
+ * `docs/nachrichtendetail.md` §10.21) — je Geste, nie über `matchMedia`.
+ */
+describe("tippenKopiert", () => {
+  it("kopiert bei Finger und Stift am Klick, nicht bei der Maus", () => {
+    expect(tippenKopiert("touch", "touch")).toBe(true);
+    expect(tippenKopiert("pen", "pen")).toBe(true);
+    expect(tippenKopiert("mouse", "mouse")).toBe(false);
+  });
+
+  it("nimmt das pointerup derselben Geste, wo der Klick die Zeigerart falsch oder gar nicht trägt", () => {
+    // Safari ab 18.2: Der Klick ist ein PointerEvent, meldet beim Tippen aber
+    // „mouse" (WebKit-Bug 282988). Vor 18.2 war er ein MouseEvent ohne Feld.
+    expect(tippenKopiert("mouse", "touch")).toBe(true);
+    expect(tippenKopiert(undefined, "touch")).toBe(true);
+    expect(tippenKopiert(undefined, "pen")).toBe(true);
+  });
+
+  it("kopiert ohne Zeigerart nicht — und nicht bei leerer oder unbekannter", () => {
+    // Ein Klick ohne vorausgehendes pointerup (etwa aus einem Skript) und das
+    // leere pointerType eines aus der Tastatur erzeugten Klicks.
+    expect(tippenKopiert(undefined, null)).toBe(false);
+    expect(tippenKopiert("", null)).toBe(false);
+    expect(tippenKopiert("", "mouse")).toBe(false);
+    expect(tippenKopiert("unbekannt", null)).toBe(false);
+  });
+
+  it("hält das Häkchen rund anderthalb Sekunden", () => {
+    expect(KOPIERT_ANZEIGE_MS).toBe(1500);
   });
 });

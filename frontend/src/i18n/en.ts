@@ -509,6 +509,8 @@ export const en: Texte = {
         wert: "Value",
         gekappt: "shortened",
         gekapptHinweis: "Shortened — {bytes} bytes in the original.",
+        wertKopieren: "Copy value of {name}",
+        wertKopiert: "Value of {name} copied",
         gruppeSchritt: "Step {nummer}",
       },
 

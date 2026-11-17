@@ -329,7 +329,9 @@ describe("Der Block Technische Eigenschaften", () => {
       expect(blockschalter(behaelter)).toBeUndefined();
       expect(behaelter.textContent).toContain(EIGENSCHAFTEN.keineAllgemeinen);
       expect(behaelter.textContent).not.toContain(EIGENSCHAFTEN.keine);
-      expect(behaelter.querySelectorAll("ol button")).toHaveLength(1);
+      // Gezählt werden die Schalter der Zeilen: Seit E‑1207 trägt jede
+      // Eigenschaftszeile im Inhalt der Schrittzeile ihren Kopierknopf.
+      expect(behaelter.querySelectorAll("ol button[aria-controls]")).toHaveLength(1);
     } finally {
       await abbauen();
     }

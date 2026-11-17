@@ -888,6 +888,12 @@ export const de = {
         // als ganze.
         gekappt: "gekürzt",
         gekapptHinweis: "Gekürzt — im Original {bytes} Bytes.",
+        // Der Kopierknopf am Ende jeder Zeile (E‑1207, §10.21). Der Name steht im
+        // zugänglichen Namen, weil eine Liste von Knöpfen „Kopieren, Kopieren,
+        // Kopieren" sonst nicht zu unterscheiden wäre. Nach dem Kopieren wechselt
+        // der Text für 1,5 s — dieselbe Ansage wie an der Nachrichten-Kennung.
+        wertKopieren: "Wert von {name} kopieren",
+        wertKopiert: "Wert von {name} kopiert",
         // Bis zum 21.09.2026 standen hier `gruppe` („{name} ({anzahl})") und
         // `gruppeNachricht` („Nachricht") für die Gruppenköpfe des Blocks. Die
         // Gruppierung ist entfallen: Die Eigenschaften stehen unter ihrem

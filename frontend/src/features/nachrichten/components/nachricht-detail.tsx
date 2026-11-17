@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useId, useMemo, useRef, type ReactNode } from "react";
 import Link from "next/link";
-import { Check, Copy, ListTree, X } from "lucide-react";
+import { ListTree, X } from "lucide-react";
 
 import { useAnzeigezone } from "@/components/zeitzone";
 import { Fehler } from "@/components/zustand";
@@ -33,6 +33,7 @@ import { Zielzeile } from "./artefakt-ziele";
 import { BamBlock } from "./bam-block";
 import { EigenschaftenBlock } from "./eigenschaften-block";
 import { KettenBlock } from "./kette-block";
+import { KopierKnopf, useKopieren } from "./kopier-knopf";
 import { StatusPlakette } from "./status-plakette";
 import { Zeitleiste } from "./zeitleiste";
 
@@ -580,17 +581,10 @@ function Zuordnung({ wert }: { wert: string | null }) {
  */
 function Kennung({ messageId }: { messageId: string }) {
   const texte = useTexte();
-  const [kopiert, setKopiert] = useState(false);
-
-  const kopiere = useCallback(() => {
-    // Scheitert es — kein sicherer Kontext, kein Recht —, bleibt der Wert
-    // sichtbar und markierbar stehen. Eine Fehlermeldung für einen Knopf, der
-    // Beiwerk kopiert, wäre lauter als die Sache.
-    void navigator.clipboard
-      ?.writeText(messageId)
-      .then(() => setKopiert(true))
-      .catch(() => undefined);
-  }, [messageId]);
+  // Seit dem 17.11.2026 der gemeinsame Baustein (E‑1207, §10.21): Er stand hier
+  // inline, die Eigenschaftszeile ist sein zweiter Verbraucher. Das Verhalten
+  // ohne sicheren Kontext ist dasselbe geblieben.
+  const { kopiert, kopiere } = useKopieren(messageId);
 
   return (
     <div className="flex min-w-0 items-center gap-1">
@@ -600,25 +594,13 @@ function Kennung({ messageId }: { messageId: string }) {
       <code className="text-beiwerk min-w-0 truncate font-mono" title={messageId}>
         {messageId}
       </code>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="min-h-bedienelement shrink-0"
-        onClick={kopiere}
-        title={
-          kopiert
-            ? texte.nachrichten.detail.kennungKopiert
-            : texte.nachrichten.detail.kennungKopieren
-        }
-      >
-        {kopiert ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-        <span className="sr-only">
-          {kopiert
-            ? texte.nachrichten.detail.kennungKopiert
-            : texte.nachrichten.detail.kennungKopieren}
-        </span>
-      </Button>
+      <KopierKnopf
+        kopiert={kopiert}
+        aufKopieren={kopiere}
+        beschriftung={texte.nachrichten.detail.kennungKopieren}
+        beschriftungKopiert={texte.nachrichten.detail.kennungKopiert}
+        className="min-h-bedienelement"
+      />
     </div>
   );
 }
